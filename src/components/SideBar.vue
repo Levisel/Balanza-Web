@@ -3,14 +3,59 @@
     useRoute
   }
   from "vue-router";
+  import { computed } from 'vue';
   import Avatar from "primevue/avatar";
+  import { useDarkMode } from '@/components/ThemeSwitcher';
+  const { isDarkTheme, toggleDarkMode } = useDarkMode();
   const route = useRoute();
+
+  const inicioClass = computed(() => [
+    'select-none flex items-center cursor-pointer p-4 rounded text-surface-700 transition-colors',
+    route.path === '/' ? 'text-green-400' : '',
+    isDarkTheme.value ? 'hover:bg-gray-700' : 'hover:bg-gray-100'
+  ]);
+  
+  const nuevoCasoClass = computed(() => [
+    'select-none flex items-center cursor-pointer p-4 rounded text-surface-700 transition-colors',
+    route.path === '/NuevoCaso' ? 'text-green-400' : '',
+    isDarkTheme.value ? 'hover:bg-gray-700' : 'hover:bg-gray-100'
+  ]);
+
+  const misCasosClass = computed(() => [
+    'select-none flex items-center cursor-pointer p-4 rounded text-surface-700 transition-colors',
+    route.path === '/MisCasos' ? 'text-green-400' : '',
+    isDarkTheme.value ? 'hover:bg-gray-700' : 'hover:bg-gray-100'
+  ]);
+
+  const reportesClass = computed(() => [
+    'select-none flex items-center cursor-pointer p-4 rounded text-surface-700 transition-colors',
+    route.path === '/ReportesCaso' ? 'text-green-400' : '',
+    isDarkTheme.value ? 'hover:bg-gray-700' : 'hover:bg-gray-100'
+  ]);
+
+  const notificacionesClass = computed(() => [
+    'select-none flex items-center cursor-pointer p-4 rounded text-surface-700 transition-colors',
+    route.path === '/Notificaciones' ? 'text-green-400' : '',
+    isDarkTheme.value ? 'hover:bg-gray-700' : 'hover:bg-gray-100'
+  ]);
+
+  const asignarCasosClass = computed(() => [
+    'select-none flex items-center cursor-pointer p-4 rounded text-surface-700 transition-colors',
+    route.path === '/AsignarCaso' ? 'text-green-400' : '',
+    isDarkTheme.value ? 'hover:bg-gray-700' : 'hover:bg-gray-100'
+  ]);
+
+  const configuracionClass = computed(() => [
+    'select-none flex items-center cursor-pointer p-4 rounded text-surface-700 transition-colors',
+    route.path === '/Configuracion' ? 'text-green-400' : '',
+    isDarkTheme.value ? 'hover:bg-gray-700' : 'hover:bg-gray-100'
+  ]);
   
 </script>
 
 <template>
   <!-- Contenedor fijo para el sidebar -->
-  <div class="select-none fixed top-0 left-0 h-full w-80 bg-white shadow-lg z-10">
+  <div class="select-none fixed top-0 left-0 h-full w-80 bg-white shadow-lg z-10 sidebar">
     <div class="flex flex-col h-full">
       <!-- Encabezado con logo -->
       <header class="flex items-center justify-between px-6 pt-4 shrink-0">
@@ -32,41 +77,26 @@
         <!-- Sección: FAVORITES -->
         <ul class="list-none p-4 m-0">
           <li>
-            <router-link to="/" draggable="false" v-ripple :class="[
-            'select-none flex items-center cursor-pointer p-4 rounded text-surface-700 hover:bg-gray-100 transition-colors',
-            route.path === '/' ? 'bg-gray-100' : 'hover:bg-gray-100'
-            ]">
-              <i class="pi pi-home mr-2">
-              </i>
-              <span class="font-medium text-lg">
-                Inicio
-              </span>
+            <router-link to="/" draggable="false" v-ripple :class="inicioClass">
+              <i class="pi pi-home mr-2"></i>
+              <span class="font-medium text-lg">Inicio</span>
             </router-link>
           </li>
           <li>
-            <router-link to="/NuevoCaso" draggable="false" v-ripple :class="[
-            'select-none flex items-center cursor-pointer p-4 rounded text-surface-700 hover:bg-gray-100 transition-colors',
-            route.path === '/NuevoCaso' ? 'bg-gray-100' : 'hover:bg-gray-100'
-            ]">
-              <i class="pi pi-plus-circle mr-2">
-              </i>
-              <span class="font-medium text-lg">
-                Nuevo Caso
-              </span>
+            <router-link to="/NuevoCaso" draggable="false" v-ripple :class="nuevoCasoClass">
+              <i class="pi pi-plus-circle mr-2"></i>
+              <span class="font-medium text-lg">Nuevo Caso</span>
             </router-link>
           </li>
           <li>
-            <a v-ripple class="select-none flex items-center cursor-pointer p-4 rounded text-surface-700 hover:bg-gray-100 transition-colors">
-              <i class="pi pi-briefcase mr-2">
-              </i>
-              <span class="font-medium text-lg">
-                Mis Casos
-              </span>
-            </a>
+            <router-link to="/MisCasos" draggable="false" v-ripple :class="misCasosClass">
+              <i class="pi pi-folder-open mr-2"></i>
+              <span class="font-medium text-lg">Mis Casos</span>
+            </router-link>
           </li>
           <li>
             <a v-ripple v-styleclass="{ selector: '@next', toggleClass: 'closed' }"
-            class="select-none flex items-center cursor-pointer p-4 rounded text-surface-700 hover:bg-gray-100 transition-colors">
+            class="select-none flex items-center cursor-pointer p-4 rounded text-surface-700 transition-colors">
               <i class="pi pi-chart-line mr-2">
               </i>
               <span class="font-medium text-lg">
@@ -75,55 +105,24 @@
               <i class="pi pi-chevron-down ml-auto">
               </i>
             </a>
-            <!-- Submenú anidado para Reports -->
-            <ul class="submenu list-none py-0 pl-4 pr-0 m-0">
+            <ul class="submenu list-none p-0 m-0">
               <li>
-                <a v-ripple v-styleclass="{ selector: '@next', toggleClass: 'closed' }"
-                class="select-none flex items-center cursor-pointer p-4 rounded text-surface-700 hover:bg-gray-100 transition-colors">
-                  <i class="pi pi-chart-line mr-2">
-                  </i>
-                  <span class="font-medium text-lg">
-                    Revenue
-                  </span>
-                  <i class="pi pi-chevron-down ml-auto">
-                  </i>
-                </a>
-                <!-- Submenú de Revenue -->
-                <ul class="submenu list-none py-0 pl-4 pr-0 m-0">
-                  <li>
-                    <a v-ripple class="select-none flex items-center cursor-pointer p-4 rounded text-surface-700 hover:bg-gray-100 transition-colors">
-                      <i class="pi pi-table mr-2">
-                      </i>
-                      <span class="font-medium">
-                        View
-                      </span>
-                    </a>
-                  </li>
-                  <li>
-                    <a v-ripple class="select-none flex items-center cursor-pointer p-4 rounded text-surface-700 hover:bg-gray-100 transition-colors">
-                      <i class="pi pi-search mr-2">
-                      </i>
-                      <span class="font-medium">
-                        Search
-                      </span>
-                    </a>
-                  </li>
-                </ul>
+                <router-link to="/ReportesCaso" draggable="false" v-ripple :class="reportesClass">
+                  <i class="pi pi-chart-bar mr-2"></i>
+                  <span class="font-medium text-lg">Reportes</span>
+                </router-link>
               </li>
             </ul>
+
+
           </li>
           <li>
-            <a v-ripple class="select-none flex items-center cursor-pointer p-4 rounded text-surface-700 hover:bg-gray-100 transition-colors">
-              <i class="pi pi-comments mr-2">
-              </i>
-              <span class="font-medium text-lg">
-                Notificaciones
-              </span>
+            <router-link to="/Notificaciones" draggable="false" v-ripple :class="notificacionesClass">
+              <i class="pi pi-comments mr-2"></i>
+              <span class="font-medium text-lg">Notificaciones</span>
               <span class="inline-flex items-center justify-center ml-auto bg-blue-500 text-white rounded-full"
-              style="min-width: 1.5rem; height: 1.5rem">
-                3
-              </span>
-            </a>
+              style="min-width: 1.5rem; height: 1.5rem">3</span>
+            </router-link>
           </li>
         </ul>
         <!-- Sección: APPLICATION -->
@@ -139,22 +138,16 @@
             </div>
             <ul class="submenu list-none p-0 m-0">
               <li>
-                <a v-ripple class="select-none flex items-center cursor-pointer p-4 rounded text-surface-700 hover:bg-gray-100 transition-colors">
-                  <i class="pi pi-folder mr-2">
-                  </i>
-                  <span class="font-medium text-lg">
-                    Asignar Casos
-                  </span>
-                </a>
+                <router-link to="/AsignarCaso" draggable="false" v-ripple :class="asignarCasosClass">
+                  <i class="pi pi-users mr-2"></i>
+                  <span class="font-medium text-lg">Asignar Casos</span>
+                </router-link>
               </li>
               <li>
-                <a v-ripple class="select-none flex items-center cursor-pointer p-4 rounded text-surface-700 hover:bg-gray-100 transition-colors">
-                  <i class="pi pi-cog mr-2">
-                  </i>
-                  <span class="font-medium text-lg">
-                    Configuración
-                  </span>
-                </a>
+                <router-link to="/Configuracion" draggable="false" v-ripple :class="configuracionClass">
+                <i class="pi pi-cog mr-2"></i>
+                <span class="font-medium text-lg">Configuración</span>
+                </router-link>
               </li>
             </ul>
           </li>
@@ -166,12 +159,21 @@
         <a v-ripple class="m-4 flex items-center cursor-pointer p-3 gap-2 rounded text-surface-700 hover:bg-surface-100 transition-colors">
           <Avatar image="https://primefaces.org/cdn/primevue/images/avatar/amyelsner.png"
           shape="circle" />
-          <span class="select-none font-bold text-lg">
+          <span class="select-none font-bold text-lg ml-2">
             Barbara Diaz
           </span>
           <!-- Icono de modo oscuro/claro -->
-          <i class="pi pi-sun ml-20" style="font-size: 1.5rem">
-          </i>
+          <button
+            type="button"
+            class="ml-10 flex items-center justify-center w-10 h-10 
+                  rounded-full transition-colors duration-300 
+                  text-yellow-500 hover:yellow-500 hover:bg-gray-700"
+            @click="toggleDarkMode"
+          >
+            <i :class="['pi', { 'pi-moon': isDarkTheme, 'pi-sun': !isDarkTheme }]"></i>
+          </button>
+
+
 
         </a>
       </footer>
@@ -198,9 +200,7 @@
   .pi-chevron-down{
     font-size: 1.2rem;
   }
-  .custom-hover:hover {
-  background-color: #f3f4f6 !important; /* Gray-100 */
-}
-
+  
+ 
   </style>
   

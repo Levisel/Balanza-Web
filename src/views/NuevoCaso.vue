@@ -190,7 +190,7 @@ const derivadoPorOptions = ref([{ name: "Referencia A" }, { name: "Referencia B"
     <!-- Datos Personales -->
     <div class="grid grid-cols-2 gap-4 border-b pb-4">
       <div class="mb-8">
-        <h3 class="text-2xl font-semibold text-gray-800 mb-8">Datos Personales</h3>
+        <h3 class="text-2xl font-semibold mb-8">Datos Personales</h3>
         <div class="input-spacing grid grid-cols-2 gap-4 mt-4">
           <!-- Grupo de Identificación -->
           <div class="w-full max-w-md mx-auto">
@@ -226,7 +226,7 @@ const derivadoPorOptions = ref([{ name: "Referencia A" }, { name: "Referencia B"
           <!-- Checkbox de Discapacidad -->
           <div class="flex items-center gap-2 ml-10">
             <Checkbox v-model="discapacidad" binary />
-            <label class="text-gray-600">¿Discapacidad?</label>
+            <label >¿Discapacidad?</label>
           </div>
           <!-- Nombres -->
           <FloatLabel variant="on" class="w-full">
@@ -308,7 +308,7 @@ const derivadoPorOptions = ref([{ name: "Referencia A" }, { name: "Referencia B"
       </div>
       <!-- Sección de Contacto centrada -->
       <div>
-        <h3 class="text-2xl font-semibold text-gray-800 ml-25 mb-8">Contacto</h3>
+        <h3 class="text-2xl font-semibold ml-25 mb-8">Contacto</h3>
         <div class="input-spacing grid grid-cols-1 gap-4 mx-auto" style="max-width: 400px;">
           <FloatLabel variant="on" class="w-full">
             <InputMask
@@ -369,19 +369,19 @@ const derivadoPorOptions = ref([{ name: "Referencia A" }, { name: "Referencia B"
     <div class="grid grid-cols-2 gap-4 border-b py-4 mb-3">
       <!-- Datos Demográficos -->
       <div>
-        <h3 class="text-2xl font-semibold text-gray-800 mb-8">Datos Demográficos</h3>
+        <h3 class="text-2xl font-semibold mb-8">Datos Demográficos</h3>
         <div class="input-spacing grid grid-cols-3 gap-4">
           <div class="flex items-center gap-2">
             <Checkbox v-model="recibeBono" binary />
-            <label class="text-gray-600">¿Recibe bono?</label>
+            <label >¿Recibe bono?</label>
           </div>
           <div class="flex items-center gap-2">
             <Checkbox v-model="casaPropia" binary />
-            <label class="text-gray-600">¿Casa Propia?</label>
+            <label >¿Casa Propia?</label>
           </div>
           <div class="flex items-center gap-2">
             <Checkbox v-model="vehiculoPropio" binary />
-            <label class="text-gray-600">¿Vehículo Propio?</label>
+            <label >¿Vehículo Propio?</label>
           </div>
         </div>
         <div class="input-spacing grid grid-cols-2 gap-4 mt-4">
@@ -454,7 +454,7 @@ const derivadoPorOptions = ref([{ name: "Referencia A" }, { name: "Referencia B"
       </div>
       <!-- Contacto de Referencia -->
       <div>
-        <h3 class="text-2xl font-semibold text-gray-800 ml-25 mb-18">Contacto de Referencia</h3>
+        <h3 class="text-2xl font-semibold ml-25 mb-18">Contacto de Referencia</h3>
         <div class="input-spacing grid grid-cols-1 gap-4 mx-auto" style="max-width: 400px;">
           <FloatLabel variant="on">
             <InputText id="nombres" v-model="nombres" size="large" class="md:w-120" />
@@ -545,13 +545,13 @@ const derivadoPorOptions = ref([{ name: "Referencia A" }, { name: "Referencia B"
                           <div class="grid grid-cols-2 gap-4 mt-6">
                             <!-- Observación -->
                             <div>
-                              <label for="observacion" class="text-gray-600">Observación</label>
+                              <label for="observacion" >Observación</label>
                               <Textarea id="observacion" v-model="observacion" size="large" class="w-full h-80" />
                             </div>
 
                             <!-- Evidencias -->
                             <div>
-                              <label for="archivo" class="text-gray-600">Evidencias</label>
+                              <label for="archivo" >Evidencias</label>
                                                                     <FileUpload id="archivo" name="demo[]" class="w-full h-80" url="/api/upload" @upload="onTemplatedUpload($event)" :multiple="true" accept="image/*" :maxFileSize="1000000" @select="onSelectedFiles">
                                           <template #header="{ chooseCallback, uploadCallback, clearCallback, files }">
                                               <div class="flex flex-wrap justify-between items-center flex-1 gap-4">
