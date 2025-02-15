@@ -4,14 +4,10 @@ import SideBar from "@/components/SideBar.vue";
 
 <template>
     <div>
-      <!-- Sidebar fijo -->
       <SideBar />
-      <!-- Contenedor principal con separación a la izquierda igual a la anchura del sidebar -->
       <div class="pl-85">
         <slot />
+        <router-view />
       </div>
     </div>
   </template>
-  
-
-  

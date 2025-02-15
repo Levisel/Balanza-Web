@@ -172,9 +172,6 @@
           >
             <i :class="['pi', { 'pi-moon': isDarkTheme, 'pi-sun': !isDarkTheme }]"></i>
           </button>
-
-
-
         </a>
       </footer>
     </div>
