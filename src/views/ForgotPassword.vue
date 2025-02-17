@@ -55,25 +55,24 @@ const onFormSubmit = ({ valid }: { valid: boolean }) => {
     <div class="select-none w-full lg:w-[500px] bg-white rounded shadow-sm lg:p-[80px]">
       <!-- Título de la tarjeta -->
        <div class="mb-12 -mt-7">
-        <h2 class="text-3xl font-medium text-center">Ingresar</h2>
+        <h2 class="text-3xl font-medium text-center">Recuperar Contraseña</h2>
+        <br>
+        <p class="font-medium text-center text-gray-500 text-lg">Porfavor, ingresa tu correo electrónico para restablecer tu contraseña.</p>
        </div>
       
       <!-- Formulario -->
-      <Form :resolver="resolver" @submit="onFormSubmit" v-slot="{ field }" class="flex flex-col gap-11 w-full">
+      <Form :resolver="resolver" @submit="onFormSubmit" v-slot="{ field }" class="flex flex-col gap-12 w-full">
         <FloatLabel name="email">
           <InputText id="email" type="email" size="large" class="w-full"/>
           <label for="email">Correo Electrónico</label>
         </FloatLabel>
-        <FloatLabel>
-          <Password id="over_label" type="text" :feedback="false" toggleMask fluid size="large" />
-          <label for="over_label">Contraseña</label>
-        </FloatLabel>
-        <div class="-mt-6">
-          <router-link to="/login/forgot-password" draggable="false" v-ripple>
-            <span class="font-medium text-sm text-blue-800 hover:text-blue-400">¿Haz olvidado tu contraseña?</span>
-          </router-link>
-        </div>
-    <Button type="submit" class="mt-3" severity="primary" label="Iniciar Sesión" />
+
+        <div class="grid grid-cols-2 gap-y-18 gap-x-15">  
+            <Button @click="$router.push('/login')" class="mt-3" severity="contrast" label="Cancelar" />   
+            <Button type="submit" class="mt-3" severity="info" label="Enviar" />
+      </div>
+
+
     
 </Form>
       

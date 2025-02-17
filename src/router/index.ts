@@ -9,6 +9,7 @@ import NotificacionesCaso from '@/views/NotificacionesCaso.vue';
 import ReportesCaso from '@/views/ReportesCaso.vue';
 import Configuracion from '@/views/Configuracion.vue';
 import Login from '@/views/Login.vue';
+import ForgotPassword from '@/views/ForgotPassword.vue';
 
 const routes: Array<RouteRecordRaw> = [
   {
@@ -60,6 +61,11 @@ const routes: Array<RouteRecordRaw> = [
         path: '',
         name: 'Login',
         component: Login,
+      },
+      {
+        path: 'forgot-password',
+        name: 'ForgotPassword',
+        component: ForgotPassword,
       },
     ],
   },
