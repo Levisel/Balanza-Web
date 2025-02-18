@@ -45,7 +45,7 @@ const onFormSubmit = ({ valid }: { valid: boolean }) => {
   <div class="select-none flex flex-col items-center justify-center">
     <!-- Logo y Título superior -->
     <div class="mb-5 mt-10 flex flex-col items-center">
-      <img
+      <img draggable="false"
         src="../components/icons/cjpuce.png"
         class="h-25 mb-4"
       />

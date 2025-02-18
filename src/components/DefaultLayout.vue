@@ -10,4 +10,4 @@ import SideBar from "@/components/SideBar.vue";
         <router-view />
       </div>
     </div>
-  </template>
+</template>

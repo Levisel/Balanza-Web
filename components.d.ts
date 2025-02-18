@@ -37,6 +37,7 @@ declare module 'vue' {
     Toast: typeof import('primevue/toast')['default']
   }
   export interface ComponentCustomProperties {
+    AnimateOnScroll: typeof import('primevue/animateonscroll')['default']
     Ripple: typeof import('primevue/ripple')['default']
     StyleClass: typeof import('primevue/styleclass')['default']
   }
