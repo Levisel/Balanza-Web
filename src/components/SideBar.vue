@@ -50,6 +50,11 @@
     route.path === '/Configuracion' ? 'text-green-400' : '',
     isDarkTheme.value ? 'hover:bg-gray-700' : 'hover:bg-gray-100'
   ]);
+  const trabajoSocialClass = computed(() => [
+    'select-none flex items-center cursor-pointer p-4 rounded text-surface-700 transition-colors',
+    route.path === '/TrabajoSocial' ? 'text-green-400' : '',
+    isDarkTheme.value ? 'hover:bg-gray-700' : 'hover:bg-gray-100'
+  ]);
   
 </script>
 
@@ -113,8 +118,6 @@
                 </router-link>
               </li>
             </ul>
-
-
           </li>
           <li>
             <router-link to="/Notificaciones" draggable="false" v-ripple :class="notificacionesClass">
@@ -123,6 +126,37 @@
               <span class="inline-flex items-center justify-center ml-auto bg-blue-500 text-white rounded-full"
               style="min-width: 1.5rem; height: 1.5rem">3</span>
             </router-link>
+          </li>
+          <li>
+            <a v-ripple v-styleclass="{ selector: '@next', toggleClass: 'closed' }"
+            class="select-none flex items-center cursor-pointer p-4 rounded text-surface-700 transition-colors">
+              <i class="pi pi-briefcase mr-2">
+              </i>
+              <span class="font-medium text-lg">
+                Trabajo Social
+              </span>
+              <i class="pi pi-chevron-down ml-auto">
+              </i>
+            </a>
+            <ul class="submenu list-none p-0 m-0">
+              <li>
+                <router-link to="/TrabajoSocialDashboard" draggable="false" v-ripple :class="trabajoSocialClass">
+                  <i class="pi pi-home mr-2"></i>
+                  <span class="font-medium text-lg">Dashboard</span>
+                </router-link>
+              </li>
+              <li>
+                <router-link to="/TrabajoSocialHorario" draggable="false" v-ripple :class="trabajoSocialClass">
+                  <i class="pi pi-calendar-clock mr-2"></i>
+                  <span class="font-medium text-lg">Horario</span>
+                </router-link>
+              </li><li>
+                <router-link to="/TrabajoSocialCasos" draggable="false" v-ripple :class="trabajoSocialClass">
+                  <i class="pi pi-file mr-2"></i>
+                  <span class="font-medium text-lg">Casos</span>
+                </router-link>
+              </li>
+            </ul>
           </li>
         </ul>
         <!-- Sección: APPLICATION -->

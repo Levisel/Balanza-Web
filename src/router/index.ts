@@ -10,6 +10,10 @@ import ReportesCaso from '@/views/ReportesCaso.vue';
 import Configuracion from '@/views/Configuracion.vue';
 import Login from '@/views/Login.vue';
 import ForgotPassword from '@/views/ForgotPassword.vue';
+import TrabajoSocialDashboard from '@/views/TrabajoSocialDashboard.vue';
+import TrabajoSocialHorario from '@/views/TrabajoSocialHorario.vue';
+import TrabajoSocialCasos from '@/views/TrabajoSocialCasos.vue';
+import nuevoCasoTrabajoSocial from '@/views/nuevoCasoTrabajoSocial.vue'
 
 const routes: Array<RouteRecordRaw> = [
   {
@@ -50,6 +54,26 @@ const routes: Array<RouteRecordRaw> = [
         path: 'Configuracion',
         name: 'Configuracion',
         component: Configuracion,
+      },
+      {
+        path: 'TrabajoSocialDashboard',
+        name: 'TrabajoSocialDashboard',
+        component: TrabajoSocialDashboard,
+      },
+      {
+        path: 'TrabajoSocialHorario',
+        name: 'TrabajoSocialHorario',
+        component: TrabajoSocialHorario,
+      },
+      {
+        path: 'TrabajoSocialCasos',
+        name: 'TrabajoSocialCasos',
+        component: TrabajoSocialCasos,
+      },
+      {
+        path: 'nuevoCasoTrabajoSocial',
+        name: 'nuevoCasoTrabajoSocial',
+        component: nuevoCasoTrabajoSocial,
       },
     ],
   },

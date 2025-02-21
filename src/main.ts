@@ -1,3 +1,4 @@
+import 'quill/dist/quill.snow.css';
 import './assets/main.css'
 import './assets/flags.css'
 import { createApp } from 'vue'
@@ -12,6 +13,7 @@ import StyleClass from 'primevue/styleclass';
 import ToastService from 'primevue/toastservice';
 import ConfirmationService from 'primevue/confirmationservice';
 import AnimateOnScroll from 'primevue/animateonscroll';
+
 
 const app = createApp(App)
 
