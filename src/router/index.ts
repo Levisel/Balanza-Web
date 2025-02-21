@@ -10,6 +10,9 @@ import ReportesCaso from '@/views/ReportesCaso.vue';
 import Configuracion from '@/views/Configuracion.vue';
 import Login from '@/views/Login.vue';
 import ForgotPassword from '@/views/ForgotPassword.vue';
+import Cronograma from '@/views/Cronograma.vue';
+import IngresoCronograma from '@/views/IngresoCronograma.vue';
+import IngresoEstudiantesExcel from '@/views/IngresoEstudiantesExcel.vue';
 
 const routes: Array<RouteRecordRaw> = [
   {
@@ -20,6 +23,21 @@ const routes: Array<RouteRecordRaw> = [
         path: '',
         name: 'home',
         component: HomeView,
+      },     
+      {
+        path: 'Cronograma',
+        name: 'Cronograma',
+        component: Cronograma,
+      },
+      {
+        path: 'IngresoCronograma',
+        name: 'IngresoCronograma',
+        component: IngresoCronograma,
+      },
+      {
+        path: 'IngresoEstudiantesExcel',
+        name: 'IngresoEstudiantesExcel',
+        component: IngresoEstudiantesExcel,
       },
       {
         path: 'NuevoCaso',

@@ -15,11 +15,12 @@
     isDarkTheme.value ? 'hover:bg-gray-700' : 'hover:bg-gray-100'
   ]);
   
-  const nuevoCasoClass = computed(() => [
+  const cronogramaClass = computed(() => [
     'select-none flex items-center cursor-pointer p-4 rounded text-surface-700 transition-colors',
     route.path === '/NuevoCaso' ? 'text-green-400' : '',
     isDarkTheme.value ? 'hover:bg-gray-700' : 'hover:bg-gray-100'
   ]);
+
 
   const misCasosClass = computed(() => [
     'select-none flex items-center cursor-pointer p-4 rounded text-surface-700 transition-colors',
@@ -83,42 +84,43 @@
             </router-link>
           </li>
           <li>
-            <router-link to="/NuevoCaso" draggable="false" v-ripple :class="nuevoCasoClass">
-              <i class="pi pi-plus-circle mr-2"></i>
-              <span class="font-medium text-lg">Nuevo Caso</span>
+            <router-link to="/Cronograma" draggable="false" v-ripple :class="cronogramaClass">
+              <i class="pi pi-graduation-cap mr-2"></i>
+              <span class="font-medium text-lg">Cronograma Académico</span>
             </router-link>
           </li>
           <li>
-            <router-link to="/MisCasos" draggable="false" v-ripple :class="misCasosClass">
-              <i class="pi pi-folder-open mr-2"></i>
-              <span class="font-medium text-lg">Mis Casos</span>
+            <router-link to="/IngresoEstudiantesExcel" draggable="false" v-ripple :class="misCasosClass">
+              <i class="pi pi-users mr-2"></i>
+              <span class="font-medium text-lg">Estudiantes</span>
             </router-link>
           </li>
+
           <li>
-            <a v-ripple v-styleclass="{ selector: '@next', toggleClass: 'closed' }"
-            class="select-none flex items-center cursor-pointer p-4 rounded text-surface-700 transition-colors">
-              <i class="pi pi-chart-line mr-2">
-              </i>
-              <span class="font-medium text-lg">
-                Reportes
-              </span>
-              <i class="pi pi-chevron-down ml-auto">
-              </i>
-            </a>
-            <ul class="submenu list-none p-0 m-0">
-              <li>
-                <router-link to="/ReportesCaso" draggable="false" v-ripple :class="reportesClass">
-                  <i class="pi pi-chart-bar mr-2"></i>
-                  <span class="font-medium text-lg">Reportes</span>
-                </router-link>
-              </li>
-            </ul>
+        <router-link to="/Seguimiento" draggable="false" v-ripple class="select-none flex items-center cursor-pointer p-4 rounded text-surface-700 transition-colors">
+          <i class="pi pi-calendar mr-2"></i>
+          <span class="font-medium text-lg">Horarios</span>
+        </router-link>
+      </li>
 
 
-          </li>
+          <li>
+        <router-link to="/Seguimiento" draggable="false" v-ripple class="select-none flex items-center cursor-pointer p-4 rounded text-surface-700 transition-colors">
+          <i class="pi pi-chart-line mr-2"></i>
+          <span class="font-medium text-lg">Seguimiento</span>
+        </router-link>
+      </li>
+
+      <li>
+        <router-link to="/ReportesCaso" draggable="false" v-ripple :class="reportesClass">
+          <i class="pi pi-chart-bar mr-2"></i>
+          <span class="font-medium text-lg">Reportes</span>
+        </router-link>
+      </li>
+
           <li>
             <router-link to="/Notificaciones" draggable="false" v-ripple :class="notificacionesClass">
-              <i class="pi pi-comments mr-2"></i>
+              <i class="pi pi-bell mr-2"></i>
               <span class="font-medium text-lg">Notificaciones</span>
               <span class="inline-flex items-center justify-center ml-auto bg-blue-500 text-white rounded-full"
               style="min-width: 1.5rem; height: 1.5rem">3</span>
@@ -140,7 +142,7 @@
               <li>
                 <router-link to="/AsignarCaso" draggable="false" v-ripple :class="asignarCasosClass">
                   <i class="pi pi-users mr-2"></i>
-                  <span class="font-medium text-lg">Asignar Casos</span>
+                  <span class="font-medium text-lg">Perfil</span>
                 </router-link>
               </li>
               <li>
@@ -160,7 +162,7 @@
           <Avatar image="https://primefaces.org/cdn/primevue/images/avatar/amyelsner.png"
           shape="circle" />
           <span class="select-none font-bold text-lg ml-2">
-            Barbara Diaz
+            Naim Buquele
           </span>
           <!-- Icono de modo oscuro/claro -->
           <button
