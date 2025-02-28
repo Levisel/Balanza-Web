@@ -223,11 +223,10 @@ const derivadoPorOptions = ref([{ name: "Referencia A" }, { name: "Referencia B"
               </div>
             </div>
           </div>
-          <!-- Checkbox de Discapacidad -->
-          <div class="flex items-center gap-2 ml-10">
-            <Checkbox v-model="discapacidad" binary />
-            <label >¿Discapacidad?</label>
-          </div>
+          <div class="flex items-center">
+          <Button icon="pi pi-search" class="p-button-primary" />
+        </div>
+          
           <!-- Nombres -->
           <FloatLabel variant="on" class="w-full">
             <InputText id="nombres" v-model="nombres" size="large" class="w-full" />
@@ -262,7 +261,7 @@ const derivadoPorOptions = ref([{ name: "Referencia A" }, { name: "Referencia B"
             />
             <label for="fechaNacimiento" >Fecha de Nacimiento</label>
           </FloatLabel>
-          <!-- Nacionalidad (sin modificar íconos) -->
+          <!-- Nacionalidad -->
           <FloatLabel variant="on" class="w-full">
             <Select
               v-model="selectedCountry"
@@ -304,9 +303,16 @@ const derivadoPorOptions = ref([{ name: "Referencia A" }, { name: "Referencia B"
             />
             <label for="etnia" >Etnia</label>
           </FloatLabel>
+
+          <!-- Checkbox de Discapacidad -->
+          <div class="flex items-center gap-2 ml-10">
+            <Checkbox v-model="discapacidad" binary />
+            <label >¿Discapacidad?</label>
+          </div>
         </div>
       </div>
-      <!-- Sección de Contacto centrada -->
+
+      <!-- Sección de Contacto -->
       <div>
         <h3 class="text-2xl font-semibold ml-25 mb-8">Contacto</h3>
         <div class="input-spacing grid grid-cols-1 gap-4 mx-auto" style="max-width: 400px;">
@@ -632,11 +638,165 @@ const derivadoPorOptions = ref([{ name: "Referencia A" }, { name: "Referencia B"
 </template>
 
 <style scoped>
-.border-b {
-  border-bottom: 1px solid #E5E7EB;
+/* Estilos generales */
+body {
+  font-family: 'Albert Sans', sans-serif;
+  background-color: #f9f9f9;
+  color: #333;
+  margin: 0;
+  padding: 0;
 }
 
-.input-spacing > :not(:last-child) {
-  margin-bottom: 4px;
+/* Contenedor principal */
+.p-6 {
+  padding: 2rem;
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  margin: 2rem auto;
+  max-width: 1200px;
+}
+
+/* Títulos */
+h3 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  color: #2c3e50;
+}
+
+/* Inputs y Selects */
+.input-spacing {
+  display: grid;
+  gap: 1rem;
+}
+
+.input-spacing .w-full {
+  width: 100%;
+}
+
+.input-spacing .w-full.md\:w-120 {
+  width: 100%;
+}
+
+.input-spacing .w-full.md\:w-55 {
+  width: 100%;
+}
+
+.input-spacing .w-full.md\:w-60 {
+  width: 100%;
+}
+
+/* Botones */
+.p-button-primary {
+  background-color: #3498db;
+  border: none;
+  color: #fff;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.p-button-primary:hover {
+  background-color: #2980b9;
+}
+
+/* Checkbox */
+.flex.items-center.gap-2 label {
+  margin-left: 0.5rem;
+}
+
+/* Grids */
+.grid {
+  display: grid;
+  gap: 1rem;
+}
+
+.grid-cols-2 {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.grid-cols-3 {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.grid-cols-1 {
+  grid-template-columns: 1fr;
+}
+
+/* Secciones */
+.border-b {
+  border-bottom: 1px solid #e5e7eb;
+  padding-bottom: 1rem;
+  margin-bottom: 1rem;
+}
+
+/* Tabs */
+.card {
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  padding: 1rem;
+  margin-top: 2rem;
+}
+
+.tab-content {
+  padding: 1rem;
+}
+
+/* Botón Crear Caso */
+.flex.justify-center.mt-8.mr-40 {
+  display: flex;
+  justify-content: center;
+  margin-top: 2rem;
+}
+
+.p-button-success {
+  background-color: #2ecc71;
+  border: none;
+  color: #fff;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.p-button-success:hover {
+  background-color: #27ae60;
+}
+
+/* File Upload */
+.file-upload {
+  border: 2px dashed #ccc;
+  border-radius: 8px;
+  padding: 1rem;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.3s ease;
+}
+
+.file-upload:hover {
+  border-color: #3498db;
+}
+
+.file-upload .pi {
+  font-size: 2rem;
+  color: #ccc;
+}
+
+.file-upload p {
+  margin-top: 1rem;
+  color: #666;
+}
+
+/* Contenedor de Asesorías y Patrocinios */
+.asesorias-patrocinios {
+  padding: 2rem;
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  margin: 2rem auto;
+  max-width: 1200px;
 }
 </style>
