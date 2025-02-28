@@ -32,6 +32,16 @@ const Casos = [
 ];
 
 const toast = useToast();
+const nuevaActividadTipo = ref('');
+const nuevaActividadUbicacion = ref('');
+const nuevaActividadFecha = ref<Date | null>(null);
+const nuevaActividadAbogado = ref('');
+const nuevaActividadDuracion = ref('');
+const nuevaActividadReferenciaExpediente = ref('');
+const nuevaActividadContraparte = ref('');
+const nuevaActividadJuez = ref('');
+
+const visibleActividadDialog = ref(false);
 
 const searchQuery = ref('');
 
@@ -63,21 +73,41 @@ const casosFinalizados = computed(() => casosFiltrados.value.filter(caso => caso
 const visibleDialog = ref(false);
 const casoSeleccionado = ref<any>(null);
 const visibleUploadDialog = ref(false);
-const actividades = ref<{ descripcion: string, fecha: Date }[]>([
-  { descripcion: 'Revisión de documentación', fecha: new Date('2025-01-01') },
-  { descripcion: 'Reunión con cliente', fecha: new Date('2025-01-02') },
-  { descripcion: 'Envío de informes', fecha: new Date('2025-01-03') },
-  { descripcion: 'Llamada a testigos', fecha: new Date('2025-01-04') },
+const actividades = ref([
+  { tipo: 'Revisión', ubicacion: 'Oficina', fecha: new Date('2025-01-01'), abogado: 'Juan Perez', duracion: '2 horas', referenciaExpediente: 'R001', contraparte: 'Carlos Ruiz', juez: 'Juez 1' },
+  { tipo: 'Reunión', ubicacion: 'Sala de Juntas', fecha: new Date('2025-01-02'), abogado: 'Maria Lopez', duracion: '1 hora', referenciaExpediente: 'R002', contraparte: 'Ana Gomez', juez: 'Juez 2' },
+  { tipo: 'Llamada', ubicacion: 'Teléfono', fecha: new Date('2025-01-03'), abogado: 'Luis Martinez', duracion: '30 minutos', referenciaExpediente: 'R003', contraparte: 'Pedro Fernandez', juez: 'Juez 3' },
+  { tipo: 'Visita', ubicacion: 'Corte', fecha: new Date('2025-01-04'), abogado: 'Elena Diaz', duracion: '3 horas', referenciaExpediente: 'R004', contraparte: 'Javier Castro', juez: 'Juez 4' },
 ]);
 
 const nuevaActividad = ref('');
 const nuevaFecha = ref<Date | null>(null);
 
-const agregarActividad = () => {
-  if (nuevaActividad.value && nuevaFecha.value) {
-    actividades.value.push({ descripcion: nuevaActividad.value, fecha: nuevaFecha.value });
-    nuevaActividad.value = '';
-    nuevaFecha.value = null; 
+const agregarNuevaActividad = () => {
+  if (nuevaActividadTipo.value && nuevaActividadUbicacion.value && nuevaActividadFecha.value && nuevaActividadAbogado.value && nuevaActividadDuracion.value && nuevaActividadReferenciaExpediente.value && nuevaActividadContraparte.value && nuevaActividadJuez.value) {
+    actividades.value.push({
+      tipo: nuevaActividadTipo.value,
+      ubicacion: nuevaActividadUbicacion.value,
+      fecha: nuevaActividadFecha.value,
+      abogado: nuevaActividadAbogado.value,
+      duracion: nuevaActividadDuracion.value,
+      referenciaExpediente: nuevaActividadReferenciaExpediente.value,
+      contraparte: nuevaActividadContraparte.value,
+      juez: nuevaActividadJuez.value
+    });
+    toast.add({ severity: 'success', summary: 'Actividad Agregada', detail: 'La actividad se ha agregado correctamente.', life: 3000 });
+    visibleActividadDialog.value = false;
+    // Limpiar los campos
+    nuevaActividadTipo.value = '';
+    nuevaActividadUbicacion.value = '';
+    nuevaActividadFecha.value = null;
+    nuevaActividadAbogado.value = '';
+    nuevaActividadDuracion.value = '';
+    nuevaActividadReferenciaExpediente.value = '';
+    nuevaActividadContraparte.value = '';
+    nuevaActividadJuez.value = '';
+  } else {
+    toast.add({ severity: 'error', summary: 'Campos Incompletos', detail: 'Por favor, rellene todos los campos.', life: 3000 });
   }
 };
 
@@ -237,35 +267,26 @@ const reactivarCaso = (caso: any) => {
     </TabView>
 
     <!-- Dialog de Actividades con fecha -->
-<Dialog v-model:visible="visibleDialog" modal header="Actividades del Caso" class="p-6 rounded-lg shadow-lg bg-white max-w-3xl w-full">
+    <Dialog v-model:visible="visibleDialog" modal header="Actividades del Caso" class="p-6 rounded-lg shadow-lg bg-white max-w-5xl w-full">
   <div class="flex flex-col space-y-6">
+    <!-- Botón para agregar nueva actividad -->
+    <Button label="Agregar Nueva Actividad" icon="pi pi-plus" class="p-button-success mb-4" @click="visibleActividadDialog = true" />
     
-    <!-- Última actividad realizada -->
-    <div v-if="actividades.length > 0" class="space-y-4">
-      <h3 class="font-bold text-lg">Última Actividad Realizada</h3>
-      <div class="p-3 bg-gray-50 rounded-lg shadow-sm text-gray-700">
-        {{ actividades[actividades.length - 1].descripcion }} - {{ actividades[actividades.length - 1].fecha.toLocaleDateString() }}
-      </div>
-    </div>
-
-    <!-- Otras actividades -->
-    <div v-if="actividades.length > 1" class="space-y-4">
-      <h3 class="font-bold text-lg">Otras Actividades</h3>
-      <div v-for="(actividad, index) in actividades.slice(0, actividades.length - 1)" :key="index" class="p-3 bg-gray-50 rounded-lg shadow-sm text-gray-700">
-        {{ actividad.descripcion }} - {{ actividad.fecha.toLocaleDateString() }}
-      </div>
-    </div>
-
-    <div v-else>
-      <p class="text-gray-500">No hay actividades registradas.</p>
-    </div>
-
-    <!-- Formulario para agregar nueva actividad -->
-    <div class="flex gap-4">
-      <input v-model="nuevaActividad" type="text" placeholder="Nueva actividad..." class="p-inputtext p-2 rounded-lg shadow-sm w-full max-w-md" />
-      <Calendar v-model="nuevaFecha" placeholder="Seleccionar fecha" class="p-inputtext p-2 rounded-lg shadow-sm" />
-      <Button label="Agregar" icon="pi pi-plus" class="p-button-success px-4 py-2 rounded-lg shadow-md" @click="agregarActividad" />
-    </div>
+    <!-- Tabla de actividades -->
+    <DataTable :value="actividades" class="p-datatable-gridlines w-full">
+      <Column field="tipo" header="Tipo" />
+      <Column field="ubicacion" header="Ubicación" />
+      <Column field="fecha" header="Fecha">
+        <template #body="slotProps">
+          {{ new Date(slotProps.data.fecha).toLocaleDateString() }}
+        </template>
+      </Column>
+      <Column field="abogado" header="Abogado Asignado" />
+      <Column field="duracion" header="Duración" />
+      <Column field="referenciaExpediente" header="Referencia Expediente" />
+      <Column field="contraparte" header="Contraparte" />
+      <Column field="juez" header="Juez Asignado" />
+    </DataTable>
   </div>
 </Dialog>
 
@@ -273,5 +294,59 @@ const reactivarCaso = (caso: any) => {
     <Dialog v-model:visible="visibleUploadDialog" modal header="Subir Reporte" class="p-6 rounded-lg shadow-lg">
       <FileUpload mode="advanced" accept=".pdf,.doc,.docx" :maxFileSize="1000000" chooseLabel="Seleccionar Archivo" uploadLabel="Subir" cancelLabel="Cancelar" />
     </Dialog>
+
+    <!-- Dialog de Nueva Actividad -->
+  <Dialog v-model:visible="visibleActividadDialog" modal header="Nueva Actividad" class="p-6 rounded-lg shadow-lg">
+    <div class="space-y-4">
+      <div class="flex gap-4">
+        <div class="flex-1">
+          <label for="tipo" class="block text-sm font-semibold">Tipo de Actividad</label>
+          <input v-model="nuevaActividadTipo" id="tipo" type="text" class="p-inputtext p-component w-full" />
+        </div>
+        <div class="flex-1">
+          <label for="ubicacion" class="block text-sm font-semibold">Ubicación</label>
+          <input v-model="nuevaActividadUbicacion" id="ubicacion" type="text" class="p-inputtext p-component w-full" />
+        </div>
+      </div>
+
+      <div class="flex gap-4">
+        <div class="flex-1">
+          <label for="fecha" class="block text-sm font-semibold">Fecha</label>
+          <Calendar v-model="nuevaActividadFecha" id="fecha" class="w-full" />
+        </div>
+        <div class="flex-1">
+          <label for="abogado" class="block text-sm font-semibold">Abogado Asignado</label>
+          <input v-model="nuevaActividadAbogado" id="abogado" type="text" class="p-inputtext p-component w-full" />
+        </div>
+      </div>
+
+      <div class="flex gap-4">
+        <div class="flex-1">
+          <label for="duracion" class="block text-sm font-semibold">Duración</label>
+          <input v-model="nuevaActividadDuracion" id="duracion" type="text" class="p-inputtext p-component w-full" />
+        </div>
+        <div class="flex-1">
+          <label for="referenciaExpediente" class="block text-sm font-semibold">Referencia Expediente</label>
+          <input v-model="nuevaActividadReferenciaExpediente" id="referenciaExpediente" type="text" class="p-inputtext p-component w-full" />
+        </div>
+      </div>
+
+      <div class="flex gap-4">
+        <div class="flex-1">
+          <label for="contraparte" class="block text-sm font-semibold">Contraparte</label>
+          <input v-model="nuevaActividadContraparte" id="contraparte" type="text" class="p-inputtext p-component w-full" />
+        </div>
+        <div class="flex-1">
+          <label for="juez" class="block text-sm font-semibold">Juez Asignado</label>
+          <input v-model="nuevaActividadJuez" id="juez" type="text" class="p-inputtext p-component w-full" />
+        </div>
+      </div>
+
+      <div class="flex justify-end gap-4">
+        <Button label="Cancelar" icon="pi pi-times" class="p-button-text" @click="visibleActividadDialog = false" />
+        <Button label="Agregar" icon="pi pi-check" class="p-button-success" @click="agregarNuevaActividad" />
+      </div>
+    </div>
+  </Dialog>
   </div>
 </template>
