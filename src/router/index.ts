@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router';
+import { useAuthStore } from '@/stores/auth'; // Asegúrate de tener este store implementado
 import DefaultLayout from '@/components/DefaultLayout.vue';
 import AuthLayout from '@/components/AuthLayout.vue';
 import HomeView from '@/views/HomeView.vue';
@@ -74,6 +75,29 @@ const routes: Array<RouteRecordRaw> = [
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes,
+});
+
+// Router guard: Todas las rutas que no comiencen con "/login" son protegidas.
+router.beforeEach(async (to, from, next) => {
+  // Si la ruta es pública (empieza con "/login"), permitimos el acceso.
+  if (to.path.startsWith('/login')) {
+    return next();
+  }
+
+  // Para las rutas protegidas, verificamos la sesión
+  const authStore = useAuthStore();
+
+  // Verificar o refrescar la sesión. Este método debería hacer una llamada al endpoint
+  // /api/me o similar para confirmar que el usuario sigue autenticado.
+  await authStore.verifySession();
+
+  // Si no está autenticado, redirigimos al login.
+  if (!authStore.isAuthenticated) {
+    return next({ name: 'Login' });
+  }
+
+  // Si está autenticado, se permite la navegación.
+  next();
 });
 
 export default router;

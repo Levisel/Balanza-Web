@@ -3,12 +3,14 @@
     useRoute
   }
   from "vue-router";
-  import { computed } from 'vue';
+  import { computed, onMounted, ref } from 'vue';
   import Avatar from "primevue/avatar";
   import { useDarkMode } from '@/components/ThemeSwitcher';
+  import type { IUsuario_Interno } from '@/RutaApi';
+  import { useAuthStore } from '@/stores/auth';
   const { isDarkTheme, toggleDarkMode } = useDarkMode();
   const route = useRoute();
-
+  const authStore = useAuthStore();
   const inicioClass = computed(() => [
     'select-none flex items-center cursor-pointer p-4 rounded text-surface-700 transition-colors',
     route.path === '/' ? 'text-green-400' : '',
@@ -50,6 +52,48 @@
     route.path === '/Configuracion' ? 'text-green-400' : '',
     isDarkTheme.value ? 'hover:bg-gray-700' : 'hover:bg-gray-100'
   ]);
+
+  // Estado para guardar los datos del usuario
+    const usuario = ref<IUsuario_Interno | null>(null);
+
+    onMounted(() => {
+      // Intentamos leer del LocalStorage
+      const stored = localStorage.getItem('usuario');
+      if (stored) {
+        usuario.value = JSON.parse(stored) as IUsuario_Interno;
+      }
+    });
+
+
+    import Menu from 'primevue/menu';
+    import Badge from 'primevue/badge';
+
+    const menu = ref();
+    const items = ref([
+        {
+            label: 'Perfil',
+            items: [
+                {
+                    label: 'Configuración',
+                    icon: 'pi pi-cog'
+                },
+                {
+                    label: 'Cerrar Sesión',
+                    icon: 'pi pi-sign-out',
+                    command: () => {
+                        authStore.logout();
+                        if(isDarkTheme.value){
+                          toggleDarkMode();
+                        }
+                },
+                }
+            ]
+        },
+    ]);
+    const toggle = (event: any) => {
+        menu.value.toggle(event);
+    };
+
   
 </script>
 
@@ -126,7 +170,7 @@
           </li>
         </ul>
         <!-- Sección: APPLICATION -->
-        <ul class="list-none p-4 m-0">
+        <ul v-if="authStore.user?.type == 'Administrador' " class="list-none p-4 m-0">
           <li>
             <div v-ripple v-styleclass="{ selector: '@next', toggleClass: 'closed' }"
             class="select-none p-4 flex items-center justify-between text-surface-500 cursor-pointer">
@@ -154,26 +198,47 @@
         </ul>
       </main>
       <!-- Pie de página con Avatar -->
-      <footer class="mt-auto">
-        <hr class="mb-4 mx-4 border-t border-surface-200" />
-        <a v-ripple class="m-4 flex items-center cursor-pointer p-3 gap-2 rounded text-surface-700 hover:bg-surface-100 transition-colors">
-          <Avatar image="https://primefaces.org/cdn/primevue/images/avatar/amyelsner.png"
-          shape="circle" />
-          <span class="select-none font-bold text-lg ml-2">
-            Barbara Diaz
-          </span>
-          <!-- Icono de modo oscuro/claro -->
-          <button
-            type="button"
-            class="ml-10 flex items-center justify-center w-10 h-10 
-                  rounded-full transition-colors duration-300 
-                  text-yellow-500 hover:yellow-500 hover:bg-gray-700"
-            @click="toggleDarkMode"
-          >
-            <i :class="['pi', { 'pi-moon': isDarkTheme, 'pi-sun': !isDarkTheme }]"></i>
-          </button>
-        </a>
-      </footer>
+<footer class="mt-auto p-4">
+  <hr class="mb-5 border-t border-gray-300" />
+  <div class="flex items-center justify-between mb-2">
+    <!-- Grupo de avatar y nombre -->
+    <div class="flex items-center gap-4">
+      <button v-ripple class="relative overflow-hidden w-full md:w-60 border-0 bg-transparent flex items-start p-2 pl-4 hover:bg-surface-100 dark:hover:bg-surface-100 rounded-none cursor-pointer transition-colors duration-200" @click="toggle" aria-haspopup="true" aria-controls="overlay_menu">
+                    <Avatar image="https://primefaces.org/cdn/primevue/images/avatar/amyelsner.png" class="mr-3" shape="circle" />
+                    <span class="inline-flex flex-col items-start">
+                        <span class="font-bold">
+                            {{ authStore.user?.name }}
+                        </span>
+                        <span class="text-sm">
+                            {{ authStore.user?.type }}
+                        </span>
+                    </span>
+        </button>
+
+        <Menu ref="menu" :model="items" class="select-none w-full md:w-30"  :popup="true" style="caret-color: transparent;">
+      <template #item="{ item, props }">
+          <a v-ripple class="flex items-center" v-bind="props.action">
+              <span :class="item.icon" />
+              <span>{{ item.label }}</span>
+              <Badge v-if="item.badge" class="ml-auto" :value="item.badge" />
+              <span v-if="item.shortcut" class="ml-auto border border-surface rounded bg-emphasis text-muted-color text-xs p-1">{{ item.shortcut }}</span>
+          </a>
+      </template>
+    </Menu> 
+    </div>
+
+    
+    <!-- Botón de modo oscuro/claro -->
+    <button
+      type="button"
+      class="flex items-center justify-center w-10 h-10 rounded-full transition-colors duration-300 text-yellow-500 hover:bg-gray-700"
+      @click="toggleDarkMode"
+    >
+      <i :class="['pi', { 'pi-moon': isDarkTheme, 'pi-sun': !isDarkTheme }]"></i>
+    </button>
+  </div>
+</footer>
+
     </div>
   </div>
 </template>
@@ -196,8 +261,7 @@
   }
   .pi-chevron-down{
     font-size: 1.2rem;
-  }
-  
+  }  
  
   </style>
   

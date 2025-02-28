@@ -12,6 +12,9 @@ import StyleClass from 'primevue/styleclass';
 import ToastService from 'primevue/toastservice';
 import ConfirmationService from 'primevue/confirmationservice';
 import AnimateOnScroll from 'primevue/animateonscroll';
+import axios from 'axios';
+
+axios.defaults.withCredentials = true;
 
 const app = createApp(App)
 
@@ -32,5 +35,6 @@ app.use(ConfirmationService);
 app.directive('ripple', Ripple);
 app.directive('styleclass', StyleClass); 
 app.directive('animateonscroll', AnimateOnScroll);
+
 
 app.mount('#app')

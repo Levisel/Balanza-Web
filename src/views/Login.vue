@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import FloatLabel from 'primevue/floatlabel';
 import { Form } from '@primevue/forms';
 import InputText from 'primevue/inputtext';
@@ -7,14 +7,18 @@ import Password from 'primevue/password';
 import Button from 'primevue/button';
 import { zodResolver } from '@primevue/forms/resolvers/zod';
 import { useToast } from 'primevue/usetoast';
+import Toast from 'primevue/toast';
 import { z } from 'zod';
+import axios from 'axios';
+import { API } from '@/RutaApi';
+import router from '@/router';
+import type { IUsuario_Interno } from '@/RutaApi';
 
-// Configuración del toast y del formulario con Zod
 const toast = useToast();
-const initialValues = ref({
-  username: '',
-  email: ''
-});
+
+const email = ref<string>('');
+const password = ref<string>('');
+const isLoginDisabled = computed(() => !email.value || !password.value);
 
 const resolver = ref(
   zodResolver(
@@ -28,15 +32,77 @@ const resolver = ref(
   )
 );
 
-const onFormSubmit = ({ valid }: { valid: boolean }) => {
-  if (valid) {
+const onFormSubmit = async ({ valid }: { valid: boolean }) => {
+  // Si el formulario no es válido, mostramos un error y salimos.
+  if (!valid) {
     toast.add({
-      severity: 'success',
-      summary: 'Form is submitted.',
+      severity: 'error',
+      summary: 'Campos incompletos',
+      detail: 'Por favor completa los campos requeridos.',
       life: 3000
     });
+    return;
+  }
+
+  try {
+    // Llamada al endpoint de login
+    const response = await axios.post<IUsuario_Interno>(`${API}/login`, {
+      Interno_Correo: email.value,
+      Interno_Password: password.value
+    });
+
+    // Suponiendo que la API retorna un objeto con datos del usuario o un indicador de éxito.
+    if (response.data) {
+      toast.add({
+        severity: 'success',
+        summary: 'Inicio de sesión exitoso',
+        detail: `Bienvenido, ${response.data.Interno_Nombre || 'Usuario'}`,
+        life: 3000
+      });
+      // Aquí podrías redirigir a otra ruta, guardar token, etc.
+      // Ejemplo:
+        router.push('/');
+    } else {
+      // Si la API no devolvió lo esperado, asumimos credenciales inválidas
+      toast.add({
+        severity: 'warn',
+        summary: 'Datos incorrectos',
+        detail: 'El correo o la contraseña no coinciden.',
+        life: 3000
+      });
+    }
+  } catch (error: any) {
+    // Manejo de errores de Axios
+    if (error.response) {
+      // Error con respuesta del servidor
+      if (error.response.status === 400 || error.response.status === 401) {
+        toast.add({
+          severity: 'error',
+          summary: 'Credenciales inválidas',
+          detail: 'El correo o la contraseña son incorrectos.',
+          life: 3000
+        });
+      } else {
+        // Otro error del servidor
+        toast.add({
+          severity: 'error',
+          summary: 'Error de servidor',
+          detail: 'Ha ocurrido un error inesperado. Intenta más tarde.',
+          life: 3000
+        });
+      }
+    } else {
+      // Error sin respuesta del servidor (red, timeout, etc.)
+      toast.add({
+        severity: 'error',
+        summary: 'Error de conexión',
+        detail: 'No se pudo conectar con el servidor.',
+        life: 3000
+      });
+    }
   }
 };
+
 </script>
 
 <template>
@@ -59,21 +125,22 @@ const onFormSubmit = ({ valid }: { valid: boolean }) => {
        </div>
       
       <!-- Formulario -->
-      <Form :resolver="resolver" @submit="onFormSubmit" v-slot="{ field }" class="flex flex-col gap-11 w-full">
+      <Form :resolver="resolver" @submit="onFormSubmit" class="flex flex-col gap-11 w-full">
         <FloatLabel name="email">
-          <InputText id="email" type="email" size="large" class="w-full"/>
+          <InputText id="email" type="email" size="large" class="w-full" v-model="email"/>
           <label for="email">Correo Electrónico</label>
         </FloatLabel>
         <FloatLabel>
-          <Password id="over_label" type="text" :feedback="false" toggleMask fluid size="large" />
-          <label for="over_label">Contraseña</label>
+          <Password id="password" type="text" :feedback="false" toggleMask fluid size="large" v-model="password"/>
+          <label for="password">Contraseña</label>
         </FloatLabel>
         <div class="-mt-6">
           <router-link to="/login/forgot-password" draggable="false" v-ripple>
             <span class="font-medium text-sm text-blue-800 hover:text-blue-400">¿Haz olvidado tu contraseña?</span>
           </router-link>
         </div>
-    <Button type="submit" class="mt-3" severity="primary" label="Iniciar Sesión" />
+    <Toast />
+    <Button type="submit" class="mt-3" severity="primary" label="Iniciar Sesión" :disabled="isLoginDisabled"/>
     
 </Form>
       
