@@ -1,17 +1,18 @@
 // src/stores/auth.ts
-import  router  from '@/router';
-import { defineStore } from 'pinia';
-import { API } from '@/RutaApi';
-import axios from 'axios';
+import router from "@/router";
+import { defineStore } from "pinia";
+import { API } from "@/ApiRoute";
+import axios from "axios";
 
 interface User {
   id: string;
   name: string;
   email: string;
   type: string;
+  area: string;
 }
 
-export const useAuthStore = defineStore('auth', {
+export const useAuthStore = defineStore("auth", {
   state: () => ({
     user: null as User | null,
   }),
@@ -31,8 +32,7 @@ export const useAuthStore = defineStore('auth', {
     async logout() {
       this.user = null;
       const response = await axios.post(`${API}/logout`);
-      if (response.status === 200)
-        router.push({ name: 'Login' });
+      if (response.status === 200) router.push({ name: "Login" });
     },
   },
 });

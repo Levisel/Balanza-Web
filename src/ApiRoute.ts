@@ -7,5 +7,7 @@ export interface IUsuario_Interno {
     Interno_Correo: string;
     Interno_Password: string;
     Interno_Tipo: string;
+    Interno_Area: string;
+    Interno_Telefono: string;
 }
 

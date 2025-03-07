@@ -4,7 +4,7 @@
 
 <template>
     <div>
-        <h1>Reportes de Caso</h1>
+        <h1>Trabajo Social</h1>
     </div>
 </template>
 
