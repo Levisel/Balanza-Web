@@ -1,5 +1,6 @@
 <script setup>
 import { ref } from "vue";
+import Dialog from "primevue/dialog";
 import InputNumber from "primevue/inputnumber";
 import InputMask from "primevue/inputmask";
 import InputText from "primevue/inputtext";
@@ -14,6 +15,8 @@ import Tab from "primevue/tab";
 import TabPanels from "primevue/tabpanels";
 import TabPanel from "primevue/tabpanel";
 import FileUpload from "primevue/fileupload";
+
+const visible = ref(false);
 
 const discapacidad = ref(false);
 const nombres = ref("");
@@ -191,10 +194,51 @@ const derivadoPorOptions = ref([
 </script>
 
 <template>
+  <!--MENU-->
+  <div class="card">
+    <div class="flex items-center gap-2">
+      <InputText
+        placeholder="Buscar por Cédula o Pasaporte"
+        type="text"
+        class="w-full sm:w-70"
+      />
+      <Button icon="pi pi-search" class="p-button-rounded" />
+
+      <Button
+        @click="visible = true"
+        label="Ayuda"
+        icon="pi pi-question-circle"
+        severity="help"
+        class="ml-200"
+      />
+      <Dialog
+        v-model:visible="visible"
+        modal
+        header="Solicitar Editar Caso"
+        :style="{ width: '25rem' }"
+      >
+
+        <div class="flex items-center gap-4 mb-4">
+          <label for="username" class="w-24">Código de autorización</label>
+          <InputText id="username" class="flex-auto" autocomplete="off" />
+        </div>
+        <div class="flex justify-end gap-2">
+          <Button
+            type="button"
+            label="Cancelar"
+            severity="secondary"
+            @click="visible = false"
+          ></Button>
+          <Button type="button" label="Aceptar" @click="visible = false"></Button>
+        </div>
+      </Dialog>
+    </div>
+  </div>
+
   <!--FORMULARIO-->
-  <div class="p-6">
+  <div class="card p-6">
     <!-- Datos Personales -->
-    <div class="grid grid-cols-2 gap-4 border-b pb-4">
+    <div class="grid grid-cols-2 gap-4 pb-4">
       <div class="mb-8">
         <h3 class="text-2xl font-semibold mb-8">Datos Personales</h3>
         <div class="input-spacing grid grid-cols-2 gap-4 mt-4">
@@ -396,8 +440,9 @@ const derivadoPorOptions = ref([
         </div>
       </div>
     </div>
+    <div class="border-b -mt-2 mb-5"></div>
     <!-- Datos Demográficos y Contacto de Referencia -->
-    <div class="grid grid-cols-2 gap-4 border-b py-4 mb-3">
+    <div class="grid grid-cols-2 gap-4 py-4 mb-3">
       <!-- Datos Demográficos -->
       <div>
         <h3 class="text-2xl font-semibold mb-8">Datos Demográficos</h3>
