@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from "vue";
-import { type IUsuario_Interno } from "@/ApiRoute";
+import { type Internal_User } from "@/ApiRoute";
 import { useToast } from "primevue/usetoast";
 import { API } from "@/ApiRoute";
 
@@ -13,15 +13,15 @@ import axios from "axios";
 
 const toast = useToast();
 
-const usuarioInterno = ref<IUsuario_Interno>({
-  Interno_Cedula: "",
-  Interno_Nombre: "",
-  Interno_Apellido: "",
-  Interno_Correo: "",
-  Interno_Password: "",
-  Interno_Tipo: "",
-  Interno_Area: "",
-  Interno_Telefono: "",
+const internalUser = ref<Internal_User>({
+  Internal_ID: "",
+  Internal_Name: "",
+  Internal_LastName: "",
+  Internal_Email: "",
+  Internal_Password: "",
+  Internal_Type: "",
+  Internal_Area: "",
+  Internal_Phone: "",
 });
 
 const tipos = ref([
@@ -43,15 +43,15 @@ const areas = ref([
 const onFormSubmit = async () => {
   // Make the API call
   try {
-    const response = await axios.post<IUsuario_Interno>(`${API}/register`, {
-      Interno_Cedula: usuarioInterno.value.Interno_Cedula,
-      Interno_Nombre: usuarioInterno.value.Interno_Nombre,
-      Interno_Apellido: usuarioInterno.value.Interno_Apellido,
-      Interno_Correo: usuarioInterno.value.Interno_Correo,
-      Interno_Password: usuarioInterno.value.Interno_Password,
-      Interno_Tipo: usuarioInterno.value.Interno_Tipo,
-      Interno_Area: usuarioInterno.value.Interno_Area,
-      Interno_Telefono: usuarioInterno.value.Interno_Telefono.replace(
+    const response = await axios.post<Internal_User>(`${API}/register`, {
+      Internal_ID: internalUser.value.Internal_ID,
+      Internal_Name: internalUser.value.Internal_Name,
+      Internal_LastName: internalUser.value.Internal_LastName,
+      Internal_Email: internalUser.value.Internal_Email,
+      Internal_Password: internalUser.value.Internal_Password,
+      Internal_Type: internalUser.value.Internal_Type,
+      Internal_Area: internalUser.value.Internal_Area,
+      Internal_Phone: internalUser.value.Internal_Phone.replace(
         /\D/g,
         ""
       ),
@@ -64,15 +64,15 @@ const onFormSubmit = async () => {
         detail: "El usuario ha sido creado exitosamente.",
         life: 3000,
       });
-      usuarioInterno.value = {
-        Interno_Cedula: "",
-        Interno_Nombre: "",
-        Interno_Apellido: "",
-        Interno_Correo: "",
-        Interno_Password: "",
-        Interno_Tipo: "",
-        Interno_Area: "",
-        Interno_Telefono: "",
+      internalUser.value = {
+        Internal_ID: "",
+        Internal_Name: "",
+        Internal_LastName: "",
+        Internal_Email: "",
+        Internal_Password: "",
+        Internal_Type: "",
+        Internal_Area: "",
+        Internal_Phone: "",
       };
     }
   } catch (error: any) {
@@ -218,7 +218,7 @@ const createPassword = () => {
   const password =
     words[Math.floor(Math.random() * words.length)] +
     Math.floor(Math.random() * 100);
-  usuarioInterno.value.Interno_Password = password;
+  internalUser.value.Internal_Password = password;
 };
 </script>
 
@@ -236,7 +236,7 @@ const createPassword = () => {
             <FloatLabel variant="on" class="w-full md:w-80">
               <InputText
                 id="idNumber"
-                v-model="usuarioInterno.Interno_Cedula"
+                v-model="internalUser.Internal_ID"
                 size="large"
                 class="w-full"
               />
@@ -250,7 +250,7 @@ const createPassword = () => {
             <FloatLabel variant="on" class="w-full md:w-80">
               <InputText
                 id="name"
-                v-model="usuarioInterno.Interno_Nombre"
+                v-model="internalUser.Internal_Name"
                 size="large"
                 class="w-full"
               />
@@ -261,7 +261,7 @@ const createPassword = () => {
             <FloatLabel variant="on" class="w-full md:w-80">
               <InputText
                 id="lastName"
-                v-model="usuarioInterno.Interno_Apellido"
+                v-model="internalUser.Internal_LastName"
                 size="large"
                 class="w-full"
               />
@@ -275,7 +275,7 @@ const createPassword = () => {
             <FloatLabel variant="on" class="w-full">
               <InputMask
                 id="telefono"
-                v-model="usuarioInterno.Interno_Telefono"
+                v-model="internalUser.Internal_Phone"
                 size="large"
                 class="w-full md:w-80"
                 mask="(999)-999-9999"
@@ -285,7 +285,7 @@ const createPassword = () => {
             <FloatLabel variant="on" class="w-full md:w-80">
               <Dropdown
                 id="userArea"
-                v-model="usuarioInterno.Interno_Area"
+                v-model="internalUser.Internal_Area"
                 :options="areas"
                 optionLabel="label"
                 optionValue="value"
@@ -309,7 +309,7 @@ const createPassword = () => {
             <FloatLabel variant="on" class="w-full md:w-80">
               <Dropdown
                 id="userType"
-                v-model="usuarioInterno.Interno_Tipo"
+                v-model="internalUser.Internal_Type"
                 :options="tipos"
                 optionLabel="label"
                 optionValue="value"
@@ -326,7 +326,7 @@ const createPassword = () => {
             <FloatLabel variant="on" class="w-full md:w-80">
               <InputText
                 id="email"
-                v-model="usuarioInterno.Interno_Correo"
+                v-model="internalUser.Internal_Email"
                 size="large"
                 class="w-full"
               />
@@ -345,7 +345,7 @@ const createPassword = () => {
                 toggleMask
                 fluid
                 size="large"
-                v-model="usuarioInterno.Interno_Password"
+                v-model="internalUser.Internal_Password"
                 class="w-full"
               />
               <label for="password"

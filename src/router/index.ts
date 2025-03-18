@@ -20,6 +20,7 @@ import HomeView from "@/views/SideBar/HomeView.vue";
 //-- Admin
 import NewUser from "@/views/SideBar/Admin/NewUser.vue";
 import CaseAssign from "@/views/SideBar/Admin/CaseAssign.vue";
+import CaseReview from "@/views/SideBar/Admin/CaseReview.vue";
 import Configuration from "@/views/SideBar/Admin/Configuration.vue";
 
 //-- Admin -> (Social Work)
@@ -80,6 +81,11 @@ const routes: Array<RouteRecordRaw> = [
         path: "NuevoUsuario",
         name: "NewUser",
         component: NewUser,
+      },
+      {
+        path: "RevisionDeCasos",
+        name: "CaseReview",
+        component: CaseReview,
       },
       {
         path: "AsignacionDeCasos",

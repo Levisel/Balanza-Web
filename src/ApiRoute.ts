@@ -1,13 +1,13 @@
 export const API = 'http://localhost:3000' //Cambiar por la IP de la máquina donde se ejecute el backend
 
-export interface IUsuario_Interno {
-    Interno_Cedula: string;
-    Interno_Nombre: string;
-    Interno_Apellido: string;
-    Interno_Correo: string;
-    Interno_Password: string;
-    Interno_Tipo: string;
-    Interno_Area: string;
-    Interno_Telefono: string;
+export interface Internal_User {
+    Internal_ID: string;
+    Internal_Name: string;
+    Internal_LastName: string;
+    Internal_Email: string;
+    Internal_Password: string;
+    Internal_Type: string;
+    Internal_Area: string;
+    Internal_Phone: string;
 }
 

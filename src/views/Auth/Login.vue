@@ -11,7 +11,7 @@ import Toast from "primevue/toast";
 import { z } from "zod";
 import axios from "axios";
 import { API } from "@/ApiRoute";
-import type { IUsuario_Interno } from "@/ApiRoute";
+import type {Internal_User } from "@/ApiRoute";
 import router from "@/router";
 
 const toast = useToast();
@@ -46,9 +46,9 @@ const onFormSubmit = async ({ valid }: { valid: boolean }) => {
 
   try {
     // Llamada al endpoint de login
-    const response = await axios.post<IUsuario_Interno>(`${API}/login`, {
-      Interno_Correo: email.value,
-      Interno_Password: password.value,
+    const response = await axios.post<Internal_User>(`${API}/login`, {
+      Internal_Email: email.value,
+      Internal_Password: password.value,
     });
 
     // Suponiendo que la API retorna un objeto con datos del usuario o un indicador de éxito.

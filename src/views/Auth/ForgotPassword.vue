@@ -106,7 +106,7 @@ async function submitEmail() {
 }
 
 async function resendEmail() {
-  if (codeResent.value < 2) {
+  if (codeResent.value < 3) {
     codeResent.value++;
     await submitEmail();
   } else {

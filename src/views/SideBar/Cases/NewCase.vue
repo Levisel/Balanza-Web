@@ -1,5 +1,7 @@
 <script setup>
 import { ref } from "vue";
+import { useAuthStore } from "@/stores/auth";
+
 import Dialog from "primevue/dialog";
 import InputNumber from "primevue/inputnumber";
 import InputMask from "primevue/inputmask";
@@ -15,7 +17,10 @@ import Tab from "primevue/tab";
 import TabPanels from "primevue/tabpanels";
 import TabPanel from "primevue/tabpanel";
 import FileUpload from "primevue/fileupload";
+import Paginator from 'primevue/paginator';
 
+
+const authStore = useAuthStore();
 const visible = ref(false);
 
 const discapacidad = ref(false);
@@ -27,8 +32,8 @@ const sexoOptions = ref([
   { name: "Femenino", value: "Femenino" },
   { name: "Otro", value: "Otro" },
 ]);
-
-const fechaNacimiento = ref("");
+const password = ref("");
+const fechaNacimiento = ref(null);
 const etnia = ref(null);
 const etniaOptions = ref([
   { name: "Mestizo", value: "Mestizo" },
@@ -166,10 +171,13 @@ const idOptions = ref([
 ]);
 const idNumber = ref("");
 
+  const currentDateTime = new Date();
+  const date = currentDateTime.toDateString();
+
 const numDoc = ref("");
 const tipoCliente = ref("");
-const fecha = ref(null);
-const consultorio = ref(null);
+const fecha = ref(date);
+const consultorio = ref("Consultorio Jurídico \"PUCE\", Sede Quito");
 const materia = ref(null);
 const tema = ref(null);
 const abogado = ref(null);
@@ -187,9 +195,9 @@ const materiaOptions = ref([{ name: "Materia 1" }, { name: "Materia 2" }]);
 const temaOptions = ref([{ name: "Tema 1" }, { name: "Tema 2" }]);
 const abogadoOptions = ref([{ name: "Abogado 1" }, { name: "Abogado 2" }]);
 const servicioOptions = ref([{ name: "Servicio 1" }, { name: "Servicio 2" }]);
-const derivadoPorOptions = ref([
-  { name: "Referencia A" },
-  { name: "Referencia B" },
+const servicioPorOptions = ref([
+  { name: "Asesorias" },
+  { name: "Patrocinio" },
 ]);
 </script>
 
@@ -220,7 +228,16 @@ const derivadoPorOptions = ref([
 
         <div class="flex items-center gap-4 mb-4">
           <label for="username" class="w-24">Código de autorización</label>
-          <InputText id="username" class="flex-auto" autocomplete="off" />
+          <Password
+                id="password"
+                type="text"
+                :feedback="false"
+                toggleMask
+                fluid
+                size="large"
+                v-model="password"
+                class="w-full"
+              />
         </div>
         <div class="flex justify-end gap-2">
           <Button
@@ -313,12 +330,12 @@ const derivadoPorOptions = ref([
           <!-- Fecha de Nacimiento -->
           <FloatLabel variant="on" class="w-full">
             <DatePicker
+              id="fechaNacimiento"
               v-model="fechaNacimiento"
-              inputId="fechaNacimiento"
+              dateFormat="dd/mm/yy"
               showIcon
-              iconDisplay="input"
-              size="large"
               class="w-full"
+              size="large"
             />
             <label for="fechaNacimiento">Fecha de Nacimiento</label>
           </FloatLabel>
@@ -581,15 +598,22 @@ const derivadoPorOptions = ref([
   <div class="card">
     <Tabs value="0">
       <TabList>
-        <Tab value="0">Asesorias</Tab>
-        <Tab value="1">Patrocinios</Tab>
+        <Tab value="0">Asesorias
+        </Tab>
+        <Tab value="1" v-if="authStore.user?.type == 'Administrador'">Patrocinios</Tab>
+        <Button icon="pi pi-file-plus" v-tooltip.bottom="'Nueva Ficha'" rounded aria-label="Filter" size="large" class="ml-216"/>
+        <Button icon="pi pi-file-edit" v-tooltip.bottom="'Editar Ficha'" rounded aria-label="Filter" size="large" class="ml-2" severity="info"/>
+        <Button icon="pi pi-trash" v-tooltip.bottom="'Borrar Ficha'" rounded aria-label="Filter" size="large" class="ml-2" severity="danger"/>
+        <Button icon="pi pi-file-pdf" v-tooltip.bottom="'Exportar PDF'" rounded aria-label="Filter" size="large" class="ml-2" severity="contrast"/>
+
       </TabList>
       <TabPanels>
+
         <TabPanel value="0">
           <div class="p-6">
             <div class="grid grid-cols-3 gap-4">
               <!-- Número de Doc. Asignado -->
-              <FloatLabel variant="on" class="w-full">
+              <FloatLabel variant="on" class="w-full" v-if="authStore.user?.type == 'Administrador'">
                 <InputText
                   id="numDoc"
                   v-model="numDoc"
@@ -612,9 +636,11 @@ const derivadoPorOptions = ref([
 
               <!-- Fecha -->
               <FloatLabel variant="on" class="w-full">
-                <Calendar
+                <DatePicker
                   id="fecha"
                   v-model="fecha"
+                  :disabled="true"
+                  dateFormat="dd/mm/yy"
                   showIcon
                   class="w-full"
                   size="large"
@@ -624,10 +650,10 @@ const derivadoPorOptions = ref([
 
               <!-- Consultorio -->
               <FloatLabel variant="on" class="w-full">
-                <Dropdown
+                <InputText
                   v-model="consultorio"
-                  :options="consultorioOptions"
                   optionLabel="name"
+                  :disabled="true"
                   class="w-full"
                   size="large"
                 />
@@ -693,6 +719,7 @@ const derivadoPorOptions = ref([
                 />
                 <label for="derivadoPor">Derivado por</label>
               </FloatLabel>
+
             </div>
 
             <!-- Observación y Evidencias -->
@@ -883,8 +910,12 @@ const derivadoPorOptions = ref([
               </div>
             </div>
           </div>
+          
+          <Paginator :rows="10" :totalRecords="120" class="mr-20"></Paginator>
+
         </TabPanel>
-        <TabPanel value="1">
+        <TabPanel value="1" 
+        >
           <p class="m-0">
             Sed ut perspiciatis unde omnis iste natus error sit voluptatem
             accusantium doloremque laudantium, totam rem aperiam, eaque ipsa
@@ -899,7 +930,7 @@ const derivadoPorOptions = ref([
     </Tabs>
   </div>
 
-  <div class="flex justify-center mt-8 mr-40">
+  <div class="flex justify-center mt-8 mr-25">
     <Button label="Crear Caso" icon="pi pi-check" iconPos="right" />
   </div>
 </template>

@@ -84,6 +84,11 @@ const newUserClass = computed(() => [
   route.path === "/NuevoUsuario" ? "text-green-400" : "",
   isDarkTheme.value ? "hover:bg-gray-700" : "hover:bg-gray-100",
 ]);
+const caseReviewClass = computed(() => [
+  "select-none flex items-center cursor-pointer p-4 rounded text-surface-700 transition-colors",
+  route.path === "/RevisionDeCasos" ? "text-green-400" : "",
+  isDarkTheme.value ? "hover:bg-gray-700" : "hover:bg-gray-100",
+]);
 const caseAssignClass = computed(() => [
   "select-none flex items-center cursor-pointer p-4 rounded text-surface-700 transition-colors",
   route.path === "/AsignacionDeCasos" ? "text-green-400" : "",
@@ -260,6 +265,18 @@ const socialWorkScheduleClass = computed(() => [
                 >
                   <i class="pi pi-user-plus mr-2"></i>
                   <span class="font-medium text-lg">Nuevo Usuario</span>
+                </router-link>
+              </li>
+              <!-- Sección: Revisar Casos -->
+              <li>
+                <router-link
+                  to="/RevisionDeCasos"
+                  draggable="false"
+                  v-ripple
+                  :class="caseReviewClass"
+                >
+                  <i class="pi pi-address-book mr-2"></i>
+                  <span class="font-medium text-lg">Revisar Casos</span>
                 </router-link>
               </li>
               <!-- Sección: Asignar Casos -->
