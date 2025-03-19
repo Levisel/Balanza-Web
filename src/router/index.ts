@@ -18,10 +18,13 @@ import ForgotPassword from "@/views/Auth/ForgotPassword.vue";
 import HomeView from "@/views/SideBar/HomeView.vue";
 
 //-- Admin
-import NewUser from "@/views/SideBar/Admin/NewUser.vue";
 import CaseAssign from "@/views/SideBar/Admin/CaseAssign.vue";
 import CaseReview from "@/views/SideBar/Admin/CaseReview.vue";
 import Configuration from "@/views/SideBar/Admin/Configuration.vue";
+
+//-- Admin -> (Users)
+import UserView from "@/views/SideBar/Admin/Users/UserView.vue";
+import NewUser from "@/views/SideBar/Admin/Users/NewUser.vue";
 
 //-- Admin -> (Social Work)
 import SocialWorkCases from "@/views/SideBar/Admin/SocialWork/SocialWorkCases.vue";
@@ -78,11 +81,6 @@ const routes: Array<RouteRecordRaw> = [
       },
       // Admin views
       {
-        path: "NuevoUsuario",
-        name: "NewUser",
-        component: NewUser,
-      },
-      {
         path: "RevisionDeCasos",
         name: "CaseReview",
         component: CaseReview,
@@ -96,6 +94,17 @@ const routes: Array<RouteRecordRaw> = [
         path: "Configuracion",
         name: "Configuration",
         component: Configuration,
+      },
+      // Admin -> Users views
+      {
+        path: "Usuarios/:id?",
+        name: "UserView",
+        component: UserView,
+      },
+      {
+        path: "NuevoUsuario",
+        name: "NewUser",
+        component: NewUser,
       },
       // Admin -> Social Work views
       {

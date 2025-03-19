@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from "vue";
+import { ref, computed, watch } from "vue";
 import { Form } from "@primevue/forms";
 import { zodResolver } from "@primevue/forms/resolvers/zod";
 import { useToast } from "primevue/usetoast";
@@ -20,12 +20,13 @@ const loading = ref(false);
 const email = ref<string>("");
 const code = ref<string>("");
 const newPassword = ref<string>("");
+const repeatPassword = ref<string>("");
 const toast = useToast();
 const codeResent = ref<number>(0);
 
 const isEmailDisabled = computed(() => !email.value);
 const isCodeDisabled = computed(() => !code.value);
-const isNewPasswordDisabled = computed(() => !newPassword.value);
+const isNewPasswordDisabled = ref(true);
 
 const instructionMessage = computed(() => {
   if (loading.value) return "⏳ Cargando...\nPor favor, espera un momento.";
@@ -147,13 +148,38 @@ async function submitCode() {
   }
 }
 
+  const checkPasswords = (shouldShowToast: boolean = true): boolean => {
+      if (newPassword.value !== repeatPassword.value) {
+        if (shouldShowToast) {
+          toast.add({
+            severity: 'warn',
+            summary: 'Contraseñas no coinciden',
+            detail: 'Las contraseñas ingresadas no coinciden.',
+            life: 5000, // Duración del Toast en milisegundos
+          });
+        }
+        return false;
+      } else {
+        isNewPasswordDisabled.value = false;
+        return true;
+      }
+    };
+
+
+
+
+
+
 async function submitResetPassword() {
+  if (!checkPasswords()) {
+      return; 
+    }
   loading.value = false;
   try {
     await axios.post(`${API}/reset-password`, {
       email: email.value,
       code: code.value,
-      newPassword: newPassword.value,
+      newPassword: repeatPassword.value,
     });
     step.value = 4;
     toast.add({
@@ -292,7 +318,7 @@ async function submitResetPassword() {
         @submit="submitResetPassword"
         class="flex flex-col gap-11"
       >
-        <div class="w-full flex flex-col items-center">
+        <div class="w-full flex flex-col items-center gap-8">
           <FloatLabel>
             <Password v-model="newPassword" size="large" toggleMask>
               <template #header>
@@ -312,7 +338,29 @@ async function submitResetPassword() {
             </Password>
             <label for="newPassword">Nueva Contraseña</label>
           </FloatLabel>
+          <FloatLabel>
+            <Password v-model="repeatPassword" size="large" toggleMask @blur="() => checkPasswords()">
+              <template #header>
+                <div class="font-semibold text-xm mb-4">
+                  Escribe tu contraseña
+                </div>
+              </template>
+              <template #footer>
+                <Divider />
+                <ul class="pl-2 my-0 leading-normal">
+                  <li>Al menos una minúscula</li>
+                  <li>Al menos una mayúscula</li>
+                  <li>Al menos un número</li>
+                  <li>Mínimo 8 caracteres</li>
+                </ul>
+              </template>
+            </Password>
+            <label for="repeatPassword">Confirmar Contraseña</label>
+          </FloatLabel>
         </div>
+
+
+
         <div class="grid grid-cols-2 gap-4 mt-1">
           <Button
             @click="router.push('/login')"

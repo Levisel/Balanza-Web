@@ -79,11 +79,6 @@ const fileReportClass = computed(() => [
 ]);
 
 //Admin Views
-const newUserClass = computed(() => [
-  "select-none flex items-center cursor-pointer p-4 rounded text-surface-700 transition-colors",
-  route.path === "/NuevoUsuario" ? "text-green-400" : "",
-  isDarkTheme.value ? "hover:bg-gray-700" : "hover:bg-gray-100",
-]);
 const caseReviewClass = computed(() => [
   "select-none flex items-center cursor-pointer p-4 rounded text-surface-700 transition-colors",
   route.path === "/RevisionDeCasos" ? "text-green-400" : "",
@@ -99,6 +94,16 @@ const configurationClass = computed(() => [
   route.path === "/Configuration" ? "text-green-400" : "",
   isDarkTheme.value ? "hover:bg-gray-700" : "hover:bg-gray-100",
 ]);
+
+//User Views
+const userClass = computed(() => [
+  "select-none flex items-center cursor-pointer p-4 rounded text-surface-700 transition-colors",
+  route.path === "/Usuarios" || route.path === "/NuevoUsuario" ? "text-green-400" : "",
+  isDarkTheme.value ? "hover:bg-gray-700" : "hover:bg-gray-100",
+]);
+
+
+
 
 //Social Work Views
 const socialWorkCasesClass = computed(() => [
@@ -258,13 +263,13 @@ const socialWorkScheduleClass = computed(() => [
               <!-- Sección: Nuevo Usuario -->
               <li>
                 <router-link
-                  to="/NuevoUsuario"
+                  to="/Usuarios"
                   draggable="false"
                   v-ripple
-                  :class="newUserClass"
+                  :class="userClass"
                 >
-                  <i class="pi pi-user-plus mr-2"></i>
-                  <span class="font-medium text-lg">Nuevo Usuario</span>
+                  <i class="pi pi-id-card mr-2"></i>
+                  <span class="font-medium text-lg">Gestión de Usuarios</span>
                 </router-link>
               </li>
               <!-- Sección: Revisar Casos -->

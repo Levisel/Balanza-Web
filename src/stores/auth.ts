@@ -11,6 +11,7 @@ interface User {
   type: string;
   area: string;
   phone: string;
+  status: string;
 }
 
 export const useAuthStore = defineStore("auth", {

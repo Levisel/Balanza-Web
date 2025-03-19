@@ -9,5 +9,6 @@ export interface Internal_User {
     Internal_Type: string;
     Internal_Area: string;
     Internal_Phone: string;
+    Internal_Status: string;
 }
 
