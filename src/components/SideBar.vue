@@ -15,19 +15,74 @@ const inicioClass = computed(() => [
 
 const cronogramaClass = computed(() => [
   'select-none flex items-center cursor-pointer p-4 rounded text-surface-700 transition-colors',
-  route.path === '/NuevoCaso' ? 'text-green-400' : '',
+  // Actualizado para coincidir con la ruta del router-link
+  route.path === '/Cronograma' ? 'text-green-400' : '',
   isDarkTheme.value ? 'hover:bg-gray-700' : 'hover:bg-gray-100'
 ]);
 
-const misCasosClass = computed(() => [
+const ingresoEstudiantesExcelClass = computed(() => [
   'select-none flex items-center cursor-pointer p-4 rounded text-surface-700 transition-colors',
-  route.path === '/MisCasos' ? 'text-green-400' : '',
+  route.path === '/IngresoEstudiantesExcel' ? 'text-green-400' : '',
   isDarkTheme.value ? 'hover:bg-gray-700' : 'hover:bg-gray-100'
 ]);
 
-const reportesClass = computed(() => [
+const ingresoManualEstudiantesClass = computed(() => [
   'select-none flex items-center cursor-pointer p-4 rounded text-surface-700 transition-colors',
-  route.path === '/ReportesCaso' ? 'text-green-400' : '',
+  route.path === '/IngresoManualEstudiantes' ? 'text-green-400' : '',
+  isDarkTheme.value ? 'hover:bg-gray-700' : 'hover:bg-gray-100'
+]);
+
+const listadoEstudiantesClass = computed(() => [
+  'select-none flex items-center cursor-pointer p-4 rounded text-surface-700 transition-colors',
+  route.path === '/ListadoEstudiantes' ? 'text-green-400' : '',
+  isDarkTheme.value ? 'hover:bg-gray-700' : 'hover:bg-gray-100'
+]);
+
+const asignacionPeriodoClass = computed(() => [
+  'select-none flex items-center cursor-pointer p-4 rounded text-surface-700 transition-colors',
+  route.path === '/AsignacionPeriodo' ? 'text-green-400' : '',
+  isDarkTheme.value ? 'hover:bg-gray-700' : 'hover:bg-gray-100'
+]);
+
+const removerPeriodoClass = computed(() => [
+  'select-none flex items-center cursor-pointer p-4 rounded text-surface-700 transition-colors',
+  route.path === '/RemoverPeriodo' ? 'text-green-400' : '',
+  isDarkTheme.value ? 'hover:bg-gray-700' : 'hover:bg-gray-100'
+]);
+
+const ingresoAreaClass = computed(() => [
+  'select-none flex items-center cursor-pointer p-4 rounded text-surface-700 transition-colors',
+  route.path === '/IngresoArea' ? 'text-green-400' : '',
+  isDarkTheme.value ? 'hover:bg-gray-700' : 'hover:bg-gray-100'
+]);
+
+const ingresoHorarioClass = computed(() => [
+  'select-none flex items-center cursor-pointer p-4 rounded text-surface-700 transition-colors',
+  route.path === '/IngresoHorario' ? 'text-green-400' : '',
+  isDarkTheme.value ? 'hover:bg-gray-700' : 'hover:bg-gray-100'
+]);
+
+const ingresoHorarioVirtualClass = computed(() => [
+  'select-none flex items-center cursor-pointer p-4 rounded text-surface-700 transition-colors',
+  route.path === '/IngresoHorarioVirtual' ? 'text-green-400' : '',
+  isDarkTheme.value ? 'hover:bg-gray-700' : 'hover:bg-gray-100'
+]);
+
+const vistaHorariosClass = computed(() => [
+  'select-none flex items-center cursor-pointer p-4 rounded text-surface-700 transition-colors',
+  route.path === '/VistaHorarios' ? 'text-green-400' : '',
+  isDarkTheme.value ? 'hover:bg-gray-700' : 'hover:bg-gray-100'
+]);
+
+const asignacionHuellaClass = computed(() => [
+  'select-none flex items-center cursor-pointer p-4 rounded text-surface-700 transition-colors',
+  route.path === '/AsignacionHuella' ? 'text-green-400' : '',
+  isDarkTheme.value ? 'hover:bg-gray-700' : 'hover:bg-gray-100'
+]);
+
+const registroAsistenciaClass = computed(() => [
+  'select-none flex items-center cursor-pointer p-4 rounded text-surface-700 transition-colors',
+  route.path === '/RegistroAsistencia' ? 'text-green-400' : '',
   isDarkTheme.value ? 'hover:bg-gray-700' : 'hover:bg-gray-100'
 ]);
 
@@ -37,15 +92,9 @@ const notificacionesClass = computed(() => [
   isDarkTheme.value ? 'hover:bg-gray-700' : 'hover:bg-gray-100'
 ]);
 
-const asignarCasosClass = computed(() => [
+const reportesClass = computed(() => [
   'select-none flex items-center cursor-pointer p-4 rounded text-surface-700 transition-colors',
-  route.path === '/AsignarCaso' ? 'text-green-400' : '',
-  isDarkTheme.value ? 'hover:bg-gray-700' : 'hover:bg-gray-100'
-]);
-
-const configuracionClass = computed(() => [
-  'select-none flex items-center cursor-pointer p-4 rounded text-surface-700 transition-colors',
-  route.path === '/Configuracion' ? 'text-green-400' : '',
+  route.path === '/ReportesCaso' ? 'text-green-400' : '',
   isDarkTheme.value ? 'hover:bg-gray-700' : 'hover:bg-gray-100'
 ]);
 </script>
@@ -75,10 +124,20 @@ const configuracionClass = computed(() => [
           </li>
 
           <li>
-            <router-link to="/Cronograma" draggable="false" v-ripple :class="cronogramaClass">
-              <i class="pi pi-graduation-cap mr-2"></i>
-              <span class="font-medium text-lg">Cronograma Académico</span>
-            </router-link>
+            <a v-ripple v-styleclass="{ selector: '@next', toggleClass: 'closed' }"
+              class="select-none flex items-center cursor-pointer p-4 rounded text-surface-700 transition-colors">
+              <i class="pi pi-users mr-2"></i>
+              <span class="font-medium text-lg">Administración de Periodos</span>
+              <i class="pi pi-chevron-down ml-auto"></i>
+            </a>
+            <ul class="submenu list-none p-0 m-0">
+              <li>
+                <router-link to="/Cronograma" draggable="false" v-ripple :class="cronogramaClass">
+                  <i class="pi pi-graduation-cap mr-2"></i>
+                  <span class="font-medium text-lg">Cronograma Académico</span>
+                </router-link>
+              </li>
+            </ul>
           </li>
 
           <!-- 🔹 Sección Estudiantes con Submenú -->
@@ -86,122 +145,103 @@ const configuracionClass = computed(() => [
             <a v-ripple v-styleclass="{ selector: '@next', toggleClass: 'closed' }"
               class="select-none flex items-center cursor-pointer p-4 rounded text-surface-700 transition-colors">
               <i class="pi pi-users mr-2"></i>
-              <span class="font-medium text-lg">Estudiantes</span>
+              <span class="font-medium text-lg">Administración Estudiantes</span>
               <i class="pi pi-chevron-down ml-auto"></i>
             </a>
             <ul class="submenu list-none p-0 m-0">
               <li>
-                <router-link to="/IngresoEstudiantesExcel" draggable="false" v-ripple class="select-none flex items-center cursor-pointer p-4 rounded text-surface-700 transition-colors">
+                <router-link to="/IngresoEstudiantesExcel" draggable="false" v-ripple :class="ingresoEstudiantesExcelClass">
                   <i class="pi pi-file-excel mr-2"></i>
                   <span class="font-medium text-lg">Ingreso por Archivo</span>
                 </router-link>
               </li>
               <li>
-                <router-link to="/IngresoManualEstudiantes" draggable="false" v-ripple class="select-none flex items-center cursor-pointer p-4 rounded text-surface-700 transition-colors">
+                <router-link to="/IngresoManualEstudiantes" draggable="false" v-ripple :class="ingresoManualEstudiantesClass">
                   <i class="pi pi-user-edit mr-2"></i>
                   <span class="font-medium text-lg">Ingreso Manual</span>
                 </router-link>
               </li>
               <li>
-                <router-link to="/ListadoEstudiantes" draggable="false" v-ripple class="select-none flex items-center cursor-pointer p-4 rounded text-surface-700 transition-colors">
+                <router-link to="/ListadoEstudiantes" draggable="false" v-ripple :class="listadoEstudiantesClass">
                   <i class="pi pi-list mr-2"></i>
                   <span class="font-medium text-lg">Listado</span>
                 </router-link>
               </li>
               <li>
-                <router-link to="/AsignacionPeriodo" draggable="false" v-ripple class="select-none flex items-center cursor-pointer p-4 rounded text-surface-700 transition-colors">
+                <router-link to="/AsignacionPeriodo" draggable="false" v-ripple :class="asignacionPeriodoClass">
                   <i class="pi pi-list-check mr-2"></i>
                   <span class="font-medium text-lg">Asignar Periodo</span>
                 </router-link>
               </li>
-
               <li>
-                <router-link to="/RemoverPeriodo" draggable="false" v-ripple class="select-none flex items-center cursor-pointer p-4 rounded text-surface-700 transition-colors">
+                <router-link to="/RemoverPeriodo" draggable="false" v-ripple :class="removerPeriodoClass">
                   <i class="pi pi-list-check mr-2"></i>
                   <span class="font-medium text-lg">Quitar de Periodo</span>
                 </router-link>
               </li>
-
               <li>
-            <router-link to="/IngresoArea" draggable="false" v-ripple :class="notificacionesClass">
-              <i class="pi pi-flag mr-2"></i>
-              <span class="font-medium text-lg">Asignar Area</span>
-            </router-link>
-          </li>
+                <router-link to="/IngresoArea" draggable="false" v-ripple :class="ingresoAreaClass">
+                  <i class="pi pi-flag mr-2"></i>
+                  <span class="font-medium text-lg">Asignar Area</span>
+                </router-link>
+              </li>
             </ul>
           </li>
 
-
-            <!-- 🔹 Sección Estudiantes con Submenú -->
-            <li>
+          <!-- 🔹 Sección Horarios con Submenú -->
+          <li>
             <a v-ripple v-styleclass="{ selector: '@next', toggleClass: 'closed' }"
               class="select-none flex items-center cursor-pointer p-4 rounded text-surface-700 transition-colors">
               <i class="pi pi-users mr-2"></i>
-              <span class="font-medium text-lg">Horarios</span>
+              <span class="font-medium text-lg">Administración de Horarios</span>
               <i class="pi pi-chevron-down ml-auto"></i>
             </a>
             <ul class="submenu list-none p-0 m-0">
-           
               <li>
-                <router-link to="/IngresoHorario" draggable="false" v-ripple class="select-none flex items-center cursor-pointer p-4 rounded text-surface-700 transition-colors">
+                <router-link to="/IngresoHorario" draggable="false" v-ripple :class="ingresoHorarioClass">
                   <i class="pi pi-user-edit mr-2"></i>
                   <span class="font-medium text-lg">Ingresar Horario Presencial</span>
                 </router-link>
               </li>
-
               <li>
-                <router-link to="/IngresoHorarioVirtual" draggable="false" v-ripple class="select-none flex items-center cursor-pointer p-4 rounded text-surface-700 transition-colors">
+                <router-link to="/IngresoHorarioVirtual" draggable="false" v-ripple :class="ingresoHorarioVirtualClass">
                   <i class="pi pi-user-edit mr-2"></i>
                   <span class="font-medium text-lg">Ingresar Horario Virtual</span>
                 </router-link>
               </li>
-           
-
               <li>
-            <router-link to="/IngresoArea" draggable="false" v-ripple :class="notificacionesClass">
-              <i class="pi pi-flag mr-2"></i>
-              <span class="font-medium text-lg">Asignar Area</span>
-            </router-link>
-          </li>
-
-          <li>
-            <router-link to="/VistaHorarios" draggable="false" v-ripple :class="notificacionesClass">
-              <i class="pi pi-flag mr-2"></i>
-              <span class="font-medium text-lg">Ver Horarios</span>
-            </router-link>
-          </li>
+                <router-link to="/VistaHorarios" draggable="false" v-ripple :class="vistaHorariosClass">
+                  <i class="pi pi-flag mr-2"></i>
+                  <span class="font-medium text-lg">Ver Horarios</span>
+                </router-link>
+              </li>
             </ul>
           </li>
 
-
+          <!-- 🔹 Sección Biométrica con Submenú -->
           <li>
             <a v-ripple v-styleclass="{ selector: '@next', toggleClass: 'closed' }"
               class="select-none flex items-center cursor-pointer p-4 rounded text-surface-700 transition-colors">
               <i class="pi pi-bullseye mr-2"></i>
-              <span class="font-medium text-lg">Biométrico</span>
+              <span class="font-medium text-lg">Administración Biométrica</span>
               <i class="pi pi-chevron-down ml-auto"></i>
             </a>
             <ul class="submenu list-none p-0 m-0">
-           
-             
-          <li>
-            <router-link to="/AsignacionHuella" draggable="false" v-ripple :class="notificacionesClass">
-              <i class="pi pi-flag mr-2"></i>
-              <span class="font-medium text-lg">Registro Biométrico</span>
-            </router-link>
-          </li>
-
-          <li>
-            <router-link to="/RegistroAsistencia" draggable="false" v-ripple :class="notificacionesClass">
-              <i class="pi pi-flag mr-2"></i>
-              <span class="font-medium text-lg">RegistroAsistencia</span>
-            </router-link>
-          </li>
+              <li>
+                <router-link to="/AsignacionHuella" draggable="false" v-ripple :class="asignacionHuellaClass">
+                  <i class="pi pi-flag mr-2"></i>
+                  <span class="font-medium text-lg">Registro Biométrico</span>
+                </router-link>
+              </li>
+              <li>
+                <router-link to="/RegistroAsistencia" draggable="false" v-ripple :class="registroAsistenciaClass">
+                  <i class="pi pi-flag mr-2"></i>
+                  <span class="font-medium text-lg">RegistroAsistencia</span>
+                </router-link>
+              </li>
             </ul>
           </li>
 
-
-          
           <li>
             <router-link to="/Notificaciones" draggable="false" v-ripple :class="notificacionesClass">
               <i class="pi pi-bell mr-2"></i>
@@ -221,7 +261,7 @@ const configuracionClass = computed(() => [
               <li>
                 <router-link to="/ReportesCaso" draggable="false" v-ripple :class="reportesClass">
                   <i class="pi pi-chart-bar mr-2"></i>
-                  <span class="font-medium text-lg">Reportes</span>
+                  <span class="font-medium text-lg">Reportes SubMenu</span>
                 </router-link>
               </li>
             </ul>
