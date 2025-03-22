@@ -10,9 +10,20 @@ import ReportesCaso from '@/views/ReportesCaso.vue';
 import Configuracion from '@/views/Configuracion.vue';
 import Login from '@/views/Login.vue';
 import ForgotPassword from '@/views/ForgotPassword.vue';
-import Cronograma from '@/views/Cronograma.vue';
-import IngresoCronograma from '@/views/IngresoCronograma.vue';
-import IngresoEstudiantesExcel from '@/views/IngresoEstudiantesExcel.vue';
+import Cronograma from '@/views/CRUD/Cronograma/Cronograma.vue';
+import IngresoCronograma from '@/views/CRUD/Cronograma/IngresoCronograma.vue';
+import IngresoEstudiantesExcel from '@/views/CRUD/Estudiantes/IngresoEstudiantesExcel.vue';
+import IngresoManualEstudiantes from '@/views/CRUD/Estudiantes/IngresoManualEstudiantes.vue';
+import ListadoEstudiantes from '@/views/CRUD/Estudiantes/ListadoEstudiantes.vue';
+import AsignacionPeriodo from '@/views/CRUD/Estudiantes/AsignacionPeriodo.vue';
+import RemoverPeriodo from '@/views/CRUD/Estudiantes/RemoverPeriodo.vue';
+import IngresoArea from '@/views/CRUD/Horario/IngresoArea.vue';
+import IngresoHorario from '@/views/CRUD/Horario/IngresoHorario.vue';
+import VistaHorarios from '@/views/CRUD/Horario/VistaHorarios.vue';
+import IngresoHorarioVirtual from '@/views/CRUD/Horario/IngresoHorarioVirtual.vue';
+import AsignacionHuella from '@/views/CRUD/RegistroBiometrico/AsignacionHuella.vue';
+import RegistroHuella from '@/views/CRUD/RegistroBiometrico/RegistroHuella.vue';
+import RegistroAsistencia from '@/views/CRUD/RegistroBiometrico/RegistroAsistencia.vue';
 
 const routes: Array<RouteRecordRaw> = [
   {
@@ -35,9 +46,75 @@ const routes: Array<RouteRecordRaw> = [
         component: IngresoCronograma,
       },
       {
+        path: 'IngresoCronograma/:id?',
+        name: 'IngresoCronograma',
+        component: IngresoCronograma,
+      },
+      {
         path: 'IngresoEstudiantesExcel',
         name: 'IngresoEstudiantesExcel',
         component: IngresoEstudiantesExcel,
+      },
+      {
+        path: 'IngresoManualEstudiantes',
+        name: 'IngresoManualEstudiantes',
+        component: IngresoManualEstudiantes,
+      },
+      {
+        path: 'IngresoManualEstudiantes/:id?',
+        name: 'IngresoManualEstudiantes',
+        component: IngresoManualEstudiantes,
+      },
+      {
+        path: 'ListadoEstudiantes',
+        name: 'ListadoEstudiantes',
+        component: ListadoEstudiantes,
+      },
+      {
+        path: 'AsignacionPeriodo',
+        name: 'AsignacionPeriodo',
+        component: AsignacionPeriodo,
+      },
+      {
+        path: 'RemoverPeriodo',
+        name: 'RemoverPeriodo',
+        component: RemoverPeriodo,
+      },
+      {
+        path: 'IngresoArea',
+        name: 'IngresoArea',
+        component: IngresoArea,
+      },
+      {
+        path: 'IngresoHorario',
+        name: 'IngresoHorario',
+        component: IngresoHorario,
+      },
+      {
+        path: 'AsignacionHuella',
+        name: 'AsignacionHuella',
+        component: AsignacionHuella,
+      },
+      {
+        path: 'RegistroAsistencia/:id?',
+        name: 'RegistroAsistencia',
+        component: RegistroAsistencia,
+      },
+      {
+        path: 'RegistroHuella/:id?',
+        name: 'RegistroHuella',
+        component: RegistroHuella,
+      },
+
+      {
+        path: 'IngresoHorarioVirtual',
+        name: 'IngresoHorarioVirtual',
+        component: IngresoHorarioVirtual,
+      },
+      {
+        path: 'VistaHorarios',
+        name: 'VistaHorarios',
+        component: VistaHorarios,
       },
       {
         path: 'NuevoCaso',

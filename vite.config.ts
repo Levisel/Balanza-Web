@@ -24,5 +24,23 @@ export default defineConfig({
       '@': fileURLToPath(new URL('./src', import.meta.url))
     },
   },
+  server: {
+    proxy: {
+      '/SGIFPCapture': {
+        target: 'https://localhost:8443',
+        changeOrigin: true,
+        secure: false
+      },
+      '/SGIMatchScore': {
+        target: 'https://localhost:8443',
+        changeOrigin: true,
+        secure: false
+      }
+    }
+  }
 })
+
+
+
+
 
