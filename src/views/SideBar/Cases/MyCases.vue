@@ -11,8 +11,17 @@ import TabView from 'primevue/tabview';
 import TabPanel from 'primevue/tabpanel';
 import Toast from 'primevue/toast'; 
 import { useToast } from 'primevue/usetoast'; 
+import { useAuthStore } from '@/stores/auth';
+import ConfirmDialog from 'primevue/confirmdialog';
+import { useConfirm } from 'primevue/useconfirm';
 
 const toast = useToast();
+const confirm = useConfirm();
+const authStore = useAuthStore();
+
+//Detalles del Usuario
+const visibleUsuarioDialog = ref(false);
+const usuarioDetalles = ref({});
 
 //Estado del dialog y actividades
 const visibleDialog = ref(false) 
@@ -20,14 +29,32 @@ const actividades = ref([])
 const visibleActividadDialog = ref(false)
 const visibleDocumentoDialog = ref(false);
 const documentoUrl = ref('');
+const nuevaActividadEstadoText = ref('En progreso');
 
 // Obtener los casos
 const casosActivos = ref([]);
 const casosInactivos = ref([]);
-
-
 const selectedCaseCode = ref('');
 const abogadosActivos = ref([]);
+
+//Búsqueda
+const searchQuery = ref('');
+
+const filtrarCasos = (casos, query) => {
+  if (!query) {
+    return casos;
+  }
+  const lowerCaseQuery = query.toLowerCase();
+  return casos.filter(caso => 
+    caso.codigo.toLowerCase().includes(lowerCaseQuery) ||
+    caso.fecha.toLowerCase().includes(lowerCaseQuery) ||
+    caso.usuario.toLowerCase().includes(lowerCaseQuery)
+  );
+};
+
+const casosActivosFiltrados = computed(() => filtrarCasos(casosActivos.value, searchQuery.value));
+const casosInactivosFiltrados = computed(() => filtrarCasos(casosInactivos.value, searchQuery.value));
+
 
 // Obtener los datos de los usuarios
 const obtenerNombreUsuario = async (userId) => {
@@ -40,16 +67,39 @@ const obtenerNombreUsuario = async (userId) => {
   }
 }
 
+const verDetallesUsuario = async (cedula) => {
+  try {
+    const response = await axios.get(`http://localhost:3000/usuario/${cedula}`);
+    usuarioDetalles.value = response.data;
+    visibleUsuarioDialog.value = true;
+  } catch (error) {
+    console.error('Error al obtener los detalles del usuario:', error);
+    toast.add({
+      severity: 'error',
+      summary: 'Error',
+      detail: 'No se pudieron obtener los detalles del usuario.',
+      life: 3000,
+    });
+  }
+};
+
 const obtenerCasos = async (estado) => {
   try {
-    // Obtener el Internal_ID del usuario logueado
-    const userResponse = await axios.get('http://localhost:3000/api/me');
-    const internalID = userResponse.data.Internal_ID;
+    // Obtener el Internal_ID del usuario logueado desde el authStore
+    const internalID = authStore.user?.id;
 
-    const response = await axios.get(`http://localhost:3000/primerasconsultas/${estado}/${internalID}`);
+    if (!internalID) {
+      throw new Error('No se pudo obtener el ID del usuario');
+    }
+
+    const response = await axios.get(`http://localhost:3000/primerasconsultas/${estado}/${internalID}`, {
+      headers: {
+        'Internal-ID': internalID,
+      }
+    });
 
     const casosConUsuarios = await Promise.all(response.data.map(async (caso, index) => {
-      const nombreUsuario = await obtenerNombreUsuario(caso.User_ID);  // Obtener el nombre completo del usuario
+      const nombreUsuario = await obtenerNombreUsuario(caso.User_ID); 
 
       return {
         nro: index + 1,
@@ -58,8 +108,8 @@ const obtenerCasos = async (estado) => {
         cedula: caso.User_ID,
         usuario: nombreUsuario,  // Se coloca el nombre completo del usuario
         caso: caso.Init_Topic,
-        ciudad: caso.Init_Office,
-        provincia: caso.Init_Subject,
+        oficina: caso.Init_Office,
+        tema: caso.Init_Subject,
         estado: caso.Init_Status ? 'Activo' : 'Inactivo',
         tipocliente: caso.Init_ClientType,
       }
@@ -79,8 +129,144 @@ const obtenerCasos = async (estado) => {
 onMounted(() => {
   obtenerCasos(1); // Cargar casos activos
   obtenerCasos(0); // Cargar casos inactivos
-  obtenerAbogadosActivos();
+  obtenerAbogadosActivosPorArea(); // Obtener abogados activos por área
 });
+
+const finalizarCaso = async (caso) => {
+  try {
+    const internalID = authStore.user?.id;
+
+    if (!internalID) {
+      throw new Error('No se pudo obtener el ID del usuario');
+    }
+
+    const response = await axios.put(`http://localhost:3000/primerasconsultas/${caso.codigo}`, {
+      Init_Status: 0
+    }, {
+      headers: {
+        'Internal-ID': internalID,
+      }
+    });
+
+    if (response.status === 200) {
+      toast.add({
+        severity: 'success',
+        summary: 'Caso Finalizado',
+        detail: `El caso ${caso.codigo} ha sido finalizado.`,
+        life: 3000,
+      });
+
+      // Actualizar la lista de casos
+      await obtenerCasos(1); // Cargar casos activos
+      await obtenerCasos(0); // Cargar casos inactivos
+    } else {
+      throw new Error(`Error al finalizar el caso: ${response.statusText}`);
+    }
+  } catch (error) {
+    console.error('Error al finalizar el caso:', error);
+    toast.add({
+      severity: 'error',
+      summary: 'Error',
+      detail: `No se pudo finalizar el caso ${caso.codigo}.`,
+      life: 3000,
+    });
+  }
+};
+
+const reactivarCaso = async (caso) => {
+  try {
+    const internalID = authStore.user?.id;
+
+    if (!internalID) {
+      throw new Error('No se pudo obtener el ID del usuario');
+    }
+
+    const response = await axios.put(`http://localhost:3000/primerasconsultas/${caso.codigo}`, {
+      Init_Status: 1
+    }, {
+      headers: {
+        'Internal-ID': internalID,
+      }
+    });
+
+    if (response.status === 200) {
+      toast.add({
+        severity: 'success',
+        summary: 'Caso Reactivado',
+        detail: `El caso ${caso.codigo} ha sido reactivado.`,
+        life: 3000,
+      });
+
+      // Actualizar la lista de casos
+      await obtenerCasos(1); // Cargar casos activos
+      await obtenerCasos(0); // Cargar casos inactivos
+    } else {
+      throw new Error(`Error al reactivar el caso: ${response.statusText}`);
+    }
+  } catch (error) {
+    console.error('Error al reactivar el caso:', error);
+    toast.add({
+      severity: 'error',
+      summary: 'Error',
+      detail: `No se pudo reactivar el caso ${caso.codigo}.`,
+      life: 3000,
+    });
+  }
+};
+
+const eliminarCaso = (caso) => {
+  confirm.require({
+    message: `¿Estás seguro de que deseas eliminar el caso ${caso.codigo}?`,
+    header: 'Confirmación',
+    icon: 'pi pi-exclamation-triangle',
+    accept: async () => {
+      try {
+        const internalID = authStore.user?.id;
+
+        if (!internalID) {
+          throw new Error('No se pudo obtener el ID del usuario');
+        }
+
+        const response = await axios.delete(`http://localhost:3000/primerasconsultas/${caso.codigo}`, {
+          headers: {
+            'Internal-ID': internalID,
+          }
+        });
+
+        if (response.status === 200) {
+          toast.add({
+            severity: 'success',
+            summary: 'Caso Eliminado',
+            detail: `El caso ${caso.codigo} ha sido eliminado.`,
+            life: 3000,
+          });
+
+          // Actualizar la lista de casos
+          await obtenerCasos(1); // Cargar casos activos
+          await obtenerCasos(0); // Cargar casos inactivos
+        } else {
+          throw new Error(`Error al eliminar el caso: ${response.statusText}`);
+        }
+      } catch (error) {
+        console.error('Error al eliminar el caso:', error);
+        toast.add({
+          severity: 'error',
+          summary: 'Error',
+          detail: `No se pudo eliminar el caso ${caso.codigo}.`,
+          life: 3000,
+        });
+      }
+    },
+    reject: () => {
+      toast.add({
+        severity: 'info',
+        summary: 'Cancelado',
+        detail: 'Eliminación cancelada',
+        life: 3000,
+      });
+    }
+  });
+};
 
 //Obtener las actividades según código del caso
 const verActividades = async (caso) => {
@@ -93,18 +279,18 @@ const verActividades = async (caso) => {
 
     // Mapear la respuesta a los campos que muestra la tabla de actividades
     actividades.value = response.data.map(act => ({
-      id: act.Activity_ID, // Asegúrate de que este campo coincida con el nombre del campo de ID en tu respuesta
-      actividad: act.Last_Activity,
+      id: act.Activity_ID,
+      actividad: act.Activity_Type,
       ubicacion: act.Location,
       fecha: act.Activity_Date,
-      abogado: act.Activity_Type, // Cambia si tienes un campo específico para abogado
+      abogado: act.Internal_ID, // Cambia si tienes un campo específico para abogado
       duracion: act.Duration,
       referenciaExpediente: act.Reference_File,
       contraparte: act.Counterparty,
       juez: act.Judge_Name,
       tipo: act.Activity_Type,
       tiempo: act.Time,
-      juzgado: act.Location,
+      juzgado: act.Judged,
       estado: act.Status,
       documento: act.Documents
     }));
@@ -145,80 +331,149 @@ const nuevaActividadContraparte = ref('');
 const nuevaActividadJuez = ref('');
 const nuevaActividadTiempo = ref('');
 const nuevaActividadJuzgado = ref('');
-const nuevaActividadEstado = ref('');
 const documento = ref(null);
 
 // Función para agregar una nueva actividad
 const agregarNuevaActividad = async () => {
-    try {
-        if (!selectedCaseCode.value) {
-            throw new Error('No se ha seleccionado ningún caso');
-        }
-
-        // Obtener el Internal_ID del usuario logueado
-        const userResponse = await axios.get('http://localhost:3000/api/me');
-        const internalID = userResponse.data.Internal_ID;
-
-        const formData = new FormData();
-        formData.append('Internal_ID', internalID); // Usar el valor obtenido
-        formData.append('Init_Code', selectedCaseCode.value); // Usar el código del caso seleccionado
-        formData.append('Activity_Type', nuevaActividadTipo.value);
-        formData.append('Location', nuevaActividadUbicacion.value);
-        
-        if (nuevaActividadFecha.value) {
-            formData.append('Activity_Date', nuevaActividadFecha.value);
-        } else {
-            throw new Error('La fecha de la actividad no puede estar vacía');
-        }
-
-        formData.append('Duration', nuevaActividadDuracion.value);
-        formData.append('Counterparty', nuevaActividadContraparte.value);
-        formData.append('Judge_Name', nuevaActividadJuez.value);
-        formData.append('Reference_File', nuevaActividadReferenciaExpediente.value);
-        formData.append('Status', nuevaActividadEstado.value);
-        
-        if (documento.value) {
-            formData.append('file', documento.value);
-        }
-
-        console.log('FormData:', formData); // Log the FormData
-
-        // Realizar la solicitud para agregar la actividad
-        const response = await axios.post('http://localhost:3000/actividad', formData, {
-            headers: {
-                'Content-Type': 'multipart/form-data',
-            },
-        });
-
-        console.log('Response:', response); // Log the response
-
-        toast.add({
-            severity: 'success',
-            summary: 'Actividad Agregada',
-            detail: 'La actividad fue agregada con éxito.',
-            life: 3000,
-        });
-
-        // Close the dialog
-        visibleActividadDialog.value = false;
-
-    } catch (error: unknown) {
-        toast.add({
-            severity: 'error',
-            summary: 'Error',
-            detail: 'No se pudo agregar la actividad.',
-            life: 3000,
-        });
-        console.error('Error al agregar la actividad:', error);
-
-        if (axios.isAxiosError(error)) {
-            console.error('Error response data:', error.response?.data); // Log the response data
-            console.error('Error response status:', error.response?.status); // Log the response status
-            console.error('Error response headers:', error.response?.headers); // Log the response headers
-        } else {
-            console.error('Unexpected error:', error);
-        }
+  try {
+    if (!selectedCaseCode.value) {
+      throw new Error('No se ha seleccionado ningún caso');
     }
+
+    // Obtener el Internal_ID del usuario logueado desde el authStore
+    const internalID = authStore.user?.id;
+
+    if (!internalID) {
+      throw new Error('No se pudo obtener el ID del usuario');
+    }
+
+    const formData = new FormData();
+    formData.append('Internal_ID', internalID); // Usar el valor obtenido
+    formData.append('Init_Code', selectedCaseCode.value); // Usar el código del caso seleccionado
+
+    if (nuevaActividadTipo.value) {
+      formData.append('Activity_Type', nuevaActividadTipo.value);
+    }
+    if (nuevaActividadUbicacion.value) {
+      formData.append('Location', nuevaActividadUbicacion.value);
+    }
+    if (nuevaActividadFecha.value) {
+      formData.append('Activity_Date', nuevaActividadFecha.value);
+    } else {
+      throw new Error('La fecha de la actividad no puede estar vacía');
+    }
+    if (nuevaActividadDuracion.value) {
+      formData.append('Duration', nuevaActividadDuracion.value);
+    }
+    if (nuevaActividadContraparte.value) {
+      formData.append('Counterparty', nuevaActividadContraparte.value);
+    }
+    if (nuevaActividadJuez.value) {
+      formData.append('Judge_Name', nuevaActividadJuez.value);
+    }
+    if (nuevaActividadReferenciaExpediente.value) {
+      formData.append('Reference_File', nuevaActividadReferenciaExpediente.value);
+    }
+    if (nuevaActividadJuzgado.value) {
+      formData.append('Judged', nuevaActividadJuzgado.value); // Asegúrate de que el campo juzgado se esté agregando
+    }
+    formData.append('Status', nuevaActividadEstadoText.value); // Asegúrate de que el estado se esté agregando
+    if (documento.value) {
+      formData.append('file', documento.value);
+    }
+
+    console.log('FormData:', formData); // Log the FormData
+
+    // Realizar la solicitud para agregar la actividad
+    const response = await axios.post('http://localhost:3000/actividad', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+        'Internal-ID': internalID
+      },
+    });
+
+    console.log('Response:', response); // Log the response
+
+    toast.add({
+      severity: 'success',
+      summary: 'Actividad Agregada',
+      detail: 'La actividad fue agregada con éxito.',
+      life: 3000,
+    });
+
+    // Close the dialog
+    visibleActividadDialog.value = false;
+
+  } catch (error: unknown) {
+    toast.add({
+      severity: 'error',
+      summary: 'Error',
+      detail: 'No se pudo agregar la actividad.',
+      life: 3000,
+    });
+    console.error('Error al agregar la actividad:', error);
+
+    if (axios.isAxiosError(error)) {
+      console.error('Error response data:', error.response?.data); // Log the response data
+      console.error('Error response status:', error.response?.status); // Log the response status
+      console.error('Error response headers:', error.response?.headers); // Log the response headers
+    } else {
+      console.error('Unexpected error:', error);
+    }
+  }
+};
+
+const eliminarActividad = (actividad) => {
+  confirm.require({
+    message: `¿Estás seguro de que deseas eliminar la actividad ${actividad.id}?`,
+    header: 'Confirmación',
+    icon: 'pi pi-exclamation-triangle',
+    accept: async () => {
+      try {
+        const internalID = authStore.user?.id;
+
+        if (!internalID) {
+          throw new Error('No se pudo obtener el ID del usuario');
+        }
+
+        const response = await axios.delete(`http://localhost:3000/actividad/${actividad.id}`, {
+          headers: {
+            'Internal-ID': internalID,
+          }
+        });
+
+        if (response.status === 200) {
+          toast.add({
+            severity: 'success',
+            summary: 'Actividad Eliminada',
+            detail: `La actividad ${actividad.id} ha sido eliminada.`,
+            life: 3000,
+          });
+
+          // Actualizar la lista de actividades
+          await verActividades({ codigo: selectedCaseCode.value }); // Recargar actividades del caso seleccionado
+        } else {
+          throw new Error(`Error al eliminar la actividad: ${response.statusText}`);
+        }
+      } catch (error) {
+        console.error('Error al eliminar la actividad:', error);
+        toast.add({
+          severity: 'error',
+          summary: 'Error',
+          detail: `No se pudo eliminar la actividad ${actividad.id}.`,
+          life: 3000,
+        });
+      }
+    },
+    reject: () => {
+      toast.add({
+        severity: 'info',
+        summary: 'Cancelado',
+        detail: 'Eliminación cancelada',
+        life: 3000,
+      });
+    }
+  });
 };
 
 // Función para ver el documento
@@ -260,9 +515,16 @@ const onUploadDocumento = (event: any) => {
   documento.value = event.files[0]; // Asigna el archivo seleccionado a documento.value
 };
 
-const obtenerAbogadosActivos = async () => {
+const obtenerAbogadosActivosPorArea = async () => {
   try {
-    const response = await axios.get('http://localhost:3000/usuariointerno/abogados/activos');
+    // Obtener el área del usuario logueado desde el authStore
+    const area = authStore.user?.area;
+
+    if (!area) {
+      throw new Error('No se pudo obtener el área del usuario');
+    }
+
+    const response = await axios.get(`http://localhost:3000/usuariointerno/abogados/activos/${area}`);
     abogadosActivos.value = response.data.map(abogado => ({
       label: `${abogado.Internal_Name} ${abogado.Internal_LastName}`,
       value: abogado.Internal_ID
@@ -277,15 +539,16 @@ const obtenerAbogadosActivos = async () => {
 <template>
 
 <Toast />
+<ConfirmDialog />
 
   <div>    
     <!-- Barra de Búsqueda -->
     <div class="flex items-center gap-4 mb-4">
       <InputText 
-        v-model="searchQuery"
-        placeholder="Buscar por código, usuario o fecha" 
-        class="p-2 rounded-lg shadow-sm w-full max-w-md border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-      />
+  v-model="searchQuery"
+  placeholder="Buscar por código, usuario o fecha" 
+  class="p-2 rounded-lg shadow-sm w-full max-w-md border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+/>
       <Button 
         icon="pi pi-search" 
         class="bg-blue-500 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-600 focus:outline-none"
@@ -294,59 +557,75 @@ const obtenerAbogadosActivos = async () => {
 
     <!-- Pestañas con TabView -->
     <TabView>
-  <TabPanel header="Casos Activos" :value="0">
-    <DataTable :value="casosActivos" paginator :rows="8" class="w-full">
-      <Column field="nro" header="Nro." />
-      <Column field="codigo" header="Código del Caso" />
-      <Column field="fecha" header="Fecha de Inicio" />
-      <Column field="cedula" header="Cédula" />
-      <Column field="usuario" header="Usuario" />
-      <Column field="caso" header="Caso" />
-      <Column field="ciudad" header="Ciudad" />
-      <Column field="provincia" header="Provincia" />
-      <Column field="estado" header="Estado" />
-      <Column field="tipocliente" header="Tipo de Cliente" />
-      <Column field="actividades" header="Actividades">
-        <template #body="slotProps">
-          <Button label="Ver Actividades" icon="pi pi-eye" class="p-button-info" @click="verActividades(slotProps.data)" />
-        </template>
-      </Column>
-      <Column header="Acciones">
-        <template #body="slotProps">
-          <div class="flex gap-2">
-            <Button icon="pi pi-check" class="bg-green-500 text-white px-3 py-1 rounded-lg shadow hover:bg-green-600" @click="finalizarCaso(slotProps.data)" />
-          </div>
-        </template>
-      </Column>
-    </DataTable>
-  </TabPanel>
+      <TabPanel header="Casos Activos" :value="0">
+  <DataTable :value="casosActivosFiltrados" paginator :rows="8" class="w-full">
+    <Column field="nro" header="Nro." />
+    <Column field="codigo" header="Código del Caso" />
+    <Column field="fecha" header="Fecha de Inicio" />
+    <Column field="cedula" header="Cédula" />
+    <Column field="usuario" header="Usuario">
+  <template #body="slotProps">
+    <div class="flex items-center gap-2">
+      {{ slotProps.data.usuario }}
+      <Button icon="pi pi-info-circle" class="p-button-text p-0" @click="verDetallesUsuario(slotProps.data.cedula)" />
+    </div>
+  </template>
+</Column>
+    <Column field="caso" header="Caso" />
+    <Column field="oficina" header="Oficina" />
+    <Column field="tema" header="Tema" />
+    <Column field="estado" header="Estado" />
+    <Column field="tipocliente" header="Tipo de Cliente" />
+    <Column field="actividades" header="Actividades">
+      <template #body="slotProps">
+        <Button label="Ver Actividades" icon="pi pi-eye" class="p-button-info" @click="verActividades(slotProps.data)" />
+      </template>
+    </Column>
+    <Column header="Acciones">
+  <template #body="slotProps">
+    <div class="flex gap-2">
+      <Button icon="pi pi-check" class="bg-green-500 text-white px-3 py-1 rounded-lg shadow hover:bg-green-600" @click="finalizarCaso(slotProps.data)" />
+      <Button icon="pi pi-trash" class="bg-red-500 text-white px-3 py-1 rounded-lg shadow hover:bg-red-600" @click="eliminarCaso(slotProps.data)" />
+    </div>
+  </template>
+</Column>
+  </DataTable>
+</TabPanel>
 
-  <TabPanel header="Casos Inactivos" :value="1">
-    <DataTable :value="casosInactivos" paginator :rows="8" class="w-full">
-      <Column field="nro" header="Nro." />
-      <Column field="codigo" header="Código del Caso" />
-      <Column field="fecha" header="Fecha de Inicio" />
-      <Column field="cedula" header="Cédula" />
-      <Column field="usuario" header="Usuario" />
-      <Column field="caso" header="Caso" />
-      <Column field="ciudad" header="Ciudad" />
-      <Column field="provincia" header="Provincia" />
-      <Column field="estado" header="Estado" />
-      <Column field="tipocliente" header="Tipo de Cliente" />
-      <Column field="actividades" header="Actividades">
-        <template #body="slotProps">
-          <Button label="Ver Actividades" icon="pi pi-eye" class="p-button-info" @click="verActividades(slotProps.data)" />
-        </template>
-      </Column>
-      <Column header="Acciones">
-        <template #body="slotProps">
-          <div class="flex gap-2">
-            <Button icon="pi pi-refresh" class="bg-yellow-500 text-white px-3 py-1 rounded-lg shadow hover:bg-yellow-600" @click="reactivarCaso(slotProps.data)" />
-          </div>
-        </template>
-      </Column>
-    </DataTable>
-  </TabPanel>
+<TabPanel header="Casos Inactivos" :value="1">
+  <DataTable :value="casosInactivosFiltrados" paginator :rows="8" class="w-full">
+    <Column field="nro" header="Nro." />
+    <Column field="codigo" header="Código del Caso" />
+    <Column field="fecha" header="Fecha de Inicio" />
+    <Column field="cedula" header="Cédula" />
+    <Column field="usuario" header="Usuario">
+  <template #body="slotProps">
+    <div class="flex items-center gap-2">
+      {{ slotProps.data.usuario }}
+      <Button icon="pi pi-info-circle" class="p-button-text p-0" @click="verDetallesUsuario(slotProps.data.cedula)" />
+    </div>
+  </template>
+</Column>
+    <Column field="caso" header="Caso" />
+    <Column field="oficina" header="Oficina" />
+    <Column field="tema" header="Tema" />
+    <Column field="estado" header="Estado" />
+    <Column field="tipocliente" header="Tipo de Cliente" />
+    <Column field="actividades" header="Actividades">
+      <template #body="slotProps">
+        <Button label="Ver Actividades" icon="pi pi-eye" class="p-button-info" @click="verActividades(slotProps.data)" />
+      </template>
+    </Column>
+    <Column header="Acciones">
+  <template #body="slotProps">
+    <div class="flex gap-2">
+      <Button icon="pi pi-refresh" class="bg-yellow-500 text-white px-3 py-1 rounded-lg shadow hover:bg-yellow-600" @click="reactivarCaso(slotProps.data)" />
+      <Button icon="pi pi-trash" class="bg-red-500 text-white px-3 py-1 rounded-lg shadow hover:bg-red-600" @click="eliminarCaso(slotProps.data)" />
+    </div>
+  </template>
+</Column>
+  </DataTable>
+</TabPanel>
 </TabView>
 
 <!-- Dialog de Actividades con fecha -->
@@ -361,8 +640,7 @@ const obtenerAbogadosActivos = async () => {
     />
     
     <!-- Tabla de actividades -->
-<!-- Tabla de actividades -->
-<DataTable :value="actividades" class="p-datatable-gridlines w-full">
+    <DataTable :value="actividades" class="p-datatable-gridlines w-full">
   <Column field="id" header="ID de Actividad" />
   <Column field="actividad" header="Actividad" />
   <Column field="ubicacion" header="Ubicación" />
@@ -372,15 +650,15 @@ const obtenerAbogadosActivos = async () => {
     </template>
   </Column>
   <Column field="abogado" header="Abogado Asignado">
-  <template #body="slotProps">
-    {{ slotProps.data.abogado }}
-  </template>
-</Column>
+    <template #body="slotProps">
+      {{ slotProps.data.abogado }}
+    </template>
+  </Column>
   <Column field="duracion" header="Duración" />
   <Column field="referenciaExpediente" header="Referencia Expediente" />
   <Column field="contraparte" header="Contraparte" />
   <Column field="juez" header="Juez Asignado" />
-  <Column field="tipoactividad" header="Tipo" />
+  <Column field="tipo" header="Tipo" />
   <Column field="tiempo" header="Tiempo" />
   <Column field="juzgado" header="Juzgado" />
   <Column field="estado" header="Estado" />
@@ -394,6 +672,13 @@ const obtenerAbogadosActivos = async () => {
       />
     </template>
   </Column>
+  <Column header="Acciones">
+    <template #body="slotProps">
+      <div class="flex gap-2">
+        <Button icon="pi pi-trash" class="bg-red-500 text-white px-3 py-1 rounded-lg shadow hover:bg-red-600" @click="eliminarActividad(slotProps.data)" />
+      </div>
+    </template>
+  </Column>
 </DataTable>
   </div>
 </Dialog>
@@ -404,7 +689,7 @@ const obtenerAbogadosActivos = async () => {
 </Dialog>
 
     <!-- Dialog de Nueva Actividad -->
-<Dialog v-model:visible="visibleActividadDialog" modal header="Nueva Actividad" class="p-6 rounded-lg shadow-lg">
+    <Dialog v-model:visible="visibleActividadDialog" modal header="Nueva Actividad" class="p-6 rounded-lg shadow-lg">
   <div class="space-y-4">
     <div class="flex gap-4">
       <div class="flex-1">
@@ -452,23 +737,19 @@ const obtenerAbogadosActivos = async () => {
 
     <div class="flex gap-4">
       <div class="flex-1">
-        <label for="contraparte" class="block text-sm font-semibold">Tipo</label>
-        <input v-model="nuevaActividadTipo" id="tipo" type="text" class="p-inputtext p-component w-full" />
+        <label for="tiempo" class="block text-sm font-semibold">Tiempo</label>
+        <input v-model="nuevaActividadTiempo" id="tiempo" type="text" class="p-inputtext p-component w-full" />
       </div>
       <div class="flex-1">
-        <label for="juez" class="block text-sm font-semibold">Tiempo</label>
-        <input v-model="nuevaActividadTiempo" id="tiempo" type="text" class="p-inputtext p-component w-full" />
+        <label for="juzgado" class="block text-sm font-semibold">Juzgado</label>
+        <input v-model="nuevaActividadJuzgado" id="juzgado" type="text" class="p-inputtext p-component w-full" />
       </div>
     </div>
 
     <div class="flex gap-4">
       <div class="flex-1">
-        <label for="contraparte" class="block text-sm font-semibold">Juzgado</label>
-        <input v-model="nuevaActividadJuzgado" id="juzgado" type="text" class="p-inputtext p-component w-full" />
-      </div>
-      <div class="flex-1">
-        <label for="juez" class="block text-sm font-semibold">Estado</label>
-        <input v-model="nuevaActividadEstado" id="estado" type="text" class="p-inputtext p-component w-full" />
+        <label for="estado" class="block text-sm font-semibold">Estado</label>
+        <input v-model="nuevaActividadEstadoText" id="estado" type="text" class="p-inputtext p-component w-full" disabled />
       </div>
     </div>
 
@@ -483,14 +764,192 @@ const obtenerAbogadosActivos = async () => {
         class="w-full" 
         @select="onUploadDocumento"
       />
-
     </div>
-      <div class="flex justify-end gap-4">
-        <Button label="Cancelar" icon="pi pi-times" class="p-button-text" @click="visibleActividadDialog = false" />
-        <Button label="Agregar" icon="pi pi-check" class="p-button-success" @click="agregarNuevaActividad" />
+    
+    <div class="flex justify-end gap-4">
+      <Button label="Cancelar" icon="pi pi-times" class="p-button-text" @click="visibleActividadDialog = false" />
+      <Button label="Agregar" icon="pi pi-check" class="p-button-success" @click="agregarNuevaActividad" />
+    </div>
+  </div>
+</Dialog>
+
+<!-- filepath: c:\Users\Alex.DESKTOP-BU9JACC\Desktop\BalanzaFinal\Balanza-Web\src\views\SideBar\Cases\MyCases.vue -->
+<Dialog v-model:visible="visibleUsuarioDialog" modal header="Detalles del Usuario" class="p-6 rounded-lg shadow-lg bg-white max-w-3xl w-full">
+  <div class="space-y-4">
+    <div class="flex gap-4">
+      <div class="flex-1">
+        <label class="block text-sm font-semibold">Nombre</label>
+        <p>{{ usuarioDetalles.User_FirstName }} {{ usuarioDetalles.User_LastName }}</p>
+      </div>
+      <div class="flex-1">
+        <label class="block text-sm font-semibold">Cédula</label>
+        <p>{{ usuarioDetalles.User_ID }}</p>
       </div>
     </div>
-
+    <div class="flex gap-4">
+      <div class="flex-1">
+        <label class="block text-sm font-semibold">Edad</label>
+        <p>{{ usuarioDetalles.User_Age }}</p>
+      </div>
+      <div class="flex-1">
+        <label class="block text-sm font-semibold">Género</label>
+        <p>{{ usuarioDetalles.User_Gender }}</p>
+      </div>
+    </div>
+    <div class="flex gap-4">
+      <div class="flex-1">
+        <label class="block text-sm font-semibold">Fecha de Nacimiento</label>
+        <p>{{ new Date(usuarioDetalles.User_BirthDate).toLocaleDateString() }}</p>
+      </div>
+      <div class="flex-1">
+        <label class="block text-sm font-semibold">Nacionalidad</label>
+        <p>{{ usuarioDetalles.User_Nationality }}</p>
+      </div>
+    </div>
+    <div class="flex gap-4">
+      <div class="flex-1">
+        <label class="block text-sm font-semibold">Teléfono</label>
+        <p>{{ usuarioDetalles.User_Phone }}</p>
+      </div>
+      <div class="flex-1">
+        <label class="block text-sm font-semibold">Email</label>
+        <p>{{ usuarioDetalles.User_Email }}</p>
+      </div>
+    </div>
+    <div class="flex gap-4">
+      <div class="flex-1">
+        <label class="block text-sm font-semibold">Dirección</label>
+        <p>{{ usuarioDetalles.User_Address }}</p>
+      </div>
+      <div class="flex-1">
+        <label class="block text-sm font-semibold">Ciudad</label>
+        <p>{{ usuarioDetalles.User_City }}</p>
+      </div>
+    </div>
+    <div class="flex gap-4">
+      <div class="flex-1">
+        <label class="block text-sm font-semibold">Provincia</label>
+        <p>{{ usuarioDetalles.User_Province }}</p>
+      </div>
+      <div class="flex-1">
+        <label class="block text-sm font-semibold">Sector</label>
+        <p>{{ usuarioDetalles.User_Sector }}</p>
+      </div>
+    </div>
+    <div class="flex gap-4">
+      <div class="flex-1">
+        <label class="block text-sm font-semibold">Zona</label>
+        <p>{{ usuarioDetalles.User_Zone }}</p>
+      </div>
+      <div class="flex-1">
+        <label class="block text-sm font-semibold">Relación de Referencia</label>
+        <p>{{ usuarioDetalles.User_ReferenceRelationship }}</p>
+      </div>
+    </div>
+    <div class="flex gap-4">
+      <div class="flex-1">
+        <label class="block text-sm font-semibold">Nombre de Referencia</label>
+        <p>{{ usuarioDetalles.User_ReferenceName }}</p>
+      </div>
+      <div class="flex-1">
+        <label class="block text-sm font-semibold">Teléfono de Referencia</label>
+        <p>{{ usuarioDetalles.User_ReferencePhone }}</p>
+      </div>
+    </div>
+    <div class="flex gap-4">
+      <div class="flex-1">
+        <label class="block text-sm font-semibold">Beneficio Social</label>
+        <p>{{ usuarioDetalles.User_SocialBenefit ? 'Sí' : 'No' }}</p>
+      </div>
+      <div class="flex-1">
+        <label class="block text-sm font-semibold">Dependencia Económica</label>
+        <p>{{ usuarioDetalles.User_EconomicDependence ? 'Sí' : 'No' }}</p>
+      </div>
+    </div>
+    <div class="flex gap-4">
+      <div class="flex-1">
+        <label class="block text-sm font-semibold">Instrucción Académica</label>
+        <p>{{ usuarioDetalles.User_Academic_Instruction }}</p>
+      </div>
+      <div class="flex-1">
+        <label class="block text-sm font-semibold">Profesión</label>
+        <p>{{ usuarioDetalles.User_Profession }}</p>
+      </div>
+    </div>
+    <div class="flex gap-4">
+      <div class="flex-1">
+        <label class="block text-sm font-semibold">Estado Civil</label>
+        <p>{{ usuarioDetalles.User_MaritalStatus }}</p>
+      </div>
+      <div class="flex-1">
+        <label class="block text-sm font-semibold">Dependientes</label>
+        <p>{{ usuarioDetalles.User_Dependents }}</p>
+      </div>
+    </div>
+    <div class="flex gap-4">
+      <div class="flex-1">
+        <label class="block text-sm font-semibold">Nivel de Ingresos</label>
+        <p>{{ usuarioDetalles.User_IncomeLevel }}</p>
+      </div>
+      <div class="flex-1">
+        <label class="block text-sm font-semibold">Ingreso Familiar</label>
+        <p>{{ usuarioDetalles.User_FamilyIncome }}</p>
+      </div>
+    </div>
+    <div class="flex gap-4">
+      <div class="flex-1">
+        <label class="block text-sm font-semibold">Personas Económicamente Activas</label>
+        <p>{{ usuarioDetalles.User_EconomicActivePeople }}</p>
+      </div>
+      <div class="flex-1">
+        <label class="block text-sm font-semibold">Tipo de Vivienda</label>
+        <p>{{ usuarioDetalles.User_HousingType }}</p>
+      </div>
+    </div>
+    <div class="flex gap-4">
+      <div class="flex-1">
+        <label class="block text-sm font-semibold">Pensionado</label>
+        <p>{{ usuarioDetalles.User_Pensioner }}</p>
+      </div>
+      <div class="flex-1">
+        <label class="block text-sm font-semibold">Seguro de Salud</label>
+        <p>{{ usuarioDetalles.User_HealthInsurance }}</p>
+      </div>
+    </div>
+    <div class="flex gap-4">
+      <div class="flex-1">
+        <label class="block text-sm font-semibold">Situación Vulnerable</label>
+        <p>{{ usuarioDetalles.User_VulnerableSituation }}</p>
+      </div>
+      <div class="flex-1">
+        <label class="block text-sm font-semibold">Discapacidad</label>
+        <p>{{ usuarioDetalles.User_Disability }}</p>
+      </div>
+    </div>
+    <div class="flex gap-4">
+      <div class="flex-1">
+        <label class="block text-sm font-semibold">Porcentaje de Discapacidad</label>
+        <p>{{ usuarioDetalles.User_DisabilityPercentage }}%</p>
+      </div>
+      <div class="flex-1">
+        <label class="block text-sm font-semibold">Enfermedad Catastrófica</label>
+        <p>{{ usuarioDetalles.User_CatastrophicIllness }}</p>
+      </div>
+    </div>
+    <div class="flex gap-4">
+      <div class="flex-1">
+        <label class="block text-sm font-semibold">Documentos de Apoyo</label>
+        <p>{{ usuarioDetalles.User_SupportingDocuments }}</p>
+      </div>
+      <div class="flex-1">
+        <label class="block text-sm font-semibold">Documentos de Salud</label>
+        <p>{{ usuarioDetalles.User_HealthDocuments }}</p>
+      </div>
+    </div>
+    <div class="flex justify-end gap-4">
+      <Button label="Cerrar" icon="pi pi-times" class="p-button-text" @click="visibleUsuarioDialog = false" />
+    </div>
+  </div>
 </Dialog>
 
   </div>
