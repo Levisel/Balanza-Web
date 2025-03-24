@@ -1,22 +1,22 @@
 <template>
   <main class="flex flex-col items-center p-8 min-h-screen">
-    <!-- Encabezado con título -->
+    <!-- Encabezado con botón "Volver" a la izquierda -->
     <div class="w-full flex items-center justify-between mb-8">
-      <!-- Botón Cancelar (para volver a AsignacionHuella) -->
-      <Button 
-        icon="pi pi-arrow-left" 
+      <Button
+        icon="pi pi-arrow-left"
         class="p-button-text text-blue-600 hover:text-blue-800"
-        @click="volverAsignacionHuella" 
-        tooltip="Volver al listado" 
+        @click="volverAsignacionHuella"
+        tooltip="Volver al listado"
         tooltipOptions="{ position: 'top' }"
       />
       <h1 class="text-3xl font-bold text-center flex-grow">Registro de Huella</h1>
-      <!-- Un espacio para alinear (puedes colocar un div vacío) -->
       <div class="w-10"></div>
     </div>
 
+    <Toast />
+
     <!-- Mostrar datos del estudiante -->
-    <div class="w-full max-w-3xl p-6 rounded-lg shadow-lg" :class="cardClass">
+    <div :class="['w-full max-w-3xl p-6 rounded-lg shadow-lg', cardClass]">
       <h2 class="text-xl font-semibold text-center mb-6">Detalles del Estudiante</h2>
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
         <div>
@@ -41,36 +41,46 @@
         </div>
       </div>
 
-      <!-- Intervalo de tiempo (simulado en este ejemplo) -->
+      <!-- Intervalo de tiempo (quemado para pruebas) -->
       <div class="mt-6 text-center">
-        <p class="text-lg">Hora programada: <strong>{{ scheduledTimeString }}</strong></p>
-        <p class="text-sm text-gray-600">Se permite capturar desde 15 minutos antes hasta 15 minutos después.</p>
+        <p class="text-lg">
+          Hora programada: <strong>{{ scheduledTimeString }}</strong>
+        </p>
+        <p class="text-sm text-gray-600">
+          Se permite capturar desde 15 minutos antes hasta 15 minutos después.
+        </p>
       </div>
 
-      <!-- Botones para captura de huella -->
+      <!-- Sección de botones -->
       <div class="flex flex-col items-center mt-8 gap-5">
-        <div v-if="!huellaCapturada">
+        <div class="flex flex-col items-center">
+          <!-- Botón Capturar Huella, con label dinámico según el tipo de registro -->
           <Button
-            label="Capturar Huella"
+            v-if="!huellaCapturada"
+            :label="tipoRegistro === 'entrada' ? 'Capturar Huella (Registrar Entrada)' : 'Capturar Huella (Registrar Salida)'"
             class="px-6 py-3 rounded-full bg-emerald-500 hover:bg-emerald-600 text-white mr-4"
             @click="iniciarCaptura"
           />
+
+          <!-- Si ya se capturó la huella, mostrar mensaje y botón para Guardar -->
+          <div v-if="huellaCapturada" class="flex flex-col items-center mt-1 mb-3">
+            <Message severity="success" class="mb-4">
+              Huella capturada correctamente.
+            </Message>
+            <Button
+              label="Guardar Huella"
+              icon="pi pi-check"
+              class="mt-4 p-button-success"
+              @click="guardarHuella"
+            />
+          </div>
+
+          <!-- Botón Cancelar (siempre presente) -->
           <Button
             label="Cancelar"
             severity="danger"
-            class="px-6 py-3 rounded-full bg-red-500 hover:bg-red-600 text-white"
+            class="px-6 py-3 rounded-full bg-red-500 hover:bg-red-600 text-white mt-2"
             @click="volverAsignacionHuella"
-          />
-        </div>
-        <div v-else class="flex flex-col items-center">
-          <Message severity="success" class="mb-4">
-            Huella capturada correctamente.
-          </Message>
-          <Button
-            label="Guardar Huella"
-            icon="pi pi-check"
-            class="mt-4 p-button-success"
-            @click="guardarHuella"
           />
         </div>
       </div>
@@ -85,10 +95,20 @@
       style="width: 30rem"
     >
       <div class="flex flex-col items-center">
-        <p class="mb-4 text-center">Coloca tu dedo en el lector y espera a que se capture la huella.</p>
-        <ProgressSpinner style="width:50px; height:50px;" strokeWidth="8" animationDuration=".8s" />
+        <p class="mb-4 text-center">
+          Coloca tu dedo en el lector y espera a que se capture la huella.
+        </p>
+        <ProgressSpinner
+          style="width:50px; height:50px;"
+          strokeWidth="8"
+          animationDuration=".8s"
+        />
         <div class="flex gap-4 mt-4">
-          <Button label="Cancelar" class="p-button-danger" @click="cancelarCaptura" />
+          <Button
+            label="Cancelar"
+            class="p-button-danger"
+            @click="cancelarCaptura"
+          />
         </div>
       </div>
     </Dialog>
@@ -107,15 +127,19 @@ import { useToast } from "primevue/usetoast";
 import { API, type Usuario } from "@/views/Interfaces";
 import { useDarkMode } from "@/components/ThemeSwitcher";
 
-// Hooks
 const router = useRouter();
 const route = useRoute();
 const toast = useToast();
 const { isDarkTheme } = useDarkMode();
 
-// Obtener cédula del estudiante desde la ruta (puede venir en "cedula" o "id")
+// Obtener cédula del estudiante (de la ruta)
 const estudianteCedula = computed(() =>
   route.params.cedula ? String(route.params.cedula) : route.params.id ? String(route.params.id) : null
+);
+
+// Obtener el periodoId de la ruta
+const periodoId = computed(() =>
+  route.params.periodoId ? String(route.params.periodoId) : null
 );
 
 // Variables del estudiante
@@ -125,12 +149,17 @@ const apellidos = ref("");
 const correo = ref("");
 const area = ref("");
 
-// Variable para almacenar la huella almacenada (si la necesitas para comparar)
+// Variables para huella
 const huellaGuardada = ref("");
-
-// Estados para la huella capturada
 const huellaBase64 = ref("");
 const huellaCapturada = ref(false);
+
+// Variables para registro de asistencia
+const registroAbierto = ref(null);
+const tipoRegistro = ref("entrada"); // 'entrada' o 'salida'
+
+// Nueva variable para usuarioXPeriodoId (obtenido de la consulta a /usuarioXPeriodo)
+const usuarioXPeriodoId = ref("");
 
 // Estados UI
 const errorMensaje = ref("");
@@ -138,16 +167,20 @@ const cargando = ref(false);
 const dialogoActivo = ref(false);
 const capturando = ref(false);
 
-// Para el control de tiempo: (simulamos una hora programada)
-const scheduledTime = ref(new Date("2025-03-22T00:39:00")); // Ejemplo: 9:00 AM
-const scheduledTimeString = computed(() => scheduledTime.value.toLocaleTimeString([], { hour: '2-digit', minute:'2-digit' }));
+// Horario programado (quemado para pruebas)
+const scheduledTime = ref(new Date("2025-03-23T21:48:00"));
+const scheduledTimeString = computed(() =>
+  scheduledTime.value.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+);
 
 // Clases dinámicas para dark mode
 const cardClass = computed(() =>
   isDarkTheme.value ? "bg-gray-800 text-white shadow-lg" : "bg-white text-gray-900 shadow-lg"
 );
 const inputClass = computed(() =>
-  isDarkTheme.value ? "bg-gray-900 text-white border-gray-700" : "bg-white text-gray-900 border-gray-300"
+  isDarkTheme.value
+    ? "bg-gray-900 text-white border-gray-700"
+    : "bg-white text-gray-900 border-gray-300"
 );
 
 // Función para cargar la información del estudiante
@@ -166,12 +199,17 @@ const cargarEstudiante = async () => {
     apellidos.value = data.Usuario_Apellidos;
     correo.value = data.Usuario_Correo;
     area.value = data.Usuario_Area || "";
-    // Si se requiere, cargar la huella almacenada
+
+    // Opcional: obtener la huella almacenada para comparar
     const resHuella = await fetch(`${API}/usuarios/obtener-huella/${data.Usuario_Cedula}`);
     if (resHuella.ok) {
       const huellaData = await resHuella.json();
       huellaGuardada.value = huellaData.huella || "";
     }
+    // Una vez cargados los datos del estudiante, consultamos el usuarioXPeriodo
+    await cargarUsuarioXPeriodo();
+    // Y consultamos si hay un registro de asistencia abierto para hoy
+    await cargarRegistroAsistenciaAbierto();
   } catch (error) {
     console.error("Error al cargar el estudiante:", error);
     errorMensaje.value = "Error al cargar los datos del estudiante.";
@@ -180,17 +218,57 @@ const cargarEstudiante = async () => {
   }
 };
 
-// Validar que el tiempo actual esté dentro del intervalo permitido (15 minutos antes y después)
+// Función para obtener el usuarioXPeriodoId
+const cargarUsuarioXPeriodo = async () => {
+  if (!cedula.value || !periodoId.value) return;
+  try {
+    const response = await fetch(`${API}/usuarioXPeriodo/${periodoId.value}/${cedula.value}`);
+    if (!response.ok) throw new Error("Error al obtener usuarioXPeriodo");
+    const data = await response.json();
+    // Suponemos que la API devuelve { usuarioXPeriodoId: "valor" }
+    usuarioXPeriodoId.value = data.usuarioXPeriodoId;
+  } catch (error) {
+    console.error("Error al cargar usuarioXPeriodo:", error);
+  }
+};
+
+// Función para cargar el registro de asistencia abierto (si existe) para el día actual
+const cargarRegistroAsistenciaAbierto = async () => {
+  if (!cedula.value) return;
+  try {
+    const hoy = new Date();
+    const fechaHoy = hoy.toISOString().split("T")[0];
+    // Se consulta al endpoint /registros/abierto con usuarioCedula y fecha
+    const response = await fetch(`${API}/registros/abierto?usuarioCedula=${cedula.value}&fecha=${fechaHoy}`);
+    if (response.ok) {
+      const data = await response.json();
+      if (data) {
+        registroAbierto.value = data;
+        tipoRegistro.value = "salida";
+      } else {
+        registroAbierto.value = null;
+        tipoRegistro.value = "entrada";
+      }
+    } else {
+      registroAbierto.value = null;
+      tipoRegistro.value = "entrada";
+    }
+  } catch (error) {
+    console.error("Error al cargar registro abierto:", error);
+    registroAbierto.value = null;
+    tipoRegistro.value = "entrada";
+  }
+};
+
+// Función para validar el intervalo de tiempo (15 min antes y 15 min después)
 const tiempoPermitido = () => {
   const now = new Date();
   const diffMinutes = (now.getTime() - scheduledTime.value.getTime()) / (1000 * 60);
-  // Permitir si diff está entre -15 y +15
   return diffMinutes >= -15 && diffMinutes <= 15;
 };
 
-// Función para iniciar la captura de huella
+// Iniciar la captura de huella
 const iniciarCaptura = async () => {
-  // Validar si el tiempo actual está dentro del intervalo permitido
   if (!tiempoPermitido()) {
     toast.add({
       severity: "warn",
@@ -206,6 +284,7 @@ const iniciarCaptura = async () => {
   }
   capturando.value = true;
   dialogoActivo.value = true;
+
   try {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 15000);
@@ -241,7 +320,6 @@ const iniciarCaptura = async () => {
         detail: "La huella digital fue escaneada correctamente.",
         life: 3000,
       });
-      // Cerrar el modal inmediatamente
       dialogoActivo.value = false;
     } else {
       throw new Error(`Error en la captura. Código: ${data.ErrorCode}`);
@@ -259,15 +337,13 @@ const iniciarCaptura = async () => {
   }
 };
 
-// Función para cancelar la captura
+// Cancelar la captura
 const cancelarCaptura = () => {
   dialogoActivo.value = false;
   capturando.value = false;
 };
 
-// Función para guardar la huella: se compara con la almacenada y, si coincide (por encima de un umbral),
-// se realiza un PUT para actualizar la huella en BD. (Aquí se simula la comparación con /SGIMatchScore)
-
+// Función para guardar la asistencia (POST para entrada, PUT para salida)
 const guardarHuella = async () => {
   if (!huellaBase64.value || !cedula.value) {
     toast.add({
@@ -278,66 +354,152 @@ const guardarHuella = async () => {
     });
     return;
   }
+  // Si no hay huella en BD para comparar, se muestra un mensaje (puedes modificar esta lógica)
+  if (!huellaGuardada.value) {
+    toast.add({
+      severity: "info",
+      summary: "Sin huella previa",
+      detail: "No existe huella almacenada para comparar, se procede a guardar la nueva.",
+      life: 3000,
+    });
+    // Aquí podrías proceder a crear el registro sin comparación (POST)
+    return;
+  }
   try {
-    // Llamada a /SGIMatchScore: se envía la huella capturada y la almacenada.
-    // Se asume que el endpoint devuelve un objeto { score: number }
-
-    console.log("Comparando huellas...", huellaBase64.value);
-    console.log("Comparando huellas...", huellaGuardada.value);
-
+    // Comparar huellas mediante /SGIMatchScore
     const params = new URLSearchParams();
-params.append("template1", huellaGuardada.value);
-params.append("template2", huellaBase64.value);
-params.append("licstr", "");
-params.append("templateFormat", "ISO");
+    params.append("Template1", huellaGuardada.value);
+    params.append("Template2", huellaBase64.value);
+    params.append("Licstr", "");
+    params.append("TemplateFormat", "ISO");
 
-const resMatch = await fetch("/SGIMatchScore", {
-  method: "POST",
-  headers: {
-    "Content-Type": "application/x-www-form-urlencoded",
-    "Accept": "*/*"
-  },
-  body: params
-});
-
-
+    const resMatch = await fetch("/SGIMatchScore", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        Accept: "*/*",
+      },
+      body: params,
+    });
     if (!resMatch.ok) throw new Error("Error en la comparación de huellas.");
     const matchData = await resMatch.json();
-    console.log("Resultado de comparación de huellas:", matchData);
-    const score = matchData.score; // Ejemplo: score entre 0 y 100
-    const umbral = 70; // Definir umbral mínimo aceptable
-    if (score < umbral) {
+    if (matchData.ErrorCode === 0) {
+      const score = matchData.MatchingScore;
+      const umbral = 70; // Umbral para considerar la huella válida
+      if (score < umbral) {
+        console.log("Huella no coincide, score:", score);
+        toast.add({
+          severity: "error",
+          summary: "Huella no coincide",
+          detail: `La huella no coincide con un puntaje de = ${score}/200. Por favor, intente de nuevo.`,
+          life: 3000,
+        });
+        huellaCapturada.value = false;
+        huellaBase64.value = "";
+        return;
+      } else {
+        toast.add({
+          severity: "success",
+          summary: "Huella válida",
+          detail: `Coincidencia con score = ${score}. Se procede a guardar la asistencia.`,
+          life: 3000,
+        });
+        console.log("Huella válida, score:", score);
+        if (tipoRegistro.value === "entrada") {
+          // Crear nuevo registro de asistencia (POST) usando usuarioXPeriodoId
+          try {
+            const registroData = {
+              usuarioXPeriodoId: usuarioXPeriodoId.value,
+              Registro_Entrada: new Date(), // hora de entrada actual
+              Registro_Salida: null,
+              Registro_Tipo: "presencial",
+              Registro_Observaciones: null,
+              Registro_fecha: new Date(),
+              Registro_IsDeleted: false
+            };
+            const response = await fetch(`${API}/registros`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(registroData)
+            });
+            if (!response.ok) throw new Error("No se pudo crear el registro de asistencia.");
+            console.log("Registro de entrada creado correctamente.");
+          } catch (error) {
+            console.error("Error creando registro de entrada:", error);
+            toast.add({
+              severity: "error",
+              summary: "Error",
+              detail: "No se pudo registrar la entrada en la base de datos.",
+              life: 5000,
+            });
+            return;
+          }
+        } else {
+          // Actualizar registro existente para marcar salida (PUT)
+          try {
+            const registroId = registroAbierto.value?.Registro_ID;
+            if (!registroId) {
+              toast.add({
+                severity: "error",
+                summary: "Error",
+                detail: "No se encontró el registro de entrada para actualizar la salida.",
+                life: 5000,
+              });
+              return;
+            }
+            const response = await fetch(`${API}/registros/${registroId}`, {
+              method: "PUT",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ Registro_Salida: new Date() })
+            });
+            if (!response.ok) throw new Error("No se pudo actualizar el registro de asistencia.");
+            console.log("Registro de salida actualizado correctamente.");
+          } catch (error) {
+            console.error("Error actualizando registro de salida:", error);
+            toast.add({
+              severity: "error",
+              summary: "Error",
+              detail: "No se pudo registrar la salida en la base de datos.",
+              life: 5000,
+            });
+            return;
+          }
+        }
+        // Mostrar toast de éxito y redirigir después de 3 segundos
+        setTimeout(() => {
+          router.push("/AsignacionHuella");
+        }, 3000);
+      }
+    } else {
       toast.add({
         severity: "error",
-        summary: "Huella no coincide",
-        detail: "La huella capturada no coincide con la almacenada.",
+        summary: "Error de comparación",
+        detail: `Error comparando las huellas (ErrorCode: ${matchData.ErrorCode}).`,
         life: 5000,
       });
-      return;
     }
-
   } catch (error) {
     console.error("Error al guardar la huella:", error);
     toast.add({
       severity: "error",
       summary: "Error",
-      detail: "No se pudo guardar la huella en la base de datos.",
+      detail: "No se pudo procesar la huella. Verifica la conexión con el lector.",
       life: 5000,
     });
   }
 };
 
-// Función para volver a la vista de AsignacionHuella
+// Volver a la vista de AsignacionHuella
 const volverAsignacionHuella = () => {
   router.push("/AsignacionHuella");
 };
 
-// Cargar datos del estudiante al montar
-onMounted(() => {
-  cargarEstudiante();
+// Al montar, cargar datos del estudiante (y luego el usuarioXPeriodo y registro abierto)
+onMounted(async () => {
+  await cargarEstudiante();
 });
 </script>
 
 <style scoped>
-/* Estilos adicionales (ajusta según necesites) */
+/* Ajusta estilos a tu preferencia */
 </style>

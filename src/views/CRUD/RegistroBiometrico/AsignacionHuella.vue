@@ -84,73 +84,71 @@
       </Column>
       <!-- Columna de acciones -->
       <Column header="Acciones">
-  <template #body="slotProps">
-    <div class="flex gap-2">
-      <!-- Botón para asignar huella -->
-      <Button
-        icon="pi pi-arrow-right"
-        class="p-button-rounded p-button-info"
-        @click="irRegistroHuella(slotProps.data.Usuario_Cedula)"
-        v-tooltip.bottom="{
-        value: 'Asignar Huella Digital',
-        pt: {
-          arrow: {
-            style: {
-              borderBottomColor: 'var(--p-primary-color)'
-            }
-          },
-          text: '!bg-primary !text-primary-contrast !font-medium'
-        }
-      }"
-        :disabled="!!slotProps.data.Usuario_Huella"
-        :tooltipOptions="{ position: 'top', showDelay: 300 }"
-      />
+        <template #body="slotProps">
+          <div class="flex gap-2">
+            <!-- Botón para asignar huella -->
+            <Button
+              icon="pi pi-arrow-right"
+              class="p-button-rounded p-button-info"
+              @click="irRegistroHuella(slotProps.data.Usuario_Cedula)"
+              v-tooltip.bottom="{
+                value: 'Asignar Huella Digital',
+                pt: {
+                  arrow: {
+                    style: {
+                      borderBottomColor: 'var(--p-primary-color)'
+                    }
+                  },
+                  text: '!bg-primary !text-primary-contrast !font-medium'
+                }
+              }"
+              :disabled="!!slotProps.data.Usuario_Huella"
+              :tooltipOptions="{ position: 'top', showDelay: 300 }"
+            />
 
-
-      <!-- Botón para registrar asistencia -->
-      <Button
-        v-if="slotProps.data.Usuario_Huella"
-        icon="pi pi-address-book"
-        class="p-button-rounded p-button-success"
-        @click="irRegistroAsistencia(slotProps.data.Usuario_Cedula)"
-        v-tooltip.bottom="{
-        value: 'Registrar Asistencia',
-        pt: {
-          arrow: {
-            style: {
-              borderBottomColor: 'var(--p-success-color)'
-            }
-          },
-          text: '!bg-green-600 !text-white !font-medium'
-        }
-      }"
-        :tooltipOptions="{ position: 'top', showDelay: 300 }"
-      />
-
+            <!-- Botón para registrar asistencia -->
+            <Button
+              v-if="slotProps.data.Usuario_Huella"
+              icon="pi pi-address-book"
+              class="p-button-rounded p-button-success"
+              @click="irRegistroAsistencia(slotProps.data.Usuario_Cedula)"
+              v-tooltip.bottom="{
+                value: 'Registrar Asistencia',
+                pt: {
+                  arrow: {
+                    style: {
+                      borderBottomColor: 'var(--p-success-color)'
+                    }
+                  },
+                  text: '!bg-green-600 !text-white !font-medium'
+                }
+              }"
+              :tooltipOptions="{ position: 'top', showDelay: 300 }"
+              :disabled="!periodoSeleccionado"
+            />
 
             <!-- Botón para borrar huella -->
             <Button
-        v-if="slotProps.data.Usuario_Huella"
-        icon="pi pi-trash"
-        class="p-button-rounded p-button-danger"
-        @click="confirmarBorrarHuella(slotProps.data)"
-        v-tooltip.bottom="{
-        value: 'Eliminar Huella Digital',
-        pt: {
-          arrow: {
-            style: {
-              borderBottomColor: 'var(--p-danger-color)'
-            }
-          },
-          text: '!bg-red-600 !text-white !font-medium'
-        }
-      }"
-        :tooltipOptions="{ position: 'top', showDelay: 300 }"
-      />
-
-    </div>
-  </template>
-</Column>
+              v-if="slotProps.data.Usuario_Huella"
+              icon="pi pi-trash"
+              class="p-button-rounded p-button-danger"
+              @click="confirmarBorrarHuella(slotProps.data)"
+              v-tooltip.bottom="{
+                value: 'Eliminar Huella Digital',
+                pt: {
+                  arrow: {
+                    style: {
+                      borderBottomColor: 'var(--p-danger-color)'
+                    }
+                  },
+                  text: '!bg-red-600 !text-white !font-medium'
+                }
+              }"
+              :tooltipOptions="{ position: 'top', showDelay: 300 }"
+            />
+          </div>
+        </template>
+      </Column>
 
     </DataTable>
 
@@ -170,7 +168,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed, watch } from "vue";
+import { ref, onMounted, computed } from "vue";
 import { useRouter } from "vue-router";
 import { useToast } from "primevue/usetoast";
 
@@ -320,11 +318,13 @@ const borrarHuella = async () => {
   }
 };
 
+// Función para redirigir a RegistroAsistencia.vue pasando la cédula y el id del período seleccionado
 const irRegistroAsistencia = (cedula: string) => {
-  router.push(`/RegistroAsistencia/${cedula}`);
-  console.log("Redirigiendo a RegistroAsistencia con cédula:", cedula);
+  if (!periodoSeleccionado.value) return; // Por seguridad, aunque el botón esté deshabilitado
+  const periodoId = periodoSeleccionado.value.Periodo_ID;
+  router.push(`/RegistroAsistencia/${cedula}/periodo/${periodoId}`);
+  console.log("Redirigiendo a RegistroAsistencia con cédula:", cedula, "y periodo:", periodoId);
 };
-
 </script>
 
 <style scoped>

@@ -96,7 +96,7 @@ const routes: Array<RouteRecordRaw> = [
         component: AsignacionHuella,
       },
       {
-        path: 'RegistroAsistencia/:id?',
+        path: 'RegistroAsistencia/:id/periodo/:periodo',
         name: 'RegistroAsistencia',
         component: RegistroAsistencia,
       },
