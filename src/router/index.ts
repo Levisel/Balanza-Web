@@ -37,9 +37,33 @@ import NewCase from "@/views/SideBar/Cases/NewCase.vue";
 import MyCases from "@/views/SideBar/Cases/MyCases.vue";
 import CaseNotifications from "@/views/SideBar/Cases/CaseNotifications.vue";
 
-//Reports
-import FeasibilityReport from "@/views/SideBar/Reports/FeasibilityReport.vue";
-import FileReport from "@/views/SideBar/Reports/FileReport.vue";
+//Cases -> Reports
+import FeasibilityReport from "@/views/SideBar/Cases/Reports/FeasibilityReport.vue";
+import FileReport from "@/views/SideBar/Cases/Reports/FileReport.vue";
+
+//----------------------------------------------------------------------------------------------------------------//
+//ENTRANCE CONTROL
+//Cronogram 
+import Cronograma from '@/views/SideBar/EntranceControl/Cronograma/Cronograma.vue';
+import IngresoCronograma from '@/views/SideBar/EntranceControl/Cronograma/IngresoCronograma.vue';
+
+//Students
+import AsignacionPeriodo from '@/views/SideBar/EntranceControl/Estudiantes/AsignacionPeriodo.vue';
+import IngresoEstudiantesExcel from '@/views/SideBar/EntranceControl/Estudiantes/IngresoEstudiantesExcel.vue';
+import IngresoManualEstudiantes from "@/views/SideBar/EntranceControl/Estudiantes/IngresoManualEstudiantes.vue";
+import RemoverPeriodo from '@/views/SideBar/EntranceControl/Estudiantes/RemoverPeriodo.vue';
+import ListadoEstudiantes from '@/views/SideBar/EntranceControl/Estudiantes/ListadoEstudiantes.vue';
+
+//Schedule
+import IngresoArea from '@/views/SideBar/EntranceControl/Horario/IngresoArea.vue';
+import IngresoHorario from '@/views/SideBar/EntranceControl/Horario/IngresoHorario.vue';
+import IngresoHorarioVirtual from '@/views/SideBar/EntranceControl/Horario/IngresoHorarioVirtual.vue';
+import VistaHorarios from '@/views/SideBar/EntranceControl/Horario/VistaHorarios.vue';
+
+// FingerPrint
+import AsignacionHuella from '@/views/SideBar/EntranceControl/RegistroBiometrico/AsignacionHuella.vue';
+import RegistroHuella from '@/views/SideBar/EntranceControl/RegistroBiometrico/RegistroHuella.vue';
+import RegistroAsistencia from '@/views/SideBar/EntranceControl/RegistroBiometrico/RegistroAsistencia.vue';
 
 const routes: Array<RouteRecordRaw> = [
   {
@@ -68,7 +92,7 @@ const routes: Array<RouteRecordRaw> = [
         name: "CaseNotifications",
         component: CaseNotifications,
       },
-      // Reports views
+      // Cases -> Reports views
       {
         path: "InformeDeViabilidad",
         name: "FeasibilityReport",
@@ -126,6 +150,87 @@ const routes: Array<RouteRecordRaw> = [
         path: "TrabajoSocialCasos",
         name: "SocialWorkCases",
         component: SocialWorkCases,
+      },
+      // Entrance Control
+      // Cronogram
+      {
+        path: "Cronograma",
+        name: "Cronograma",
+        component: Cronograma,
+      },
+      {
+        path: 'IngresoCronograma',
+        name: 'IngresoCronograma',
+        component: IngresoCronograma,
+      },
+      {
+        path: 'IngresoCronograma/:id?',
+        name: 'IngresoCronograma',
+        component: IngresoCronograma,
+      },
+      //Students
+      {
+        path: 'AsignacionPeriodo',
+        name: 'AsignacionPeriodo',
+        component: AsignacionPeriodo,
+      },
+      {
+        path: 'IngresoEstudiantesExcel',
+        name: 'IngresoEstudiantesExcel',
+        component: IngresoEstudiantesExcel,
+      },
+      {
+        path: 'IngresoManualEstudiantes',
+        name: 'IngresoManualEstudiantes',
+        component: IngresoManualEstudiantes,
+      },
+      {
+        path: 'ListadoEstudiantes',
+        name: 'ListadoEstudiantes',
+        component: ListadoEstudiantes,
+      },
+      {
+        path: 'RemoverPeriodo',
+        name: 'RemoverPeriodo',
+        component: RemoverPeriodo,
+      },
+      //Schedule
+      {
+        path: 'IngresoArea',
+        name: 'IngresoArea',
+        component: IngresoArea,
+      },
+      {
+        path: 'IngresoHorario',
+        name: 'IngresoHorario',
+        component: IngresoHorario,
+      },
+      {
+        path: 'IngresoHorarioVirtual',
+        name: 'IngresoHorarioVirtual',
+        component: IngresoHorarioVirtual,
+      },
+      {
+        path: 'VistaHorarios',
+        name: 'VistaHorarios',
+        component: VistaHorarios,
+      },
+      //FingerPrint
+      {
+        path: 'AsignacionHuella',
+        name: 'AsignacionHuella',
+        component: AsignacionHuella,
+      },
+      {
+        path: 'RegistroHuella/:id?',
+        name: 'RegistroHuella',
+        component: RegistroHuella,
+      },
+      //Attendance
+      {
+        path: 'RegistroAsistencia/:id/periodo/:periodo',
+        name: 'RegistroAsistencia',
+        component: RegistroAsistencia,
       },
     ],
   },

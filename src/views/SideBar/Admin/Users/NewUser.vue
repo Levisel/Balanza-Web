@@ -10,11 +10,13 @@ import Select from 'primevue/select';
 import Password from "primevue/password";
 import Button from "primevue/button";
 import axios from "axios";
+import type { boolean } from "zod";
 
 
 const toast = useToast();
 const selectedIdType = ref<string>("");
 const bandera = ref<boolean>(false);
+const userRegistered = ref<boolean>(false);
 
 const internalUser = ref<Internal_User>({
   Internal_ID: "",
@@ -86,17 +88,85 @@ const resetLabels = () => {
   return digitoVerificador === digits[9];
 };
 
+const checkUserExists = async (): Promise<boolean> => {
+  if (!internalUser.value.Internal_ID) {
+    return false;
+  }
+  
+  try {
+    const response = await axios.get<Internal_User>(
+      `${API}/usuariointerno/${internalUser.value.Internal_ID}`
+    );
+    
+    if (response.data) {
+      internalUser.value.Internal_ID = "";
+      return true;
+    }
+  } catch (error: any) {
+    if (error.response && error.response.status !== 404) {
+      toast.add({
+        severity: "error",
+        summary: "Error del servidor",
+        detail: "Ha ocurrido un error en el servidor. Por favor intenta más tarde.",
+        life: 3000,
+      });
+    }
+  }
+
+  return false;
+};
+
+const checkEmailExists = async (): Promise<boolean> => {
+  if (!internalUser.value.Internal_Email) {
+    return false;
+  }
+  
+  try {
+    const response = await axios.get<Internal_User>(
+      `${API}/usuariointerno/email/${internalUser.value.Internal_Email}`
+    );
+    
+    if (response.data) {
+      internalUser.value.Internal_Email = "";
+      return true;
+    }
+  } catch (error: any) {
+    if (error.response && error.response.status !== 404) {
+      toast.add({
+        severity: "error",
+        summary: "Error del servidor",
+        detail: "Ha ocurrido un error en el servidor. Por favor intenta más tarde.",
+        life: 3000,
+      });
+    }
+  }
+
+  return false;
+};
+
 watch(
   () => internalUser.value.Internal_ID,
   (nuevoValor) => {
     if (selectedIdType.value === "cedula" && nuevoValor.length === 10) {
       if (validateID(nuevoValor)) {
-        toast.add({
+        checkUserExists().then((existe) => {
+        if (existe) {
+            toast.add({
+            severity: "warn",
+            summary: "Usuario ya existe",
+            detail: "Ya existe un usuario con la cédula ingresada.",
+            life: 3000,
+          });
+        } else {
+          toast.add({
           severity: "success",
           summary: "Cédula válida",
           detail: "La cédula ingresada es correcta.",
           life: 3000,
+           });
+        }
         });
+        
       } else {
         toast.add({
           severity: "error",
@@ -110,7 +180,25 @@ watch(
   }
 );
 
-const validarLongitudCedula = (shouldShowToast: boolean = true): boolean => {
+watch(
+  () => internalUser.value.Internal_Email,
+  (nuevoValor) => {
+    if (nuevoValor) {
+      checkEmailExists().then((existe) => {
+        if (existe) {
+            toast.add({
+            severity: "warn",
+            summary: "Correo ya existe",
+            detail: "Ya existe un usuario con ese correo ingresado.",
+            life: 3000,
+          });
+        } 
+        });
+    }
+  }
+);
+
+const checkIdSize = (shouldShowToast: boolean = true): boolean => {
   if (selectedIdType.value === "cedula" && internalUser.value.Internal_ID.length !== 10) {
     bandera.value = false;
     toast.add({
@@ -128,13 +216,9 @@ const validarLongitudCedula = (shouldShowToast: boolean = true): boolean => {
 };
 
 
-
-
-
 const onFormSubmit = async () => {
   // Make the API call
   try {
-    if(validarLongitudCedula() === false) return;
     const response = await axios.post<Internal_User>(`${API}/register`, {
       Internal_ID: internalUser.value.Internal_ID,
       Internal_Name: internalUser.value.Internal_Name,
@@ -340,8 +424,9 @@ const createPassword = () => {
                     size="large"
                     class="w-full"
                     :maxlength="selectedIdType === 'cedula' ? 10 : 15"
-                    @blur="() => validarLongitudCedula()"
+                    @blur="() => checkIdSize()"
                     :disabled="!selectedIdType"
+                    autocomplete="off"
                   />
                   <label for="idNumber">Número de ID</label>
                 </FloatLabel>

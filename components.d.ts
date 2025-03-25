@@ -15,6 +15,8 @@ declare module 'vue' {
     Card: typeof import('primevue/card')['default']
     Checkbox: typeof import('primevue/checkbox')['default']
     Column: typeof import('primevue/column')['default']
+    ConfirmPopup: typeof import('primevue/confirmpopup')['default']
+    CuadriculaHorario: typeof import('./src/components/CuadriculaHorario.vue')['default']
     DataTable: typeof import('primevue/datatable')['default']
     DatePicker: typeof import('primevue/datepicker')['default']
     DefaultLayout: typeof import('./src/components/layouts/DefaultLayout.vue')['default']
