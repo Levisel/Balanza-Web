@@ -9,15 +9,10 @@ export {}
 declare module 'vue' {
   export interface GlobalComponents {
     AuthLayout: typeof import('./src/components/layouts/AuthLayout.vue')['default']
-    Badge: typeof import('primevue/badge')['default']
     Button: typeof import('primevue/button')['default']
     Card: typeof import('primevue/card')['default']
-    Checkbox: typeof import('primevue/checkbox')['default']
-    Column: typeof import('primevue/column')['default']
     ConfirmPopup: typeof import('primevue/confirmpopup')['default']
     CuadriculaHorario: typeof import('./src/components/CuadriculaHorario.vue')['default']
-    DataTable: typeof import('primevue/datatable')['default']
-    DatePicker: typeof import('primevue/datepicker')['default']
     DefaultLayout: typeof import('./src/components/layouts/DefaultLayout.vue')['default']
     Dialog: typeof import('primevue/dialog')['default']
     Divider: typeof import('primevue/divider')['default']
@@ -28,7 +23,6 @@ declare module 'vue' {
     InputIcon: typeof import('primevue/inputicon')['default']
     InputMask: typeof import('primevue/inputmask')['default']
     InputText: typeof import('primevue/inputtext')['default']
-    Message: typeof import('primevue/message')['default']
     Password: typeof import('primevue/password')['default']
     ProgressBar: typeof import('primevue/progressbar')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
