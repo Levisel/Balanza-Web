@@ -17,10 +17,13 @@ import ForgotPassword from "@/views/Auth/ForgotPassword.vue";
 //Home
 import HomeView from "@/views/SideBar/HomeView.vue";
 
-//-- Admin
-import CaseAssign from "@/views/SideBar/Admin/CaseAssign.vue";
-import CaseReview from "@/views/SideBar/Admin/CaseReview.vue";
+//-- Admin -> (Case Management)
+import CaseAssign from "@/views/SideBar/Admin/CaseManagement/CaseAssign.vue";
+import CaseReview from "@/views/SideBar/Admin/CaseManagement/CaseReview.vue";
 import Configuration from "@/views/SideBar/Admin/Configuration.vue";
+
+//-- Admin -> (Parameter Management)
+import Parameter from "@/views/SideBar/Admin/ParameterManagement/Parameter.vue";
 
 //-- Admin -> (Users)
 import UserView from "@/views/SideBar/Admin/Users/UserView.vue";
@@ -76,34 +79,7 @@ const routes: Array<RouteRecordRaw> = [
         name: "home",
         component: HomeView,
       },
-      // Cases views
-      {
-        path: "NuevoCaso",
-        name: "NewCase",
-        component: NewCase,
-      },
-      {
-        path: "MisCasos",
-        name: "MyCases",
-        component: MyCases,
-      },
-      {
-        path: "Notificaciones",
-        name: "CaseNotifications",
-        component: CaseNotifications,
-      },
-      // Cases -> Reports views
-      {
-        path: "InformeDeViabilidad",
-        name: "FeasibilityReport",
-        component: FeasibilityReport,
-      },
-      {
-        path: "ReporteDeDocumentos",
-        name: "FileReport",
-        component: FileReport,
-      },
-      // Admin views
+      // Admin -> Case Management views
       {
         path: "RevisionDeCasos",
         name: "CaseReview",
@@ -114,10 +90,11 @@ const routes: Array<RouteRecordRaw> = [
         name: "CaseAssign",
         component: CaseAssign,
       },
+      // Admin -> Parameter Management
       {
-        path: "Configuracion",
-        name: "Configuration",
-        component: Configuration,
+        path: "Parametros",
+        name: "Parameter",
+        component: Parameter,
       },
       // Admin -> Users views
       {
@@ -150,6 +127,38 @@ const routes: Array<RouteRecordRaw> = [
         path: "TrabajoSocialCasos",
         name: "SocialWorkCases",
         component: SocialWorkCases,
+      },
+      {
+        path: "Configuracion",
+        name: "Configuration",
+        component: Configuration,
+      },
+      // Cases views
+      {
+        path: "NuevoCaso",
+        name: "NewCase",
+        component: NewCase,
+      },
+      {
+        path: "MisCasos",
+        name: "MyCases",
+        component: MyCases,
+      },
+      {
+        path: "Notificaciones",
+        name: "CaseNotifications",
+        component: CaseNotifications,
+      },
+      // Cases -> Reports views
+      {
+        path: "InformeDeViabilidad",
+        name: "FeasibilityReport",
+        component: FeasibilityReport,
+      },
+      {
+        path: "ReporteDeDocumentos",
+        name: "FileReport",
+        component: FileReport,
       },
       // Entrance Control
       // Cronogram
