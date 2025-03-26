@@ -95,7 +95,7 @@ const checkUserExists = async (): Promise<boolean> => {
   
   try {
     const response = await axios.get<Internal_User>(
-      `${API}/usuariointerno/${internalUser.value.Internal_ID}`
+      `${API}/internal-user/${internalUser.value.Internal_ID}`
     );
     
     if (response.data) {
@@ -123,7 +123,7 @@ const checkEmailExists = async (): Promise<boolean> => {
   
   try {
     const response = await axios.get<Internal_User>(
-      `${API}/usuariointerno/email/${internalUser.value.Internal_Email}`
+      `${API}/internal-user/email/${internalUser.value.Internal_Email}`
     );
     
     if (response.data) {

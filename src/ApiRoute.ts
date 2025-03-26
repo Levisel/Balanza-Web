@@ -168,3 +168,54 @@ export interface Parametro_Horario {
     Parametro_Horario_Tipo: string;
     Parametro_Horario_IsDeleted: boolean;
 }
+
+//------------------------------------------------------------------------------------------------------------------//
+//Tabla de Parámetros
+export interface Vulnerable_Situation{
+    Vulnerable_Situation_Id: number;
+    Vulnerable_Situation_Name: string;
+    Vulnerable_Situation_Status: boolean;
+}
+
+
+export interface Catastrophic_Illness{
+    Catastrophic_Illness_Id: number;
+    Catastrophic_Illness_Name: string;
+    Catastrophic_Illness_Status: boolean;
+}   
+
+export interface Disability{
+    Disability_Id: number;
+    Disability_Name: string;
+    Disability_Status: boolean;
+}
+
+export interface Protocols{
+    Protocol_Id: number;
+    Protocol_Name: string;
+    Protocol_Status: boolean;
+}
+
+export interface Case_Status{
+    Case_Status_Id: number;
+    Case_Status_Name: string;
+    Case_Status_Status: boolean;
+}
+
+export interface Type_Of_Attention{
+    Type_Of_Attention_Id: number;
+    Type_Of_Attention_Name: string;
+    Type_Of_Attention_Status: boolean;
+}
+
+export interface Schedule{
+    Schedule_Id: number;
+    Schedule_Limit: string;
+    Schedule_Status: boolean;
+}
+
+export interface Profiles{
+    Profile_Id: number;
+    Profile_Name: string;
+    Profile_Status: boolean;
+}

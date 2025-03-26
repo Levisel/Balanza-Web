@@ -59,7 +59,7 @@ const types = ref([
 // Función para obtener usuarios de la API
 const fetchUsers = async () => {
     try {
-        const { data } = await axios.get(`${API}/usuariointerno`);
+        const { data } = await axios.get(`${API}/internal-user`);
         // Excluimos la contraseña
         internalUser.value = data.map((user: Internal_User) => {
             const { Internal_Password, ...rest } = user;
@@ -75,7 +75,7 @@ const saveUser = async () => {
     if (selectedInternalUser.value) {
         try {
             selectedInternalUser.value.Internal_Phone = selectedInternalUser.value.Internal_Phone.replace(/\D/g,""); // Eliminar caracteres no numéricos
-            await axios.put(`${API}/usuariointerno/${selectedInternalUser.value.Internal_ID}`, selectedInternalUser.value);
+            await axios.put(`${API}/internal-user/${selectedInternalUser.value.Internal_ID}`, selectedInternalUser.value);
             toast.add({ severity: "info", summary: "Usuario Actualizado", detail: "El usuario ha sido actualizado con éxito.", life: 4000 });
             // Recargar usuarios después de la actualización
             await fetchUsers();
