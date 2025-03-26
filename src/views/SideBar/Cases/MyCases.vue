@@ -71,7 +71,7 @@ const casosInactivosFiltrados = computed(() => filtrarCasos(casosInactivos.value
 // Obtener los datos de los usuarios
 const obtenerNombreUsuario = async (userId) => {
   try {
-    const response = await axios.get(`${API}/usuario/${userId}`);
+    const response = await axios.get(`${API}/user/${userId}`);
     return `${response.data.User_FirstName} ${response.data.User_LastName}`;
   } catch (error) {
     console.error(`Error al obtener el usuario con ID ${userId}:`, error);
@@ -81,7 +81,7 @@ const obtenerNombreUsuario = async (userId) => {
 
 const verDetallesUsuario = async (cedula) => {
   try {
-    const response = await axios.get(`${API}/usuario/${cedula}`);
+    const response = await axios.get(`${API}/user/${cedula}`);
     usuarioDetalles.value = response.data;
     visibleUsuarioDialog.value = true;
   } catch (error) {
@@ -105,7 +105,7 @@ const obtenerCasos = async () => {
     }
 
     // Obtener los datos de las asignaciones usando el internal_id
-    const asignacionesResponse = await axios.get(`${API}/asignacion/studentid/${internalID}`);
+    const asignacionesResponse = await axios.get(`${API}/assignment/studentid/${internalID}`);
 
     console.log('asignacionesResponse:', asignacionesResponse.data); // Verificar la respuesta de asignaciones
 
@@ -115,7 +115,7 @@ const obtenerCasos = async () => {
 
     // Obtener los detalles de cada caso usando los init_code
     const casosConUsuarios = await Promise.all(asignacionesResponse.data.map(async (asignacion, index) => {
-      const consultaResponse = await axios.get(`${API}/primerasconsultas/${asignacion.Init_Code}`);
+      const consultaResponse = await axios.get(`${API}/initial-consultations/${asignacion.Init_Code}`);
       const caso = consultaResponse.data;
 
       if (!caso) {
@@ -165,7 +165,7 @@ const finalizarCaso = async (caso: { codigo: any; }) => {
       throw new Error('No se pudo obtener el ID del usuario');
     }
 
-    const response = await axios.put(`${API}/primerasconsultas/${caso.codigo}`, {
+    const response = await axios.put(`${API}/initial-consultations/${caso.codigo}`, {
       Init_Status: 0
     }, {
       headers: {
@@ -206,7 +206,7 @@ const reactivarCaso = async (caso: { codigo: any; }) => {
       throw new Error('No se pudo obtener el ID del usuario');
     }
 
-    const response = await axios.put(`${API}/primerasconsultas/${caso.codigo}`, {
+    const response = await axios.put(`${API}/initial-consultations/${caso.codigo}`, {
       Init_Status: 1
     }, {
       headers: {
@@ -252,7 +252,7 @@ const eliminarCaso = (caso) => {
           throw new Error('No se pudo obtener el ID del usuario');
         }
 
-        const response = await axios.delete(`${API}/primerasconsultas/${caso.codigo}`, {
+        const response = await axios.delete(`${API}/initial-consultations/${caso.codigo}`, {
           headers: {
             'Internal-ID': internalID,
           }
@@ -300,7 +300,7 @@ const verActividades = async (caso) => {
     selectedCaseCode.value = codigoCaso; // Almacenar el Init_Code del caso seleccionado
 
     // Llamada directa a la API que trae actividades solo de ese caso
-    const response = await axios.get(`${API}/actividad/caso/${codigoCaso}`);
+    const response = await axios.get(`${API}/activity/case/${codigoCaso}`);
 
     if (!response.data || response.data.length === 0) {
       throw new Error(`No se encontraron actividades para el caso ${codigoCaso}`);
@@ -413,7 +413,7 @@ const agregarNuevaActividad = async () => {
     console.log('FormData:', formData); // Log the FormData
 
     // Realizar la solicitud para agregar la actividad
-    const response = await axios.post(`${API}/actividad`, formData, {
+    const response = await axios.post(`${API}/activity`, formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
         'Internal-ID': internalID
@@ -464,7 +464,7 @@ const eliminarActividad = (actividad: { id: any; }) => {
           throw new Error('No se pudo obtener el ID del usuario');
         }
 
-        const response = await axios.delete(`${API}/actividad/${actividad.id}`, {
+        const response = await axios.delete(`${API}/activity/${actividad.id}`, {
           headers: {
             'Internal-ID': internalID,
           }
@@ -507,7 +507,7 @@ const eliminarActividad = (actividad: { id: any; }) => {
 // Función para ver el documento
 const verDocumento = async (actividadId: any) => {
   try {
-    const response = await axios.get(`${API}/actividad/documento/${actividadId}`, {
+    const response = await axios.get(`${API}/activity/document/${actividadId}`, {
       responseType: 'blob'
     });
 

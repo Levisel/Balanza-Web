@@ -10,7 +10,6 @@ declare module 'vue' {
     AuthLayout: typeof import('./src/components/layouts/AuthLayout.vue')['default']
     Button: typeof import('primevue/button')['default']
     Card: typeof import('primevue/card')['default']
-    Checkbox: typeof import('primevue/checkbox')['default']
     ConfirmPopup: typeof import('primevue/confirmpopup')['default']
     CuadriculaHorario: typeof import('./src/components/CuadriculaHorario.vue')['default']
     DefaultLayout: typeof import('./src/components/layouts/DefaultLayout.vue')['default']
