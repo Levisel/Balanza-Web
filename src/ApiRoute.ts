@@ -11,6 +11,7 @@ export interface Internal_User {
     Internal_Type: string;
     Internal_Area: string;
     Internal_Phone: string;
+    Interal_Huella: Blob;
     Internal_Status: string;
 }
 // 📌 Internal User (The external user that requires the consultation service)
