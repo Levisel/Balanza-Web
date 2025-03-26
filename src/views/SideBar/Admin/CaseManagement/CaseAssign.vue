@@ -15,6 +15,7 @@
             <div class="column-header" style="width: 15%">Número de Caso</div>
             <div class="column-header" style="width: 20%">Área</div>
             <div class="column-header" style="width: 15%">Estado</div>
+            <div class="column-header" style="width: 15%">Complejidad</div>
             <div class="column-header" style="width: 15%">Asignar a</div>
             <div class="column-header" style="width: 15%">Acciones</div>
           </div>
@@ -64,6 +65,7 @@
             <div class="column-header" style="width: 20%">Área</div>
             <div class="column-header" style="width: 15%">Estado</div>
             <div class="column-header" style="width: 15%">Asignado a</div>
+            <div class="column-header" style="width: 15%">Complejidad</div>
             <div class="column-header" style="width: 15%">Acciones</div>
           </div>
 
@@ -147,15 +149,15 @@ export default defineComponent({
     const filters = ref({ global: '' });
 
     const fetchCases = async () => {
-      try {
-        const response = await axios.get(`http://localhost:3000/initial-consultations/type/${selectedArea.value}`);
-        cases.value = response.data;
-      } catch (error) {
-        console.error('Error fetching cases:', error);
-      } finally {
-        loading.value = false;
-      }
-    };
+  try {
+    const response = await axios.get(`http://localhost:3000/initial-consultations/type/${selectedArea.value}/active`);
+    cases.value = response.data;
+  } catch (error) {
+    console.error('Error fetching cases:', error);
+  } finally {
+    loading.value = false;
+  }
+};
 
     const fetchStudents = async () => {
       try {
