@@ -32,7 +32,11 @@ const internalUser = ref<Internal_User>({
 
 const types = ref([
   { label: "Estudiante", value: "Estudiante" },
-  { label: "Administrador", value: "Administrador" },
+  { label: "Administrador", value: "Administrador"},
+  { label: "Abogado", value: "Abogado"  },
+  { label: "Secretaría", value: "Secretaría" },
+  { label: "Conserje", value: "Conserje" },
+  { label: "Otro", value: "Otro" },
 ]);
 
 const areas = ref([

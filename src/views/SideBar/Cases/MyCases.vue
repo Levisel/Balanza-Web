@@ -95,7 +95,7 @@ const verDetallesUsuario = async (cedula) => {
   }
 };
 
-const obtenerCasos = async (estado) => {
+const obtenerCasos = async () => {
   try {
     // Obtener el Internal_ID del usuario logueado desde el authStore
     const internalID = authStore.user?.id;
@@ -104,14 +104,25 @@ const obtenerCasos = async (estado) => {
       throw new Error('No se pudo obtener el ID del usuario');
     }
 
-    const response = await axios.get(`${API}/primerasconsultas/${estado}/${internalID}`, {
-      headers: {
-        'Internal-ID': internalID,
-      }
-    });
+    // Obtener los datos de las asignaciones usando el internal_id
+    const asignacionesResponse = await axios.get(`${API}/asignacion/studentid/${internalID}`);
 
-    const casosConUsuarios = await Promise.all(response.data.map(async (caso: { User_ID: any; Init_Code: any; Init_Date: string | number | Date; Init_Topic: any; Init_Office: any; Init_Subject: any; Init_Status: any; Init_ClientType: any; }, index: number) => {
-      const nombreUsuario = await obtenerNombreUsuario(caso.User_ID); 
+    console.log('asignacionesResponse:', asignacionesResponse.data); // Verificar la respuesta de asignaciones
+
+    if (!asignacionesResponse.data || asignacionesResponse.data.length === 0) {
+      throw new Error('No se encontraron asignaciones para el usuario');
+    }
+
+    // Obtener los detalles de cada caso usando los init_code
+    const casosConUsuarios = await Promise.all(asignacionesResponse.data.map(async (asignacion, index) => {
+      const consultaResponse = await axios.get(`${API}/primerasconsultas/${asignacion.Init_Code}`);
+      const caso = consultaResponse.data;
+
+      if (!caso) {
+        throw new Error(`No se encontraron detalles para el init_code ${asignacion.Init_Code}`);
+      }
+
+      const nombreUsuario = await obtenerNombreUsuario(caso.User_ID);
 
       return {
         nro: index + 1,
@@ -127,20 +138,22 @@ const obtenerCasos = async (estado) => {
       }
     }));
 
-    if (estado === 1) {
-      casosActivos.value = casosConUsuarios;
-    } else {
-      casosInactivos.value = casosConUsuarios;
-    }
+    // Asignar todos los casos a casosActivos
+    casosActivos.value = casosConUsuarios;
 
   } catch (error) {
-    console.error('Error al obtener los casos:', error)
+    console.error('Error al obtener los casos:', error);
+    toast.add({
+      severity: 'error',
+      summary: 'Error',
+      detail: 'No se pudieron obtener los casos.',
+      life: 3000,
+    });
   }
 }
 
 onMounted(() => {
-  obtenerCasos(1); // Cargar casos activos
-  obtenerCasos(0); // Cargar casos inactivos
+  obtenerCasos(); // Cargar todos los casos en la tabla de casos activos
   obtenerAbogadosActivosPorArea(); // Obtener abogados activos por área
 });
 
@@ -283,11 +296,15 @@ const eliminarCaso = (caso) => {
 //Obtener las actividades según código del caso
 const verActividades = async (caso) => {
   try {
-    const codigoCaso = caso.Init_Code; // Init_Code que ya tienes en el objeto "caso"
+    const codigoCaso = caso.codigo; // Init_Code que ya tienes en el objeto "caso"
     selectedCaseCode.value = codigoCaso; // Almacenar el Init_Code del caso seleccionado
 
     // Llamada directa a la API que trae actividades solo de ese caso
     const response = await axios.get(`${API}/actividad/caso/${codigoCaso}`);
+
+    if (!response.data || response.data.length === 0) {
+      throw new Error(`No se encontraron actividades para el caso ${codigoCaso}`);
+    }
 
     // Mapear la respuesta a los campos que muestra la tabla de actividades
     actividades.value = response.data.map((act) => ({
@@ -302,7 +319,6 @@ const verActividades = async (caso) => {
       juez: act.Judge_Name,
       tipo: act.Activity_Type,
       tiempo: act.Time,
-      //juzgado: act.Judged, // No se si haya campo juzgado pero falta agregar LastActivity
       estado: act.Status,
       documento: act.Documents
     }));
@@ -397,7 +413,7 @@ const agregarNuevaActividad = async () => {
     console.log('FormData:', formData); // Log the FormData
 
     // Realizar la solicitud para agregar la actividad
-    const response = await axios.post('${API}/actividad', formData, {
+    const response = await axios.post(`${API}/actividad`, formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
         'Internal-ID': internalID
@@ -416,7 +432,7 @@ const agregarNuevaActividad = async () => {
     // Close the dialog
     visibleActividadDialog.value = false;
 
-  } catch (error: unknown) {
+  } catch (error) {
     toast.add({
       severity: 'error',
       summary: 'Error',
@@ -546,6 +562,10 @@ const obtenerAbogadosActivosPorArea = async () => {
   }
 };
 
+const abrirDialogoNuevaActividad = () => {
+  visibleActividadDialog.value = true; // Abrir el diálogo de nueva actividad
+};
+
 </script>
 
 <template>
@@ -645,10 +665,10 @@ const obtenerAbogadosActivosPorArea = async () => {
   <div class="flex flex-col space-y-6">
     <!-- Botón para agregar nueva actividad -->
     <Button 
-      label="Agregar Nueva Actividad" 
-      icon="pi pi-plus" 
-      class="p-button-success mb-4" 
-      @click="visibleActividadDialog = true" 
+    label="Agregar Nueva Actividad" 
+    icon="pi pi-plus" 
+    class="p-button-success mb-4" 
+    @click="abrirDialogoNuevaActividad" 
     />
     
     <!-- Tabla de actividades -->
