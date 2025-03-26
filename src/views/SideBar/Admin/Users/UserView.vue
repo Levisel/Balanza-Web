@@ -80,6 +80,7 @@ const saveUser = async () => {
             // Recargar usuarios después de la actualización
             await fetchUsers();
             editDialogVisible.value = false;
+            console.log(selectedInternalUser.value);
         } catch (error) {
             toast.add({ severity: "error", summary: "Error", detail: "No se ha podido actualizar al usuario.", life: 3000 });
         }
@@ -495,4 +496,3 @@ onMounted(() => {
 <style scoped>
 
 </style>
-
