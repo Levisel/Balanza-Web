@@ -65,6 +65,11 @@ const caseNotificactionsClass = computed(() => [
   route.path === "/Notificaciones" ? "text-green-400" : "",
   isDarkTheme.value ? "hover:bg-gray-700" : "hover:bg-gray-100",
 ]);
+const activitiesClass = computed(() => [
+  "select-none flex items-center cursor-pointer p-4 rounded text-surface-700 transition-colors",
+  route.path === "/CrearActividades" ? "text-green-400" : "",
+  isDarkTheme.value ? "hover:bg-gray-700" : "hover:bg-gray-100",
+]);
 
 //Cases -> Reports
 const feasibilityReportClass = computed(() => [
@@ -272,6 +277,17 @@ const registroAsistenciaClass = computed(() => [
               >
                 <i class="pi pi-folder-open mr-2"></i>
                 <span class="font-medium text-lg">Mis Casos</span>
+              </router-link>
+            </li>
+            <li>
+              <router-link
+                to="/CrearActividades"
+                draggable="false"
+                v-ripple
+                :class="activitiesClass"
+              >
+                <i class="pi pi-folder-open mr-2"></i>
+                <span class="font-medium text-lg">Crear Acividades</span>
               </router-link>
             </li>
             <!-- Sección: REPORTES -->

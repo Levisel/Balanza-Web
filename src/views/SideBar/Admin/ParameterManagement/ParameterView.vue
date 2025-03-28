@@ -66,6 +66,79 @@ const tableConfig = {
     { field: "Profile_Name", header: "Nombre", type: "string" },
     { field: "Profile_Status", header: "Estado", type: "boolean" },
   ],
+  Occupations: [
+    { field: "Occupation_Name", header: "Nombre", type: "string" },
+    { field: "Occupation_Status", header: "Estado", type: "boolean" },
+  ],
+  Income_Level: [
+    { field: "Income_Level_Name", header: "Nombre", type: "string" },
+    { field: "Income_Level_Status", header: "Estado", type: "boolean" },
+  ],
+  Family_Group: [
+    { field: "Family_Group_Name", header: "Nombre", type: "string" },
+    { field: "Family_Group_Status", header: "Estado", type: "boolean" },
+  ],
+  Family_Income: [
+    { field: "Family_Income_Name", header: "Nombre", type: "string" },
+    { field: "Family_Income_Status", header: "Estado", type: "boolean" },
+  ],
+  Type_Of_Housing: [
+    { field: "Type_Of_Housing_Name", header: "Nombre", type: "string" },
+    { field: "Type_Of_Housing_Status", header: "Estado", type: "boolean" },
+  ],
+  Own_Assets: [
+    { field: "Own_Assets_Name", header: "Nombre", type: "string" },
+    { field: "Own_Assets_Status", header: "Estado", type: "boolean" },
+  ],
+  Pensioner: [
+    { field: "Pensioner_Name", header: "Nombre", type: "string" },
+    { field: "Pensioner_Status", header: "Estado", type: "boolean" },
+  ],
+  Health_Insurance: [
+    { field: "Health_Insurance_Name", header: "Nombre", type: "string" },
+    { field: "Health_Insurance_Status", header: "Estado", type: "boolean" },
+  ],
+  /**************************************************************************** */
+  Ethnicity: [
+    { field: "Ethnicity_Name", header: "Nombre", type: "string" },
+    { field: "Ethnicity_Status", header: "Estado", type: "boolean" },
+  ],
+  Civil_Status: [
+    { field: "Civil_Status_Name", header: "Nombre", type: "string" },
+    { field: "Civil_Status_Status", header: "Estado", type: "boolean" },
+  ],
+  Sex: [
+    { field: "Sex_Name", header: "Nombre", type: "string" },
+    { field: "Sex_Status", header: "Estado", type: "boolean" },
+  ],
+  Derived_By: [
+    { field: "Derived_By_Name", header: "Nombre", type: "string" },
+    { field: "Derived_By_Status", header: "Estado", type: "boolean" },
+  ],
+  Academic_Instruction: [
+    { field: "Academic_Instruction_Name", header: "Nombre", type: "string" },
+    { field: "Academic_Instruction_Status", header: "Estado", type: "boolean" },
+  ],
+  Number_Of_Attempts: [
+    { field: "Number_Of_Attempts", header: "Nombre", type: "string" },
+    { field: "Number_Of_Attempts_Status", header: "Estado", type: "boolean" },
+  ],
+  Complexity: [
+    { field: "Complexity_Name", header: "Nombre", type: "string" },
+    { field: "Complexity_Status", header: "Estado", type: "boolean" },
+  ],
+  Documentation_Backup: [
+    { field: "Documentation_Backup_Name", header: "Nombre", type: "string" },
+    { field: "Documentation_Backup_Status", header: "Estado", type: "boolean" },
+  ],
+  Period_Type: [
+    { field: "Period_Type_Name", header: "Nombre", type: "string" },
+    { field: "Period_Type_Status", header: "Estado", type: "boolean" },
+  ],
+  Practical_Hours: [
+    { field: "Practical_Hours", header: "Nombre", type: "string" },
+    { field: "Practical_Hours_Status", header: "Estado", type: "boolean" },
+  ]
 };
 
 // Función para resetear el registro seleccionado
@@ -83,6 +156,24 @@ const tableNames: { [key in keyof typeof tableConfig]: string } = {
   Type_Of_Attention: "Tipo de Atención",
   Schedule: "Horario",
   Profiles: "Perfiles",
+  Occupations: "Ocupaciones",
+  Income_Level: "Nivel de Ingresos",
+  Family_Group: "Grupo Familiar",
+  Family_Income: "Ingresos Familiares",
+  Type_Of_Housing: "Tipo de Vivienda",
+  Own_Assets: "Bienes Propios",
+  Pensioner: "Pensionado",
+  Health_Insurance: "Seguro de Salud",
+  Ethnicity: "Etnia",
+  Academic_Instruction: "Instrucción Académica",
+  Number_Of_Attempts: "Número de Intentos",
+  Complexity: "Complejidad",
+  Documentation_Backup: "Documentación de respaldo",
+  Period_Type: "Tipo de Período",
+  Practical_Hours: "Horas Prácticas",
+  Sex: "Sexo",
+  Civil_Status: "Estado Civil",
+  Derived_By: "Derivado por",
 };
 
 // Mapeo de campos de ID según la tabla
@@ -95,6 +186,24 @@ const idFieldMap: { [key in keyof typeof tableConfig]: string } = {
   Type_Of_Attention: "Type_Of_Attention_Id",
   Schedule: "Schedule_Id",
   Profiles: "Profile_Id",
+  Occupations: "Occupation_Id",
+  Income_Level: "Income_Level_Id",
+  Family_Group: "Family_Group_Id",
+  Family_Income: "Family_Income_Id",
+  Type_Of_Housing: "Type_Of_Housing_Id",
+  Own_Assets: "Own_Assets_Id",
+  Pensioner: "Pensioner_Id",
+  Health_Insurance: "Health_Insurance_Id",
+  Ethnicity: "Ethnicity_ID",
+  Academic_Instruction: "Academic_Instruction_ID",
+  Number_Of_Attempts: "Number_Of_Attempts_ID",
+  Complexity: "Complexity_ID",
+  Documentation_Backup: "Documentation_Backup_ID",
+  Period_Type: "Period_Type_ID",
+  Practical_Hours: "Practical_Hours_ID",
+  Sex: "Sex_ID",
+  Civil_Status: "Civil_Status_ID",
+  Derived_By: "Derived_By_ID",
 };
 
 // Computamos la clave (key) a partir del label seleccionado
@@ -157,6 +266,24 @@ const loadData = async () => {
         Type_Of_Attention: `${API}/type-of-attention`,
         Schedule: `${API}/schedule`,
         Profiles: `${API}/profile`,
+        Occupations: `${API}/occupations`,
+        Income_Level: `${API}/income-level`,
+        Family_Group: `${API}/family-group`,
+        Family_Income: `${API}/family-income`,
+        Type_Of_Housing: `${API}/type-of-housing`,
+        Own_Assets: `${API}/own-assets`,
+        Pensioner: `${API}/pensioner`,
+        Health_Insurance: `${API}/health-insurance`,
+        Ethnicity:`${API}/ethnicities`,
+        Academic_Instruction: `${API}/academic-instructions`,
+        Number_Of_Attempts: `${API}/number-of-attempts`,
+        Complexity: `${API}/complexities`,
+        Documentation_Backup: `${API}/documentation-backups`,
+        Period_Type: `${API}/period-types`,
+        Practical_Hours: `${API}/practical-hours`,
+        Sex: `${API}/sexes`,
+        Civil_Status: `${API}/civil-statuses`,
+        Derived_By: `${API}/derived-by`
       };
       console.log("Cargando datos desde:", urlMap[selectedTableKey.value]);
       const { data } = await axios.get(urlMap[selectedTableKey.value]);
@@ -194,6 +321,24 @@ const createData = async () => {
         Type_Of_Attention: `${API}/type-of-attention`,
         Schedule: `${API}/schedule`,
         Profiles: `${API}/profile`,
+        Occupations: `${API}/occupations`,
+        Income_Level: `${API}/income-level`,
+        Family_Group: `${API}/family-group`,
+        Family_Income: `${API}/family-income`,
+        Type_Of_Housing: `${API}/type-of-housing`,
+        Own_Assets: `${API}/own-assets`,
+        Pensioner: `${API}/pensioner`,
+        Health_Insurance: `${API}/health-insurance`,
+        Ethnicity: `${API}/ethnicities`,
+        Academic_Instruction: `${API}/academic-instructions`,
+        Number_Of_Attempts: `${API}/number-of-attempts`,
+        Complexity: `${API}/complexities`,
+        Documentation_Backup: `${API}/documentation-backups`,
+        Period_Type: `${API}/period-types`,
+        Practical_Hours: `${API}/practical-hours`,
+        Sex: `${API}/sexes`,
+        Civil_Status: `${API}/civil-statuses`,
+        Derived_By: `${API}/derived-by`
       };
       console.log("Enviando datos para creación:", selectedRecord.value);
       await axios.post(urlMap[selectedTableKey.value], selectedRecord.value);
@@ -230,6 +375,24 @@ const updateData = async () => {
         Type_Of_Attention: `${API}/type-of-attention`,
         Schedule: `${API}/schedule`,
         Profiles: `${API}/profile`,
+        Occupations: `${API}/occupations`,
+        Income_Level: `${API}/income-level`,
+        Family_Group: `${API}/family-group`,
+        Family_Income: `${API}/family-income`,
+        Type_Of_Housing: `${API}/type-of-housing`,
+        Own_Assets: `${API}/own-assets`,
+        Pensioner: `${API}/pensioner`,
+        Health_Insurance: `${API}/health-insurance`,
+        Ethnicity:`${API}/ethnicities`,
+        Academic_Instruction: `${API}/academic-instructions`,
+        Number_Of_Attempts: `${API}/number-of-attempts`,
+        Complexity: `${API}/complexities`,
+        Documentation_Backup: `${API}/documentation-backups`,
+        Period_Type: `${API}/period-types`,
+        Practical_Hours: `${API}/practical-hours`,
+        Sex: `${API}/sexes`,
+        Civil_Status: `${API}/civil-statuses`,
+        Derived_By: `${API}/derived-by`
       };
       const idField = idFieldMap[selectedTableKey.value];
       const recordId = selectedRecord.value[idField] || selectedRecord.value.id;
@@ -288,6 +451,25 @@ const deleteData = async () => {
         Type_Of_Attention: `${API}/type-of-attention`,
         Schedule: `${API}/schedule`,
         Profiles: `${API}/profile`,
+        Occupations: `${API}/occupations`,
+        Income_Level: `${API}/income-level`,
+        Family_Group: `${API}/family-group`,
+        Family_Income: `${API}/family-income`,
+        Type_Of_Housing: `${API}/type-of-housing`,
+        Own_Assets: `${API}/own-assets`,
+        Pensioner: `${API}/pensioner`,
+        Health_Insurance: `${API}/health-insurance`,
+        Ethnicity:`${API}/ethnicities`,
+        Academic_Instruction: `${API}/academic-instructions`,
+        Number_Of_Attempts: `${API}/number-of-attempts`,
+        Complexity: `${API}/complexities`,
+        Documentation_Backup: `${API}/documentation-backups`,
+        Period_Type: `${API}/period-types`,
+        Practical_Hours: `${API}/practical-hours`,
+        Sex: `${API}/sexes`,
+        Civil_Status: `${API}/civil-statuses`,
+        Derived_By: `${API}/derived-by`
+
       };
       const idField = idFieldMap[selectedTableKey.value];
       const recordId = selectedRecord.value[idField] || selectedRecord.value.id;

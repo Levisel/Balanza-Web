@@ -39,6 +39,7 @@ import SocialWorkNewCase from "@/views/SideBar/Admin/SocialWork/SocialWorkNewCas
 import NewCase from "@/views/SideBar/Cases/NewCase.vue";
 import MyCases from "@/views/SideBar/Cases/MyCases.vue";
 import CaseNotifications from "@/views/SideBar/Cases/CaseNotifications.vue";
+import CreateActivities from "@/views/SideBar/Cases/CreateActivities.vue";
 
 //Cases -> Reports
 import FeasibilityReport from "@/views/SideBar/Cases/Reports/FeasibilityReport.vue";
@@ -143,6 +144,11 @@ const routes: Array<RouteRecordRaw> = [
         path: "MisCasos",
         name: "MyCases",
         component: MyCases,
+      },
+      {
+        path: "CrearActividades",
+        name: "CreateActivities",
+        component: CreateActivities,
       },
       {
         path: "Notificaciones",
