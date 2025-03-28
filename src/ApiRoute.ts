@@ -60,7 +60,7 @@ export interface User {
     User_Disability: string;
     User_DisabilityPercentage: number;
     User_CatastrophicIllness: string;
-    User_HealthDocuments: Blob;
+    User_HealthDocuments: File | null;
 }
 // 📌 Initial_Consultation (Manages all the information of the initial consultation)
 export interface Initial_Consultation {
