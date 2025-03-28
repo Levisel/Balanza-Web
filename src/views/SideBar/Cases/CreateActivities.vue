@@ -357,6 +357,149 @@ const nuevaActividadTiempo = ref('');
 const nuevaActividadJuzgado = ref('');
 const documento = ref(null);
 
+// Función para agregar una nueva actividad
+const agregarNuevaActividad = async () => {
+  try {
+    if (!selectedCaseCode.value) {
+      throw new Error('No se ha seleccionado ningún caso');
+    }
+
+    // Obtener el Internal_ID del usuario logueado desde el authStore
+    const internalID = authStore.user?.id;
+
+    if (!internalID) {
+      throw new Error('No se pudo obtener el ID del usuario');
+    }
+
+    const formData = new FormData();
+    formData.append('Internal_ID', internalID); // Usar el valor obtenido
+    formData.append('Init_Code', selectedCaseCode.value); // Usar el código del caso seleccionado
+
+    if (nuevaActividadTipo.value) {
+      formData.append('Activity_Type', nuevaActividadTipo.value);
+    }
+    if (nuevaActividadUbicacion.value) {
+      formData.append('Location', nuevaActividadUbicacion.value);
+    }
+    if (nuevaActividadFecha.value) {
+      formData.append('Activity_Date', nuevaActividadFecha.value);
+    } else {
+      throw new Error('La fecha de la actividad no puede estar vacía');
+    }
+    if (nuevaActividadDuracion.value) {
+      formData.append('Duration', nuevaActividadDuracion.value);
+    }
+    if (nuevaActividadContraparte.value) {
+      formData.append('Counterparty', nuevaActividadContraparte.value);
+    }
+    if (nuevaActividadJuez.value) {
+      formData.append('Judge_Name', nuevaActividadJuez.value);
+    }
+    if (nuevaActividadReferenciaExpediente.value) {
+      formData.append('Reference_File', nuevaActividadReferenciaExpediente.value);
+    }
+    if (nuevaActividadJuzgado.value) {
+      formData.append('Judged', nuevaActividadJuzgado.value); // Asegúrate de que el campo juzgado se esté agregando
+    }
+    formData.append('Status', nuevaActividadEstadoText.value); // Asegúrate de que el estado se esté agregando
+    if (documento.value) {
+      formData.append('file', documento.value);
+    }
+
+    console.log('FormData:', formData); // Log the FormData
+
+    // Realizar la solicitud para agregar la actividad
+    const response = await axios.post(`${API}/activity`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+        'Internal-ID': internalID
+      },
+    });
+
+    console.log('Response:', response); // Log the response
+
+    toast.add({
+      severity: 'success',
+      summary: 'Actividad Agregada',
+      detail: 'La actividad fue agregada con éxito.',
+      life: 3000,
+    });
+
+    // Close the dialog
+    visibleActividadDialog.value = false;
+
+  } catch (error) {
+    toast.add({
+      severity: 'error',
+      summary: 'Error',
+      detail: 'No se pudo agregar la actividad.',
+      life: 3000,
+    });
+    console.error('Error al agregar la actividad:', error);
+
+    if (axios.isAxiosError(error)) {
+      console.error('Error response data:', error.response?.data); // Log the response data
+      console.error('Error response status:', error.response?.status); // Log the response status
+      console.error('Error response headers:', error.response?.headers); // Log the response headers
+    } else {
+      console.error('Unexpected error:', error);
+    }
+  }
+};
+
+const eliminarActividad = (actividad: { id: any; }) => {
+  confirm.require({
+    message: `¿Estás seguro de que deseas eliminar la actividad ${actividad.id}?`,
+    header: 'Confirmación',
+    icon: 'pi pi-exclamation-triangle',
+    accept: async () => {
+      try {
+        const internalID = authStore.user?.id;
+
+        if (!internalID) {
+          throw new Error('No se pudo obtener el ID del usuario');
+        }
+
+        const response = await axios.delete(`${API}/activity/${actividad.id}`, {
+          headers: {
+            'Internal-ID': internalID,
+          }
+        });
+
+        if (response.status === 200) {
+          toast.add({
+            severity: 'success',
+            summary: 'Actividad Eliminada',
+            detail: `La actividad ${actividad.id} ha sido eliminada.`,
+            life: 3000,
+          });
+
+          // Actualizar la lista de actividades
+          await verActividades({ codigo: selectedCaseCode.value }); // Recargar actividades del caso seleccionado
+        } else {
+          throw new Error(`Error al eliminar la actividad: ${response.statusText}`);
+        }
+      } catch (error) {
+        console.error('Error al eliminar la actividad:', error);
+        toast.add({
+          severity: 'error',
+          summary: 'Error',
+          detail: `No se pudo eliminar la actividad ${actividad.id}.`,
+          life: 3000,
+        });
+      }
+    },
+    reject: () => {
+      toast.add({
+        severity: 'info',
+        summary: 'Cancelado',
+        detail: 'Eliminación cancelada',
+        life: 3000,
+      });
+    }
+  });
+};
+
 // Función para ver el documento
 const verDocumento = async (actividadId: any) => {
   try {
@@ -470,6 +613,7 @@ const abrirDialogoNuevaActividad = () => {
   <template #body="slotProps">
     <div class="flex gap-2">
       <Button icon="pi pi-check" class="bg-green-500 text-white px-3 py-1 rounded-lg shadow hover:bg-green-600" @click="finalizarCaso(slotProps.data)" />
+      <Button icon="pi pi-trash" class="bg-red-500 text-white px-3 py-1 rounded-lg shadow hover:bg-red-600" @click="eliminarCaso(slotProps.data)" />
     </div>
   </template>
 </Column>
@@ -504,6 +648,7 @@ const abrirDialogoNuevaActividad = () => {
   <template #body="slotProps">
     <div class="flex gap-2">
       <Button icon="pi pi-refresh" class="bg-yellow-500 text-white px-3 py-1 rounded-lg shadow hover:bg-yellow-600" @click="reactivarCaso(slotProps.data)" />
+      <Button icon="pi pi-trash" class="bg-red-500 text-white px-3 py-1 rounded-lg shadow hover:bg-red-600" @click="eliminarCaso(slotProps.data)" />
     </div>
   </template>
 </Column>
@@ -514,6 +659,13 @@ const abrirDialogoNuevaActividad = () => {
 <!-- Dialog de Actividades con fecha -->
 <Dialog v-model:visible="visibleDialog" modal header="Actividades del Caso" class="p-6 rounded-lg shadow-lg bg-white max-w-5xl w-full">
   <div class="flex flex-col space-y-6">
+    <!-- Botón para agregar nueva actividad -->
+    <Button 
+    label="Agregar Nueva Actividad" 
+    icon="pi pi-plus" 
+    class="p-button-success mb-4" 
+    @click="abrirDialogoNuevaActividad" 
+    />
     
     <!-- Tabla de actividades -->
     <DataTable :value="actividades" class="p-datatable-gridlines w-full">
@@ -550,11 +702,9 @@ const abrirDialogoNuevaActividad = () => {
   </Column>
   <Column header="Acciones">
     <template #body="slotProps">
-      <Button 
-        icon="pi pi-check" 
-        class="p-button-success" 
-        @click="accionRealizada(slotProps.data.id)" 
-      />
+      <div class="flex gap-2">
+        <Button icon="pi pi-trash" class="bg-red-500 text-white px-3 py-1 rounded-lg shadow hover:bg-red-600" @click="eliminarActividad(slotProps.data)" />
+      </div>
     </template>
   </Column>
 </DataTable>
@@ -564,7 +714,92 @@ const abrirDialogoNuevaActividad = () => {
 <!-- Dialog para visualizar el documento PDF -->
 <Dialog v-model:visible="visibleDocumentoDialog" modal header="Documento de la Actividad" class="p-6 rounded-lg shadow-lg bg-white max-w-7xl w-full">
   <iframe :src="documentoUrl" class="w-full h-250" frameborder="0"></iframe>
-</Dialog>    
+</Dialog>
+
+    <!-- Dialog de Nueva Actividad -->
+    <Dialog v-model:visible="visibleActividadDialog" modal header="Nueva Actividad" class="p-6 rounded-lg shadow-lg">
+  <div class="space-y-4">
+    <div class="flex gap-4">
+      <div class="flex-1">
+        <label for="tipo" class="block text-sm font-semibold">Tipo de Actividad</label>
+        <input v-model="nuevaActividadTipo" id="tipo" type="text" class="p-inputtext p-component w-full" />
+      </div>
+      <div class="flex-1">
+        <label for="ubicacion" class="block text-sm font-semibold">Ubicación</label>
+        <input v-model="nuevaActividadUbicacion" id="ubicacion" type="text" class="p-inputtext p-component w-full" />
+      </div>
+    </div>
+
+    <div class="flex gap-4">
+      <div class="flex-1">
+        <label for="fecha" class="block text-sm font-semibold">Fecha</label>
+        <Calendar v-model="nuevaActividadFecha" id="fecha" class="w-full" />
+      </div>
+      <div class="flex-1">
+        <label for="abogado" class="block text-sm font-semibold">Abogado Asignado</label>
+        <Dropdown v-model="nuevaActividadAbogado" :options="abogadosActivos" optionLabel="label" optionValue="value" placeholder="Seleccionar Abogado" class="w-full" />
+      </div>
+    </div>
+
+    <div class="flex gap-4">
+      <div class="flex-1">
+        <label for="duracion" class="block text-sm font-semibold">Duración</label>
+        <input v-model="nuevaActividadDuracion" id="duracion" type="text" class="p-inputtext p-component w-full" />
+      </div>
+      <div class="flex-1">
+        <label for="referenciaExpediente" class="block text-sm font-semibold">Referencia Expediente</label>
+        <input v-model="nuevaActividadReferenciaExpediente" id="referenciaExpediente" type="text" class="p-inputtext p-component w-full" />
+      </div>
+    </div>
+
+    <div class="flex gap-4">
+      <div class="flex-1">
+        <label for="contraparte" class="block text-sm font-semibold">Contraparte</label>
+        <input v-model="nuevaActividadContraparte" id="contraparte" type="text" class="p-inputtext p-component w-full" />
+      </div>
+      <div class="flex-1">
+        <label for="juez" class="block text-sm font-semibold">Juez Asignado</label>
+        <input v-model="nuevaActividadJuez" id="juez" type="text" class="p-inputtext p-component w-full" />
+      </div>
+    </div>
+
+    <div class="flex gap-4">
+      <div class="flex-1">
+        <label for="tiempo" class="block text-sm font-semibold">Tiempo</label>
+        <input v-model="nuevaActividadTiempo" id="tiempo" type="text" class="p-inputtext p-component w-full" />
+      </div>
+      <div class="flex-1">
+        <label for="juzgado" class="block text-sm font-semibold">Juzgado</label>
+        <input v-model="nuevaActividadJuzgado" id="juzgado" type="text" class="p-inputtext p-component w-full" />
+      </div>
+    </div>
+
+    <div class="flex gap-4">
+      <div class="flex-1">
+        <label for="estado" class="block text-sm font-semibold">Estado</label>
+        <input v-model="nuevaActividadEstadoText" id="estado" type="text" class="p-inputtext p-component w-full" disabled />
+      </div>
+    </div>
+
+    <!-- Campo de carga de documento -->
+    <div class="flex-1">
+      <label for="documento" class="block text-sm font-semibold">Subir Documento</label>
+      <FileUpload 
+        mode="basic" 
+        name="documento" 
+        accept=".pdf,.doc,.docx" 
+        chooseLabel="Seleccionar Archivo" 
+        class="w-full" 
+        @select="onUploadDocumento"
+      />
+    </div>
+    
+    <div class="flex justify-end gap-4">
+      <Button label="Cancelar" icon="pi pi-times" class="p-button-text" @click="visibleActividadDialog = false" />
+      <Button label="Agregar" icon="pi pi-check" class="p-button-success" @click="agregarNuevaActividad" />
+    </div>
+  </div>
+</Dialog>
 
 <Dialog v-model:visible="visibleUsuarioDialog" modal header="Detalles del Usuario" class="p-6 rounded-lg shadow-lg bg-white max-w-3xl w-full">
   <div class="space-y-4">
