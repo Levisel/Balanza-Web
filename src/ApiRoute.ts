@@ -115,16 +115,16 @@ export interface Periodo {
 
 // 📌 Interface de Usuario (sin `UsuarioXPeriodo_ID`)
 export interface Usuario {
-    Usuario_Cedula: string;
-    Usuario_Nombres: string;
-    Usuario_Apellidos: string;
-    Usuario_Area: string;
-    Usuario_Correo: string;
-    Usuario_Huella: Blob | undefined;
-    Usuario_contrasenia?: string; //campo opcional
-    Usuario_Activo: boolean;
-    Usuario_Tipo: string;
-    Usuario_IsDeleted: boolean;
+    Internal_ID: string;           // Cédula de identidad o pasaporte
+    Internal_Name: string;         // Nombres del usuario
+    Internal_LastName: string;     // Apellidos del usuario
+    Internal_Email: string;        // Correo institucional
+    Internal_Area: string;         // Área o departamento
+    Internal_Phone?: string;       // Teléfono (opcional)
+    Internal_Huella?: Blob | null; // Huella digital (opcional)
+    Internal_Password?: string;    // Contraseña (opcional)
+    Internal_Type: string;         // Tipo de usuario (Ej.: Estudiante, Coordinador, etc.)
+    Internal_Status: string;   
 }
 
 // 📌 Interface de UsuarioXPeriodo (con `UsuarioXPeriodo_ID`)
@@ -137,12 +137,12 @@ export interface UsuarioXPeriodo {
 
 // 📌 Interface de UsuarioXPeriodoDVM (Usado en la tabla para mostrar datos combinados)
 export interface UsuarioXPeriodoDVM {
-    Usuario_Cedula: string;
-    Usuario_Nombres: string;
-    Usuario_Apellidos: string;
-    Usuario_Correo: string;
-    Usuario_Huella: Blob;
-    Usuario_Area: string;
+    Internal_ID: string;
+    Internal_Name: string;
+    Internal_LastName: string;
+    Internal_Email: string;
+    Internal_Huella: Blob;
+    Internal_Area: string;
     Periodo_ID: number;
     PeriodoNombre: string;
 }
@@ -167,6 +167,17 @@ export interface Parametro_Horario {
     Parametro_Horario_Hora_Salida: string;
     Parametro_Horario_Tipo: string;
     Parametro_Horario_IsDeleted: boolean;
+}
+
+export interface SeguimientoSemanal {
+    Semana_ID: number;
+    Semana_Numero: number;
+    Semana_Ini: Date;
+    Semana_Fin: Date;
+    Semana_Horas: number;
+    Semana_Feriado: number;
+    Semana_Observacion: string;
+    Periodo_ID: number;
 }
 
 //------------------------------------------------------------------------------------------------------------------//

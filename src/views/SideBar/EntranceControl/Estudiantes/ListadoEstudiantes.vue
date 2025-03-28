@@ -51,29 +51,29 @@
       class="w-full max-w-6xl shadow-lg"
       removableSort
     >
-      <Column field="Usuario_Cedula" header="Cédula" sortable>
+      <Column field="Internal_ID" header="Cédula" sortable>
         <template #body="slotProps">
-          {{ slotProps.data.Usuario_Cedula ?? "N/A" }}
+          {{ slotProps.data.Internal_ID ?? "N/A" }}
         </template>
       </Column>
-      <Column field="Usuario_Nombres" header="Nombres" sortable>
+      <Column field="Internal_Name" header="Nombres" sortable>
         <template #body="slotProps">
-          {{ slotProps.data.Usuario_Nombres ?? "N/A" }}
+          {{ slotProps.data.Internal_Name ?? "N/A" }}
         </template>
       </Column>
-      <Column field="Usuario_Apellidos" header="Apellidos" sortable>
+      <Column field="Internal_LastName" header="Apellidos" sortable>
         <template #body="slotProps">
-          {{ slotProps.data.Usuario_Apellidos ?? "N/A" }}
+          {{ slotProps.data.Internal_LastName ?? "N/A" }}
         </template>
       </Column>
-      <Column field="Usuario_Correo" header="Correo Institucional" sortable>
+      <Column field="Internal_Email" header="Correo Institucional" sortable>
         <template #body="slotProps">
-          {{ slotProps.data.Usuario_Correo?.trim() || "N/A" }}
+          {{ slotProps.data.Internal_Email?.trim() || "N/A" }}
         </template>
       </Column>
-      <Column field="Usuario_Area" header="Área" sortable>
+      <Column field="Internal_Area" header="Área" sortable>
         <template #body="slotProps">
-          {{ slotProps.data.Usuario_Area?.trim() || "N/A" }}
+          {{ slotProps.data.Internal_Area?.trim() || "N/A" }}
         </template>
       </Column>
 
@@ -84,12 +84,12 @@
             <Button
               icon="pi pi-pencil"
               class="p-button-rounded p-button-warning"
-              @click="editarEstudiante(slotProps.data.Usuario_Cedula)"
+              @click="editarEstudiante(slotProps.data.Internal_ID)"
             />
             <Button
               icon="pi pi-trash"
               class="p-button-rounded p-button-danger"
-              @click="eliminarEstudiante(slotProps.data.Usuario_Cedula)"
+              @click="eliminarEstudiante(slotProps.data.Internal_ID)"
             />
           </div>
         </template>
@@ -158,11 +158,11 @@ const fetchUsuariosXPeriodo = async () => {
     } else {
       // Convertir la estructura del backend a la nueva interfaz UsuarioXPeriodoDVM
       usuariosXPeriodoDVM.value = data.map((rel: any) => ({
-        Usuario_Cedula: rel.usuario.Usuario_Cedula,
-        Usuario_Nombres: rel.usuario.Usuario_Nombres,
-        Usuario_Apellidos: rel.usuario.Usuario_Apellidos,
-        Usuario_Correo: rel.usuario.Usuario_Correo,
-        Usuario_Area: rel.usuario.Usuario_Area || "N/A",
+        Internal_ID: rel.usuario.Internal_ID,
+        Internal_Name: rel.usuario.Internal_Name,
+        Internal_LastName: rel.usuario.Internal_LastName,
+        Internal_Email: rel.usuario.Internal_Email,
+        Internal_Area: rel.usuario.Internal_Area || "N/A",
         Periodo_ID: rel.periodo.Periodo_ID,
         PeriodoNombre: rel.periodo.PeriodoNombre,
       }));
@@ -175,9 +175,10 @@ const fetchUsuariosXPeriodo = async () => {
 
 // Computed para filtrar estudiantes según los filtros
 const estudiantesFiltrados = computed(() => {
-  return usuariosXPeriodoDVM.value.filter((est) => {
-    const nombreCompleto = `${est.Usuario_Nombres} ${est.Usuario_Apellidos}`.toLowerCase();
-    const ced = est.Usuario_Cedula.toLowerCase();
+  // Primero, filtramos según los criterios
+  const filtrados = usuariosXPeriodoDVM.value.filter((est) => {
+    const nombreCompleto = `${est.Internal_Name} ${est.Internal_LastName}`.toLowerCase();
+    const ced = String(est.Internal_ID).toLowerCase();
     const filtrarPorNombre = busquedaNombre.value.trim()
       ? nombreCompleto.includes(busquedaNombre.value.toLowerCase().trim())
       : true;
@@ -188,11 +189,21 @@ const estudiantesFiltrados = computed(() => {
       ? est.Periodo_ID === periodoSeleccionado.value.Periodo_ID
       : true;
     const filtrarPorArea = areaSeleccionada.value
-      ? est.Usuario_Area === areaSeleccionada.value
+      ? est.Internal_Area === areaSeleccionada.value
       : true;
     return filtrarPorNombre && filtrarPorCedula && filtrarPorPeriodo && filtrarPorArea;
   });
+
+  // Luego, usamos un Map para agrupar por Internal_ID y quedarnos solo con el primer registro de cada estudiante
+  const mapa = new Map();
+  filtrados.forEach((est) => {
+    if (!mapa.has(est.Internal_ID)) {
+      mapa.set(est.Internal_ID, est);
+    }
+  });
+  return Array.from(mapa.values());
 });
+
 
 // Estados para selección de estudiantes (tabla de múltiples)
 const estudiantesSeleccionados = ref<UsuarioXPeriodoDVM[]>([]);

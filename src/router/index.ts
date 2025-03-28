@@ -68,6 +68,10 @@ import VistaHorarios from '@/views/SideBar/EntranceControl/Horario/VistaHorarios
 import AsignacionHuella from '@/views/SideBar/EntranceControl/RegistroBiometrico/AsignacionHuella.vue';
 import RegistroHuella from '@/views/SideBar/EntranceControl/RegistroBiometrico/RegistroHuella.vue';
 import RegistroAsistencia from '@/views/SideBar/EntranceControl/RegistroBiometrico/RegistroAsistencia.vue';
+import RegistroPorCedula from "@/views/SideBar/EntranceControl/RegistroBiometrico/RegistroPorCedula.vue";
+import SeguimientoGeneral from "@/views/SideBar/EntranceControl/SeguimientoGeneral/SeguimientoGeneral.vue";
+import SeguimientoSemanal from "@/views/SideBar/EntranceControl/Cronograma/SeguimientoSemanal.vue";
+
 
 const routes: Array<RouteRecordRaw> = [
   {
@@ -183,6 +187,11 @@ const routes: Array<RouteRecordRaw> = [
         name: 'IngresoCronograma',
         component: IngresoCronograma,
       },
+      {
+        path: 'PeriodoSemanal',
+        name: 'PeriodoSemanal',
+        component: SeguimientoSemanal,
+      },
       //Students
       {
         path: 'AsignacionPeriodo',
@@ -241,11 +250,20 @@ const routes: Array<RouteRecordRaw> = [
         name: 'RegistroHuella',
         component: RegistroHuella,
       },
-      //Attendance
       {
-        path: 'RegistroAsistencia/:id/periodo/:periodo',
+        path: 'RegistroAsistencia/:id/periodo/:periodoId',
         name: 'RegistroAsistencia',
         component: RegistroAsistencia,
+      },
+      {
+        path: 'RegistroPorCedula',
+        name: 'RegistroPorCedula',
+        component: RegistroPorCedula,
+      },
+      {
+        path: 'SeguimientoGeneral',
+        name: 'SeguimientoGeneral',
+        component: SeguimientoGeneral,
       },
     ],
   },
