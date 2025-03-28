@@ -23,7 +23,7 @@ import CaseReview from "@/views/SideBar/Admin/CaseManagement/CaseReview.vue";
 import Configuration from "@/views/SideBar/Admin/Configuration.vue";
 
 //-- Admin -> (Parameter Management)
-import Parameter from "@/views/SideBar/Admin/ParameterManagement/Parameter.vue";
+import ParameterView from "@/views/SideBar/Admin/ParameterManagement/ParameterView.vue";
 
 //-- Admin -> (Users)
 import UserView from "@/views/SideBar/Admin/Users/UserView.vue";
@@ -94,7 +94,7 @@ const routes: Array<RouteRecordRaw> = [
       {
         path: "Parametros",
         name: "Parameter",
-        component: Parameter,
+        component: ParameterView,
       },
       // Admin -> Users views
       {

@@ -633,7 +633,7 @@ const searchIDButton = () => {
 
 const fetchUser = async () => {
   try {
-    const response = await axios.get(`${API}/usuario/${searchIDInput.value}`);
+    const response = await axios.get(`${API}/user/${searchIDInput.value}`);
     selectedUser.value = response.data;
     doesUserExist.value = true;
     isSearchButtonDisabled.value = true;
@@ -862,7 +862,7 @@ const updateFormWithConsultation = (data: Initial_Consultation): void => {
 const fetchConsultations = async (): Promise<void> => {
   try {
     const response = await axios.get(
-      `${API}/primerasconsultas/user/${searchIDInput.value}`
+      `${API}/initial-consultations/user/${searchIDInput.value}`
     );
     consultations.value = response.data as Initial_Consultation[];
     // Cargar la primera consulta en el formulario si existe
@@ -1003,7 +1003,7 @@ const createInitialConsultation = async () => {
   console.log("Datos enviados:", JSON.stringify(consultationData, null, 2));
 
   try {
-    await axios.post(`${API}/primerasconsultas`, consultationData, {
+    await axios.post(`${API}/initial-consultations`, consultationData, {
       headers: {
         "internal-id": authStore.user?.id,
       },
@@ -1083,7 +1083,7 @@ const newUserConsultation = async () => { // ✅ Agregar async aquí
   console.log("Datos enviados:", JSON.stringify(consultationData, null, 2));
 
   try {
-    await axios.post(`${API}/primerasconsultas`, consultationData, {
+    await axios.post(`${API}/initial-consultations`, consultationData, {
       headers: {
         "internal-id": authStore.user?.id,
       },
@@ -1271,7 +1271,7 @@ const editUser = async () => {
 
   try {
     await axios.put(
-      `${API}/usuario/${selectedUser.value.User_ID}`,
+      `${API}/user/${selectedUser.value.User_ID}`,
       updatedUser,
       {
         headers: {
@@ -1996,6 +1996,23 @@ const checkIdSize = (shouldShowToast: boolean = true): boolean => {
                   'opacity 0.5s ease-out, transform 0.5s ease-out, visibility 0.5s',
               }"
             />
+            <!-- <div class="flex gap-1">
+              <Button
+                icon="pi pi-plus"
+                @click="userDisabilityPercentage++"
+                :disabled="userDisabilityPercentage >= 100"
+                style="width: 24px; height: 24px; font-size: 12px;"
+              />
+              <Button
+                icon="pi pi-minus"
+                @click="userDisabilityPercentage--"
+                :disabled="userDisabilityPercentage <= 0"
+                style="width: 24px; height: 24px; font-size: 12px;"
+              />
+            </div> -->
+
+
+            
           </div>
         </div>
 
