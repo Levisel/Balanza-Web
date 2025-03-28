@@ -66,6 +66,38 @@ const tableConfig = {
     { field: "Profile_Name", header: "Nombre", type: "string" },
     { field: "Profile_Status", header: "Estado", type: "boolean" },
   ],
+  Occupations: [
+    { field: "Occupation_Name", header: "Nombre", type: "string" },
+    { field: "Occupation_Status", header: "Estado", type: "boolean" },
+  ],
+  Income_Level: [
+    { field: "Income_Level_Name", header: "Nombre", type: "string" },
+    { field: "Income_Level_Status", header: "Estado", type: "boolean" },
+  ],
+  Family_Group: [
+    { field: "Family_Group_Name", header: "Nombre", type: "string" },
+    { field: "Family_Group_Status", header: "Estado", type: "boolean" },
+  ],
+  Family_Income: [
+    { field: "Family_Income_Name", header: "Nombre", type: "string" },
+    { field: "Family_Income_Status", header: "Estado", type: "boolean" },
+  ],
+  Type_Of_Housing: [
+    { field: "Type_Of_Housing_Name", header: "Nombre", type: "string" },
+    { field: "Type_Of_Housing_Status", header: "Estado", type: "boolean" },
+  ],
+  Own_Assets: [
+    { field: "Own_Assets_Name", header: "Nombre", type: "string" },
+    { field: "Own_Assets_Status", header: "Estado", type: "boolean" },
+  ],
+  Pensioner: [
+    { field: "Pensioner_Name", header: "Nombre", type: "string" },
+    { field: "Pensioner_Status", header: "Estado", type: "boolean" },
+  ],
+  Health_Insurance: [
+    { field: "Health_Insurance_Name", header: "Nombre", type: "string" },
+    { field: "Health_Insurance_Status", header: "Estado", type: "boolean" },
+  ],
 };
 
 // Función para resetear el registro seleccionado
@@ -83,6 +115,14 @@ const tableNames: { [key in keyof typeof tableConfig]: string } = {
   Type_Of_Attention: "Tipo de Atención",
   Schedule: "Horario",
   Profiles: "Perfiles",
+  Occupations: "Ocupaciones",
+  Income_Level: "Nivel de Ingresos",
+  Family_Group: "Grupo Familiar",
+  Family_Income: "Ingresos Familiares",
+  Type_Of_Housing: "Tipo de Vivienda",
+  Own_Assets: "Bienes Propios",
+  Pensioner: "Pensionado",
+  Health_Insurance: "Seguro de Salud",
 };
 
 // Mapeo de campos de ID según la tabla
@@ -95,6 +135,14 @@ const idFieldMap: { [key in keyof typeof tableConfig]: string } = {
   Type_Of_Attention: "Type_Of_Attention_Id",
   Schedule: "Schedule_Id",
   Profiles: "Profile_Id",
+  Occupations: "Occupation_Id",
+  Income_Level: "Income_Level_Id",
+  Family_Group: "Family_Group_Id",
+  Family_Income: "Family_Income_Id",
+  Type_Of_Housing: "Type_Of_Housing_Id",
+  Own_Assets: "Own_Assets_Id",
+  Pensioner: "Pensioner_Id",
+  Health_Insurance: "Health_Insurance_Id",
 };
 
 // Computamos la clave (key) a partir del label seleccionado
@@ -157,6 +205,14 @@ const loadData = async () => {
         Type_Of_Attention: `${API}/type-of-attention`,
         Schedule: `${API}/schedule`,
         Profiles: `${API}/profile`,
+        Occupations: `${API}/occupations`,
+        Income_Level: `${API}/income-level`,
+        Family_Group: `${API}/family-group`,
+        Family_Income: `${API}/family-income`,
+        Type_Of_Housing: `${API}/type-of-housing`,
+        Own_Assets: `${API}/own-assets`,
+        Pensioner: `${API}/pensioner`,
+        Health_Insurance: `${API}/health-insurance`,
       };
       console.log("Cargando datos desde:", urlMap[selectedTableKey.value]);
       const { data } = await axios.get(urlMap[selectedTableKey.value]);
@@ -194,6 +250,14 @@ const createData = async () => {
         Type_Of_Attention: `${API}/type-of-attention`,
         Schedule: `${API}/schedule`,
         Profiles: `${API}/profile`,
+        Occupations: `${API}/occupations`,
+        Income_Level: `${API}/income-level`,
+        Family_Group: `${API}/family-group`,
+        Family_Income: `${API}/family-income`,
+        Type_Of_Housing: `${API}/type-of-housing`,
+        Own_Assets: `${API}/own-assets`,
+        Pensioner: `${API}/pensioner`,
+        Health_Insurance: `${API}/health-insurance`,
       };
       console.log("Enviando datos para creación:", selectedRecord.value);
       await axios.post(urlMap[selectedTableKey.value], selectedRecord.value);
@@ -230,6 +294,14 @@ const updateData = async () => {
         Type_Of_Attention: `${API}/type-of-attention`,
         Schedule: `${API}/schedule`,
         Profiles: `${API}/profile`,
+        Occupations: `${API}/occupations`,
+        Income_Level: `${API}/income-level`,
+        Family_Group: `${API}/family-group`,
+        Family_Income: `${API}/family-income`,
+        Type_Of_Housing: `${API}/type-of-housing`,
+        Own_Assets: `${API}/own-assets`,
+        Pensioner: `${API}/pensioner`,
+        Health_Insurance: `${API}/health-insurance`,
       };
       const idField = idFieldMap[selectedTableKey.value];
       const recordId = selectedRecord.value[idField] || selectedRecord.value.id;
@@ -288,6 +360,14 @@ const deleteData = async () => {
         Type_Of_Attention: `${API}/type-of-attention`,
         Schedule: `${API}/schedule`,
         Profiles: `${API}/profile`,
+        Occupations: `${API}/occupations`,
+        Income_Level: `${API}/income-level`,
+        Family_Group: `${API}/family-group`,
+        Family_Income: `${API}/family-income`,
+        Type_Of_Housing: `${API}/type-of-housing`,
+        Own_Assets: `${API}/own-assets`,
+        Pensioner: `${API}/pensioner`,
+        Health_Insurance: `${API}/health-insurance`,
       };
       const idField = idFieldMap[selectedTableKey.value];
       const recordId = selectedRecord.value[idField] || selectedRecord.value.id;

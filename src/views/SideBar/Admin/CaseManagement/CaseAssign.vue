@@ -1,171 +1,168 @@
-<template>
-  <div class="case-assignment-container">
-    <div class="filters-section mb-4">
-      <div class="p-input-icon-left">
-        <i class="pi pi-search"></i>
-        <input type="text" v-model="filters.global" class="p-inputtext p-component" placeholder="Buscar caso..." />
-      </div>
-    </div>
-
-    <TabView>
-      <TabPanel header="Casos por Asignar">
-        <div class="cases-table">
-          <div class="table-header">
-            <div class="column-header" style="width: 5%">#</div>
-            <div class="column-header" style="width: 15%">Número de Caso</div>
-            <div class="column-header" style="width: 20%">Área</div>
-            <div class="column-header" style="width: 15%">Estado</div>
-            <div class="column-header" style="width: 15%">Complejidad</div>
-            <div class="column-header" style="width: 15%">Asignar a</div>
-            <div class="column-header" style="width: 15%">Acciones</div>
-          </div>
-
-          <div v-if="loading" class="loading-container">
-            <i class="pi pi-spin pi-spinner" style="font-size: 2rem"></i>
-            <span>Cargando casos...</span>
-          </div>
-
-          <div v-else-if="filteredPendingCases.length === 0" class="empty-message">
-            No se encontraron casos para asignar.
-          </div>
-
-          <div v-else class="table-body">
-            <div 
-              v-for="(caso, index) in filteredPendingCases" 
-              :key="caso.Internal_ID" 
-              class="table-row"
-              :class="{ 'row-alternate': index % 2 !== 0 }"
-            >
-              <div class="column-cell" style="width: 5%">{{ index + 1 }}</div>
-              <div class="column-cell" style="width: 15%">{{ caso.Init_Code }}</div>
-              <div class="column-cell" style="width: 20%">{{ caso.Init_Subject }}</div>
-              <div class="column-cell" style="width: 15%">{{ caso.Init_Type }}</div>
-              <div class="column-cell" style="width: 15%">
-                <select v-model="caso.assignedTo" class="p-inputtext p-component assign-select">
-                  <option value="">Seleccionar estudiante</option>
-                  <option v-for="student in students" :key="student.Internal_ID" :value="student.Internal_ID">
-                    {{ student.Internal_Name }} {{ student.Internal_LastName }}
-                  </option>
-                </select>
-              </div>
-              <div class="column-cell" style="width: 15%">
-                <button @click="assignCase(caso)" class="p-button p-button-sm p-button-outlined" :disabled="!caso.assignedTo">
-                  Asignar
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </TabPanel>
-      <TabPanel header="Casos Asignados">
-        <div class="cases-table">
-          <div class="table-header">
-            <div class="column-header" style="width: 5%">#</div>
-            <div class="column-header" style="width: 15%">Número de Caso</div>
-            <div class="column-header" style="width: 20%">Área</div>
-            <div class="column-header" style="width: 15%">Estado</div>
-            <div class="column-header" style="width: 15%">Asignado a</div>
-            <div class="column-header" style="width: 15%">Complejidad</div>
-            <div class="column-header" style="width: 15%">Acciones</div>
-          </div>
-
-          <div v-if="loading" class="loading-container">
-            <i class="pi pi-spin pi-spinner" style="font-size: 2rem"></i>
-            <span>Cargando casos...</span>
-          </div>
-
-          <div v-else-if="filteredAssignedCases.length === 0" class="empty-message">
-            No se encontraron casos asignados.
-          </div>
-
-          <div v-else class="table-body">
-            <div 
-              v-for="(caso, index) in filteredAssignedCases" 
-              :key="caso.Internal_ID" 
-              class="table-row"
-              :class="{ 'row-alternate': index % 2 !== 0 }"
-            >
-              <div class="column-cell" style="width: 5%">{{ index + 1 }}</div>
-              <div class="column-cell" style="width: 15%">{{ caso.Init_Code }}</div>
-              <div class="column-cell" style="width: 20%">{{ caso.Init_Subject }}</div>
-              <div class="column-cell" style="width: 15%">{{ caso.Init_Type }}</div>
-              <div class="column-cell" style="width: 15%">
-                <select v-model="caso.assignedTo" class="p-inputtext p-component assign-select">
-                  <option value="">Seleccionar estudiante</option>
-                  <option v-for="student in students" :key="student.Internal_ID" :value="student.Internal_ID">
-                    {{ student.Internal_Name }} {{ student.Internal_LastName }}
-                  </option>
-                </select>
-              </div>
-              <div class="column-cell" style="width: 15%">
-                <button @click="reassignCase(caso)" class="p-button p-button-sm p-button-outlined" :disabled="!caso.assignedTo">
-                  Reasignar
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </TabPanel>
-    </TabView>
-
-    <!-- Notification Toast -->
-    <div v-if="showNotification" class="notification-toast" :class="notificationType">
-      <i :class="notificationIcon" class="notification-icon"></i>
-      <div class="notification-content">
-        <h3>{{ notificationTitle }}</h3>
-        <p>{{ notificationMessage }}</p>
-      </div>
-      <button @click="closeNotification" class="close-notification">
-        <i class="pi pi-times"></i>
-      </button>
-    </div>
-  </div>
-</template>
-
 <script lang="ts">
 import { defineComponent, ref, onMounted, computed } from 'vue';
 import axios from 'axios';
 import { useAuthStore } from '@/stores/auth'; // Asegúrate de que la ruta sea correcta
 
+interface Case {
+  Internal_ID: string;
+  Init_Code: string;
+  Init_Subject: string;
+  Init_Type: string;
+  Init_Complexity: string;
+  assignedTo?: string;
+}
+
+interface Student {
+  Internal_ID: string;
+  Internal_Name: string;
+  Internal_LastName: string;
+}
+
 export default defineComponent({
   name: 'CaseAssign',
   setup() {
     const authStore = useAuthStore();
-    const selectedArea = ref(authStore.user?.area || '');
-    const loading = ref(true);
-    const cases = ref([]);
-    const students = ref([]);
-    const filteredPendingCases = computed(() => {
-      return cases.value.filter(caso => caso.Init_Type === 'Por Asignar' && (selectedArea.value === '' || caso.Init_Subject === selectedArea.value));
-    });
-    const filteredAssignedCases = computed(() => {
-      return cases.value.filter(caso => caso.Init_Type === 'Asignado' && (selectedArea.value === '' || caso.Init_Subject === selectedArea.value));
-    });
-    const showNotification = ref(false);
-    const notificationType = ref('');
-    const notificationIcon = ref('');
-    const notificationTitle = ref('');
-    const notificationMessage = ref('');
-    const filters = ref({ global: '' });
+    const selectedArea = ref<string>(authStore.user?.area || '');
+    const loading = ref<boolean>(true);
+    const cases = ref<Case[]>([]);
+    const students = ref<Student[]>([]);
+    const showNotification = ref<boolean>(false);
+    const notificationType = ref<'success' | 'error'>('');
+    const notificationIcon = ref<string>('');
+    const notificationTitle = ref<string>('');
+    const notificationMessage = ref<string>('');
+    const filters = ref<{ global: string }>({ global: '' });
 
-    const fetchCases = async () => {
+    const filteredPendingCases = computed(() =>
+      cases.value.filter(
+        (caso) =>
+          caso.Init_Type === 'Por Asignar' &&
+          (selectedArea.value === '' || caso.Init_Subject === selectedArea.value)
+      )
+    );
+
+    const filteredAssignedCases = computed(() =>
+      cases.value.filter(
+        (caso) =>
+          caso.Init_Type === 'Asignado' &&
+          (selectedArea.value === '' || caso.Init_Subject === selectedArea.value)
+      )
+    );
+
+    const fetchCases = async (): Promise<void> => {
   try {
-    const response = await axios.get(`http://localhost:3000/initial-consultations/type/${selectedArea.value}/active`);
-    cases.value = response.data;
+    if (!authStore.user?.area) {
+      console.error("El área del usuario no está definida.");
+      return;
+    }
+
+    // Obtener casos por asignar
+    const pendingResponse = await axios.get(
+      `http://localhost:3000/initial-consultations/type/${authStore.user.area}/Por%20Asignar/Activo`
+    );
+    const pendingCases = pendingResponse.data;
+
+    // Obtener casos asignados
+    const assignedResponse = await axios.get(
+      `http://localhost:3000/initial-consultations/type/${authStore.user.area}/Asignado/Activo`
+    );
+    const assignedCases = assignedResponse.data;
+
+    // Unir ambos conjuntos de casos en la variable principal
+    cases.value = [...pendingCases, ...assignedCases];
   } catch (error) {
-    console.error('Error fetching cases:', error);
+    console.error("Error fetching cases:", error);
   } finally {
     loading.value = false;
   }
 };
 
-    const fetchStudents = async () => {
+    const fetchStudents = async (): Promise<void> => {
       try {
-        const response = await axios.get(`http://localhost:3000/internal-users/students/${selectedArea.value}`);
+        const response = await axios.get(
+          `http://localhost:3000/internal-users/students/${selectedArea.value}`
+        );
         students.value = response.data;
       } catch (error) {
         console.error('Error fetching students:', error);
       }
+    };
+
+    const assignCase = async (caso: Case): Promise<void> => {
+  if (!caso.assignedTo) {
+    console.error('No se ha seleccionado un estudiante para asignar.');
+    return;
+  }
+
+  try {
+    // Crear el registro en la tabla de asignaciones
+    const assignmentData = {
+      Init_Code: caso.Init_Code,
+      Assignment_Date: new Date().toISOString(),
+      Internal_User_ID_Student: caso.assignedTo, // Usar directamente el ID del estudiante
+      Internal_User_ID: authStore.user?.id, // ID del usuario logueado
+    };
+
+    console.log('Datos enviados a la API (asignación):', assignmentData);
+
+    // Enviar la solicitud para crear la asignación
+    await axios.post('http://localhost:3000/assignment', assignmentData, {
+      headers: {
+        'internal-id': authStore.user?.id, // ID del usuario logueado
+      },
+    });
+
+    // Actualizar el Init_Type del caso a "Asignado"
+    const updateData = { Init_Type: 'Asignado' };
+    console.log('Datos enviados a la API (actualización):', updateData);
+
+    await axios.put(
+      `http://localhost:3000/initial-consultations/${caso.Init_Code}`,
+      updateData,
+      {
+        headers: {
+          'internal-id': authStore.user?.id, // ID del usuario logueado
+        },
+      }
+    );
+
+    // Notificación de éxito
+    showNotification.value = true;
+    notificationType.value = 'success';
+    notificationTitle.value = 'Asignación exitosa';
+    notificationMessage.value = `El caso ${caso.Init_Code} ha sido asignado correctamente.`;
+
+    // Actualizar la lista de casos
+    await fetchCases();
+  } catch (error) {
+    if (error.response) {
+      console.error('Error del servidor:', error.response.data);
+      notificationMessage.value = error.response.data.message || 'Error desconocido en el servidor.';
+    } else {
+      console.error('Error al asignar el caso:', error);
+      notificationMessage.value = 'No se pudo asignar el caso. Inténtalo nuevamente.';
+    }
+
+    // Notificación de error
+    showNotification.value = true;
+    notificationType.value = 'error';
+    notificationTitle.value = 'Error en la asignación';
+  }
+};
+
+    const getAssignedStudentName = (assignedTo: string | undefined): string => {
+      if (!assignedTo) return 'No asignado'; // Si no hay estudiante asignado, mostrar un mensaje
+      const student = students.value.find(student => student.Internal_ID === assignedTo);
+      return student ? `${student.Internal_Name} ${student.Internal_LastName}` : 'Estudiante no encontrado';
+    };
+
+    const reassignCase = (caso: Case): void => {
+      console.log(`Reasignar caso ${caso.Init_Code} a ${caso.assignedTo}`);
+      // Implementar la lógica para reasignar el caso
+    };
+
+    const closeNotification = (): void => {
+      showNotification.value = false;
     };
 
     onMounted(() => {
@@ -186,257 +183,155 @@ export default defineComponent({
       notificationTitle,
       notificationMessage,
       filters,
+      assignCase,
+      reassignCase,
+      closeNotification,
+      getAssignedStudentName,
     };
-  },
-  methods: {
-    assignCase(caso) {
-      // Implementar la lógica para asignar el caso
-      console.log(`Asignar caso ${caso.Init_Code} a ${caso.assignedTo}`);
-    },
-    reassignCase(caso) {
-      // Implementar la lógica para reasignar el caso
-      console.log(`Reasignar caso ${caso.Init_Code} a ${caso.assignedTo}`);
-    },
-    closeNotification() {
-      this.showNotification = false;
-    },
   },
 });
 </script>
 
-<style scoped>
-.case-assignment-container {
-  width: 100%;
-  max-width: 1200px;
-  margin: 0 auto;
-}
+<template>
+  <div class="container mx-auto p-4">
+    <div class="mb-4 flex items-center gap-4">
+      <div class="relative">
+        <i class="pi pi-search absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-500"></i>
+        <input
+          type="text"
+          v-model="filters.global"
+          class="pl-8 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          placeholder="Buscar caso..."
+        />
+      </div>
+    </div>
 
-.header-section {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1.5rem;
-}
+    <TabView>
+      <TabPanel header="Casos por Asignar">
+        <div class="border border-gray-300 rounded-md overflow-hidden">
+          <div class="bg-gray-100 font-semibold text-gray-700 flex">
+            <div class="w-1/12 p-2">#</div>
+            <div class="w-2/12 p-2">Número de Caso</div>
+            <div class="w-3/12 p-2">Área</div>
+            <div class="w-2/12 p-2">Estado</div>
+            <div class="w-2/12 p-2">Complejidad</div>
+            <div class="w-2/12 p-2">Asignar a</div>
+            <div class="w-2/12 p-2">Acciones</div>
+          </div>
 
-.filters-section {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 1rem;
-}
+          <div v-if="loading" class="flex flex-col items-center justify-center p-8 text-gray-500">
+            <i class="pi pi-spin pi-spinner text-2xl"></i>
+            <span>Cargando casos...</span>
+          </div>
 
-.p-button {
-  background-color: var(--p-primary-500);
-  border: 1px solid var(--p-primary-500);
-  color: white;
-  padding: 0.5rem 1rem;
-  border-radius: 6px;
-  cursor: pointer;
-  font-weight: 600;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  transition: background-color 0.2s, color 0.2s, border-color 0.2s;
-}
+          <div v-else-if="filteredPendingCases.length === 0" class="p-8 text-center text-gray-500">
+            No se encontraron casos para asignar.
+          </div>
 
-.p-button:hover:not(:disabled) {
-  background-color: var(--p-primary-600);
-  border-color: var(--p-primary-600);
-}
+          <div v-else>
+            <div
+              v-for="(caso, index) in filteredPendingCases"
+              :key="caso.Internal_ID"
+              class="flex border-b border-gray-300 even:bg-gray-50"
+            >
+              <div class="w-1/12 p-2">{{ index + 1 }}</div>
+              <div class="w-2/12 p-2">{{ caso.Init_Code }}</div>
+              <div class="w-3/12 p-2">{{ caso.Init_Subject }}</div>
+              <div class="w-2/12 p-2">{{ caso.Init_Type }}</div>
+              <div class="w-2/12 p-2">{{ caso.Init_Complexity }}</div>
+              <div class="w-2/12 p-2">
+                <select
+                  v-model="caso.assignedTo"
+                  class="w-full border border-gray-300 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="">Seleccionar estudiante</option>
+                  <option
+                    v-for="student in students"
+                    :key="student.Internal_ID"
+                    :value="student.Internal_ID"
+                  >
+                    {{ student.Internal_Name }} {{ student.Internal_LastName }}
+                  </option>
+                </select>
+              </div>
+              <div class="w-2/12 p-2 flex justify-center">
+                <button
+                  @click="assignCase(caso)"
+                  class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 disabled:opacity-50"
+                  :disabled="!caso.assignedTo"
+                >
+                  Asignar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </TabPanel>
+      <TabPanel header="Casos Asignados">
+        <div class="border border-gray-300 rounded-md overflow-hidden">
+          <div class="bg-gray-100 font-semibold text-gray-700 flex">
+            <div class="w-1/12 p-2">#</div>
+            <div class="w-2/12 p-2">Número de Caso</div>
+            <div class="w-3/12 p-2">Área</div>
+            <div class="w-2/12 p-2">Estado</div>
+            <div class="w-2/12 p-2">Complejidad</div>
+            <div class="w-2/12 p-2">Asignado a</div>
+            <div class="w-2/12 p-2">Acciones</div>
+          </div>
 
-.p-button:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
+          <div v-if="loading" class="flex flex-col items-center justify-center p-8 text-gray-500">
+            <i class="pi pi-spin pi-spinner text-2xl"></i>
+            <span>Cargando casos...</span>
+          </div>
 
-.p-button-success {
-  background-color: var(--p-green-500);
-  border-color: var(--p-green-500);
-}
+          <div v-else-if="filteredAssignedCases.length === 0" class="p-8 text-center text-gray-500">
+            No se encontraron casos asignados.
+          </div>
 
-.p-button-success:hover:not(:disabled) {
-  background-color: var(--p-green-600);
-  border-color: var(--p-green-600);
-}
+          <div v-else>
+            <div
+              v-for="(caso, index) in filteredAssignedCases"
+              :key="caso.Internal_ID"
+              class="flex border-b border-gray-300 even:bg-gray-50"
+            >
+              <div class="w-1/12 p-2">{{ index + 1 }}</div>
+              <div class="w-2/12 p-2">{{ caso.Init_Code }}</div>
+              <div class="w-3/12 p-2">{{ caso.Init_Subject }}</div>
+              <div class="w-2/12 p-2">{{ caso.Init_Type }}</div>
+              <div class="w-2/12 p-2">{{ caso.Init_Complexity }}</div>
+              <div class="w-2/12 p-2">{{ caso.assignedTo }}</div>
+              <div class="w-2/12 p-2 flex justify-center">
+                <button
+                  @click="reassignCase(caso)"
+                  class="px-4 py-2 bg-yellow-500 text-white rounded-md hover:bg-yellow-600 disabled:opacity-50"
+                  :disabled="!caso.assignedTo"
+                >
+                  Reasignar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </TabPanel>
+    </TabView>
 
-.p-button-warning {
-  background-color: var(--p-orange-500);
-  border-color: var(--p-orange-500);
-}
+    <!-- Notification Toast -->
+    <div
+      v-if="showNotification"
+      class="fixed bottom-4 left-4 right-4 max-w-md mx-auto bg-white shadow-lg rounded-md p-4 flex items-center gap-4"
+      :class="notificationType === 'success' ? 'border-green-500' : 'border-red-500'"
+    >
+      <i :class="notificationIcon" class="text-xl"></i>
+      <div>
+        <h3 class="font-semibold">{{ notificationTitle }}</h3>
+        <p>{{ notificationMessage }}</p>
+      </div>
+      <button @click="closeNotification" class="ml-auto text-gray-500 hover:text-gray-700">
+        <i class="pi pi-times"></i>
+      </button>
+    </div>
+  </div>
+</template>
 
-.p-button-warning:hover:not(:disabled) {
-  background-color: var(--p-orange-600);
-  border-color: var(--p-orange-600);
-}
 
-.p-button-outlined {
-  background-color: transparent;
-  color: var(--p-primary-500);
-  border: 1px solid var(--p-primary-500);
-}
 
-.p-button-outlined:hover:not(:disabled) {
-  background-color: rgba(var(--p-primary-500-rgb), 0.04);
-}
-
-.p-button-warning.p-button-outlined {
-  color: var(--p-orange-500);
-  border-color: var(--p-orange-500);
-}
-
-.p-button-warning.p-button-outlined:hover:not(:disabled) {
-  background-color: rgba(var(--p-orange-500-rgb), 0.04);
-}
-
-.p-button-sm {
-  padding: 0.25rem 0.5rem;
-  font-size: 0.875rem;
-}
-
-.p-inputtext {
-  padding: 0.5rem;
-  border: 1px solid var(--border-color);
-  border-radius: 6px;
-  transition: border-color 0.2s, box-shadow 0.2s;
-  background: var(--card-bg);
-  color: var(--text-color);
-}
-
-.p-inputtext:focus {
-  outline: 0 none;
-  border-color: var(--p-primary-400);
-  box-shadow: 0 0 0 1px var(--p-primary-400);
-}
-
-.p-input-icon-left {
-  position: relative;
-  display: inline-block;
-}
-
-.p-input-icon-left > i {
-  position: absolute;
-  top: 50%;
-  left: 0.5rem;
-  margin-top: -0.5rem;
-  color: var(--text-color);
-}
-
-.p-input-icon-left > input {
-  padding-left: 2rem;
-}
-
-/* Table styles */
-.cases-table {
-  border: 1px solid var(--border-color);
-  border-radius: 6px;
-  overflow: hidden;
-}
-
-.table-header {
-  display: flex;
-  background-color: var(--p-surface-100);
-  font-weight: 600;
-  color: var(--p-surface-700);
-}
-
-.table-row {
-  display: flex;
-  border-bottom: 1px solid var(--border-color);
-}
-
-.row-alternate {
-  background-color: rgba(var(--p-surface-200-rgb), 0.3);
-}
-
-.column-header, .column-cell {
-  padding: 0.75rem 0.5rem;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.column-header {
-  text-align: left;
-}
-
-.area-badge, .status-badge {
-  display: inline-block;
-  padding: 0.25rem 0.5rem;
-  border-radius: 4px;
-  font-size: 0.875rem;
-  font-weight: 500;
-}
-
-.area-penal {
-  background-color: rgba(var(--p-red-500-rgb), 0.1);
-  color: var(--p-red-600);
-}
-
-.area-civil {
-  background-color: rgba(var(--p-blue-500-rgb), 0.1);
-  color: var(--p-blue-600);
-}
-
-.area-movilidad {
-  background-color: rgba(var(--p-orange-500-rgb), 0.1);
-  color: var(--p-orange-600);
-}
-
-.area-ninez {
-  background-color: rgba(var(--p-purple-500-rgb), 0.1);
-  color: var(--p-purple-600);
-}
-
-.status-pending {
-  background-color: rgba(var(--p-yellow-500-rgb), 0.1);
-  color: var(--p-yellow-700);
-}
-
-.status-assigned {
-  background-color: rgba(var(--p-green-500-rgb), 0.1);
-  color: var(--p-green-600);
-}
-
-.status-progress {
-  background-color: rgba(var(--p-blue-500-rgb), 0.1);
-  color: var(--p-blue-600);
-}
-
-.assign-select {
-  width: 100%;
-  max-width: 150px;
-}
-
-.actions {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
-.actions-buttons {
-  display: flex;
-  gap: 0.25rem;
-}
-
-.loading-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 2rem;
-  color: var(--text-color);
-  gap: 1rem;
-}
-
-.empty-message {
-  padding: 2rem;
-  text-align: center;
-  color: var(--text-color);
-}
-  
-  .notification-toast {
-    width: calc(100% - 2rem);
-    left: 1rem;
-    right: 1rem;
-  }
-
-</style>

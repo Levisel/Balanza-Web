@@ -302,10 +302,6 @@ const verActividades = async (caso) => {
     // Llamada directa a la API que trae actividades solo de ese caso
     const response = await axios.get(`${API}/activity/case/${codigoCaso}`);
 
-    if (!response.data || response.data.length === 0) {
-      throw new Error(`No se encontraron actividades para el caso ${codigoCaso}`);
-    }
-
     // Mapear la respuesta a los campos que muestra la tabla de actividades
     actividades.value = response.data.map((act) => ({
       id: act.Activity_ID,
@@ -323,7 +319,7 @@ const verActividades = async (caso) => {
       documento: act.Documents
     }));
 
-    // Verificar si hay actividades o no
+    // Mostrar un mensaje informativo si no hay actividades
     if (actividades.value.length === 0) {
       toast.add({
         severity: 'info',
@@ -333,7 +329,7 @@ const verActividades = async (caso) => {
       });
     }
 
-    // Abre el dialog de actividades
+    // Abre el diálogo de actividades incluso si no hay actividades
     visibleDialog.value = true;
 
   } catch (error) {
