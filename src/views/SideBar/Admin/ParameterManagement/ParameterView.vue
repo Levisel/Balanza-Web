@@ -98,6 +98,47 @@ const tableConfig = {
     { field: "Health_Insurance_Name", header: "Nombre", type: "string" },
     { field: "Health_Insurance_Status", header: "Estado", type: "boolean" },
   ],
+  /**************************************************************************** */
+  Ethnicity: [
+    { field: "Ethnicity_Name", header: "Nombre", type: "string" },
+    { field: "Ethnicity_Status", header: "Estado", type: "boolean" },
+  ],
+  Civil_Status: [
+    { field: "Civil_Status_Name", header: "Nombre", type: "string" },
+    { field: "Civil_Status_Status", header: "Estado", type: "boolean" },
+  ],
+  Sex: [
+    { field: "Sex_Name", header: "Nombre", type: "string" },
+    { field: "Sex_Status", header: "Estado", type: "boolean" },
+  ],
+  Derived_By: [
+    { field: "Derived_By_Name", header: "Nombre", type: "string" },
+    { field: "Derived_By_Status", header: "Estado", type: "boolean" },
+  ],
+  Academic_Instruction: [
+    { field: "Academic_Instruction_Name", header: "Nombre", type: "string" },
+    { field: "Academic_Instruction_Status", header: "Estado", type: "boolean" },
+  ],
+  Number_Of_Attempts: [
+    { field: "Number_Of_Attempts", header: "Nombre", type: "string" },
+    { field: "Number_Of_Attempts_Status", header: "Estado", type: "boolean" },
+  ],
+  Complexity: [
+    { field: "Complexity_Name", header: "Nombre", type: "string" },
+    { field: "Complexity_Status", header: "Estado", type: "boolean" },
+  ],
+  Documentation_Backup: [
+    { field: "Documentation_Backup_Name", header: "Nombre", type: "string" },
+    { field: "Documentation_Backup_Status", header: "Estado", type: "boolean" },
+  ],
+  Period_Type: [
+    { field: "Period_Type_Name", header: "Nombre", type: "string" },
+    { field: "Period_Type_Status", header: "Estado", type: "boolean" },
+  ],
+  Practical_Hours: [
+    { field: "Practical_Hours", header: "Nombre", type: "string" },
+    { field: "Practical_Hours_Status", header: "Estado", type: "boolean" },
+  ]
 };
 
 // Función para resetear el registro seleccionado
@@ -123,6 +164,16 @@ const tableNames: { [key in keyof typeof tableConfig]: string } = {
   Own_Assets: "Bienes Propios",
   Pensioner: "Pensionado",
   Health_Insurance: "Seguro de Salud",
+  Ethnicity: "Etnia",
+  Academic_Instruction: "Instrucción Académica",
+  Number_Of_Attempts: "Número de Intentos",
+  Complexity: "Complejidad",
+  Documentation_Backup: "Documentación de respaldo",
+  Period_Type: "Tipo de Período",
+  Practical_Hours: "Horas Prácticas",
+  Sex: "Sexo",
+  Civil_Status: "Estado Civil",
+  Derived_By: "Derivado por",
 };
 
 // Mapeo de campos de ID según la tabla
@@ -143,6 +194,16 @@ const idFieldMap: { [key in keyof typeof tableConfig]: string } = {
   Own_Assets: "Own_Assets_Id",
   Pensioner: "Pensioner_Id",
   Health_Insurance: "Health_Insurance_Id",
+  Ethnicity: "Ethnicity_ID",
+  Academic_Instruction: "Academic_Instruction_ID",
+  Number_Of_Attempts: "Number_Of_Attempts_ID",
+  Complexity: "Complexity_ID",
+  Documentation_Backup: "Documentation_Backup_ID",
+  Period_Type: "Period_Type_ID",
+  Practical_Hours: "Practical_Hours_ID",
+  Sex: "Sex_ID",
+  Civil_Status: "Civil_Status_ID",
+  Derived_By: "Derived_By_ID",
 };
 
 // Computamos la clave (key) a partir del label seleccionado
@@ -213,6 +274,16 @@ const loadData = async () => {
         Own_Assets: `${API}/own-assets`,
         Pensioner: `${API}/pensioner`,
         Health_Insurance: `${API}/health-insurance`,
+        Ethnicity:`${API}/ethnicities`,
+        Academic_Instruction: `${API}/academic-instructions`,
+        Number_Of_Attempts: `${API}/number-of-attempts`,
+        Complexity: `${API}/complexities`,
+        Documentation_Backup: `${API}/documentation-backups`,
+        Period_Type: `${API}/period-types`,
+        Practical_Hours: `${API}/practical-hours`,
+        Sex: `${API}/sexes`,
+        Civil_Status: `${API}/civil-statuses`,
+        Derived_By: `${API}/derived-by`
       };
       console.log("Cargando datos desde:", urlMap[selectedTableKey.value]);
       const { data } = await axios.get(urlMap[selectedTableKey.value]);
@@ -258,6 +329,16 @@ const createData = async () => {
         Own_Assets: `${API}/own-assets`,
         Pensioner: `${API}/pensioner`,
         Health_Insurance: `${API}/health-insurance`,
+        Ethnicity: `${API}/ethnicities`,
+        Academic_Instruction: `${API}/academic-instructions`,
+        Number_Of_Attempts: `${API}/number-of-attempts`,
+        Complexity: `${API}/complexities`,
+        Documentation_Backup: `${API}/documentation-backups`,
+        Period_Type: `${API}/period-types`,
+        Practical_Hours: `${API}/practical-hours`,
+        Sex: `${API}/sexes`,
+        Civil_Status: `${API}/civil-statuses`,
+        Derived_By: `${API}/derived-by`
       };
       console.log("Enviando datos para creación:", selectedRecord.value);
       await axios.post(urlMap[selectedTableKey.value], selectedRecord.value);
@@ -302,6 +383,16 @@ const updateData = async () => {
         Own_Assets: `${API}/own-assets`,
         Pensioner: `${API}/pensioner`,
         Health_Insurance: `${API}/health-insurance`,
+        Ethnicity:`${API}/ethnicities`,
+        Academic_Instruction: `${API}/academic-instructions`,
+        Number_Of_Attempts: `${API}/number-of-attempts`,
+        Complexity: `${API}/complexities`,
+        Documentation_Backup: `${API}/documentation-backups`,
+        Period_Type: `${API}/period-types`,
+        Practical_Hours: `${API}/practical-hours`,
+        Sex: `${API}/sexes`,
+        Civil_Status: `${API}/civil-statuses`,
+        Derived_By: `${API}/derived-by`
       };
       const idField = idFieldMap[selectedTableKey.value];
       const recordId = selectedRecord.value[idField] || selectedRecord.value.id;
@@ -368,6 +459,17 @@ const deleteData = async () => {
         Own_Assets: `${API}/own-assets`,
         Pensioner: `${API}/pensioner`,
         Health_Insurance: `${API}/health-insurance`,
+        Ethnicity:`${API}/ethnicities`,
+        Academic_Instruction: `${API}/academic-instructions`,
+        Number_Of_Attempts: `${API}/number-of-attempts`,
+        Complexity: `${API}/complexities`,
+        Documentation_Backup: `${API}/documentation-backups`,
+        Period_Type: `${API}/period-types`,
+        Practical_Hours: `${API}/practical-hours`,
+        Sex: `${API}/sexes`,
+        Civil_Status: `${API}/civil-statuses`,
+        Derived_By: `${API}/derived-by`
+
       };
       const idField = idFieldMap[selectedTableKey.value];
       const recordId = selectedRecord.value[idField] || selectedRecord.value.id;
