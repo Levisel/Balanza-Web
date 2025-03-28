@@ -538,16 +538,25 @@ const abrirDialogoNuevaActividad = () => {
   <Column field="tiempo" header="Tiempo" />
   <Column field="juzgado" header="Juzgado" />
   <Column field="estado" header="Estado" />
-  <Column field="documento" header="Documento">
-    <template #body="slotProps">
-      <Button 
-        label="Ver Documento" 
-        icon="pi pi-file" 
-        class="p-button-info" 
-        @click="verDocumento(slotProps.data.id)" 
-      />
-    </template>
-  </Column>
+    <Column field="documento" header="Documento">
+      <template #body="slotProps">
+        <template v-if="!slotProps.data.documento">
+          <Button icon="pi pi-upload" @click="uploadDocument(slotProps.data)" />
+
+
+
+        </template>
+        <template v-else>
+          <Button 
+            label="Ver Documento" 
+            icon="pi pi-file" 
+            class="p-button-info" 
+            @click="verDocumento(slotProps.data.id)" 
+          />
+        </template>
+      </template>
+    </Column>
+
   <Column header="Acciones">
     <template #body="slotProps">
       <Button 

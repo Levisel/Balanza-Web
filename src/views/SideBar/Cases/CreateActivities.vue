@@ -780,19 +780,6 @@ const abrirDialogoNuevaActividad = () => {
         <input v-model="nuevaActividadEstadoText" id="estado" type="text" class="p-inputtext p-component w-full" disabled />
       </div>
     </div>
-
-    <!-- Campo de carga de documento -->
-    <div class="flex-1">
-      <label for="documento" class="block text-sm font-semibold">Subir Documento</label>
-      <FileUpload 
-        mode="basic" 
-        name="documento" 
-        accept=".pdf,.doc,.docx" 
-        chooseLabel="Seleccionar Archivo" 
-        class="w-full" 
-        @select="onUploadDocumento"
-      />
-    </div>
     
     <div class="flex justify-end gap-4">
       <Button label="Cancelar" icon="pi pi-times" class="p-button-text" @click="visibleActividadDialog = false" />
