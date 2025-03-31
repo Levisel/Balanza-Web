@@ -9,9 +9,10 @@ import Calendar from 'primevue/calendar';
 import FileUpload from 'primevue/fileupload';
 import TabView from 'primevue/tabview';
 import TabPanel from 'primevue/tabpanel';
-import Toast from 'primevue/toast'; 
+import Toast from 'primevue/toast';
+import InputText from 'primevue/inputtext';
 import ConfirmDialog from 'primevue/confirmdialog';
-import { useToast } from 'primevue/usetoast'; 
+import { useToast } from 'primevue/usetoast';
 import { useAuthStore } from '@/stores/auth';
 import { API } from "@/ApiRoute";
 import { useConfirm } from 'primevue/useconfirm';
@@ -36,12 +37,15 @@ const actividadDetalles = ref<Activity>({} as Activity);
 const usuarioInternoDetalles = ref<Internal_User>({} as Internal_User);
 
 //Estado del dialog y actividades
-const visibleDialog = ref(false) 
-const actividades = ref([])   
+const visibleDialog = ref(false)
+const actividades = ref([])
 const visibleActividadDialog = ref(false)
 const visibleDocumentoDialog = ref(false);
 const documentoUrl = ref('');
 const nuevaActividadEstadoText = ref('En progreso');
+const selectedActivityForUpload = ref(null);
+const visibleFileUploadDialog = ref(false);
+const documento = ref(null);
 
 // Obtener los casos
 const casosActivos = ref([]);
@@ -57,7 +61,7 @@ const filtrarCasos = (casos, query) => {
     return casos;
   }
   const lowerCaseQuery = query.toLowerCase();
-  return casos.filter((caso: { codigo: string; fecha: string; usuario: string; }) => 
+  return casos.filter((caso: { codigo: string; fecha: string; usuario: string; }) =>
     caso.codigo.toLowerCase().includes(lowerCaseQuery) ||
     caso.fecha.toLowerCase().includes(lowerCaseQuery) ||
     caso.usuario.toLowerCase().includes(lowerCaseQuery)
@@ -114,7 +118,7 @@ const obtenerCasos = async () => {
     }
 
     // Obtener los detalles de cada caso usando los init_code
-    const casosConUsuarios = await Promise.all(asignacionesResponse.data.map(async (asignacion, index) => {
+    const casosConUsuarios = await Promise.all(asignacionesResponse.data.map(async (asignacion: { Init_Code: any; }, index: number) => {
       const consultaResponse = await axios.get(`${API}/initial-consultations/${asignacion.Init_Code}`);
       const caso = consultaResponse.data;
 
@@ -133,13 +137,18 @@ const obtenerCasos = async () => {
         caso: caso.Init_Topic,
         oficina: caso.Init_Office,
         tema: caso.Init_Subject,
-        estado: caso.Init_Status ? 'Activo' : 'Inactivo',
+        estado: caso.Init_Status,
         tipocliente: caso.Init_ClientType,
       }
     }));
 
-    // Asignar todos los casos a casosActivos
-    casosActivos.value = casosConUsuarios;
+    // Separar los casos activos e inactivos
+    const casosActivosData = casosConUsuarios.filter(caso => caso.estado === 'Activo');
+    const casosInactivosData = casosConUsuarios.filter(caso => caso.estado === 'Inactivo');
+
+    // Asignar los casos a sus respectivas variables
+    casosActivos.value = casosActivosData;
+    casosInactivos.value = casosInactivosData;
 
   } catch (error) {
     console.error('Error al obtener los casos:', error);
@@ -166,7 +175,7 @@ const finalizarCaso = async (caso: { codigo: any; }) => {
     }
 
     const response = await axios.put(`${API}/initial-consultations/${caso.codigo}`, {
-      Init_Status: 0
+      Init_Status: 'Inactivo'
     }, {
       headers: {
         'Internal-ID': internalID,
@@ -182,8 +191,7 @@ const finalizarCaso = async (caso: { codigo: any; }) => {
       });
 
       // Actualizar la lista de casos
-      await obtenerCasos(1); // Cargar casos activos
-      await obtenerCasos(0); // Cargar casos inactivos
+      await obtenerCasos(); // Cargar casos activos
     } else {
       throw new Error(`Error al finalizar el caso: ${response.statusText}`);
     }
@@ -207,7 +215,7 @@ const reactivarCaso = async (caso: { codigo: any; }) => {
     }
 
     const response = await axios.put(`${API}/initial-consultations/${caso.codigo}`, {
-      Init_Status: 1
+      Init_Status: 'Activo' // Cambio: Ahora se envía 1 para indicar "Activo"
     }, {
       headers: {
         'Internal-ID': internalID,
@@ -223,8 +231,7 @@ const reactivarCaso = async (caso: { codigo: any; }) => {
       });
 
       // Actualizar la lista de casos
-      await obtenerCasos(1); // Cargar casos activos
-      await obtenerCasos(0); // Cargar casos inactivos
+      await obtenerCasos(); // Cargar casos activos
     } else {
       throw new Error(`Error al reactivar el caso: ${response.statusText}`);
     }
@@ -239,7 +246,7 @@ const reactivarCaso = async (caso: { codigo: any; }) => {
   }
 };
 
-const eliminarCaso = (caso) => {
+const eliminarCaso = async (caso: { codigo: any; }) => {
   confirm.require({
     message: `¿Estás seguro de que deseas eliminar el caso ${caso.codigo}?`,
     header: 'Confirmación',
@@ -267,8 +274,7 @@ const eliminarCaso = (caso) => {
           });
 
           // Actualizar la lista de casos
-          await obtenerCasos(1); // Cargar casos activos
-          await obtenerCasos(0); // Cargar casos inactivos
+          await obtenerCasos(); // Cargar casos activos
         } else {
           throw new Error(`Error al eliminar el caso: ${response.statusText}`);
         }
@@ -294,7 +300,7 @@ const eliminarCaso = (caso) => {
 };
 
 //Obtener las actividades según código del caso
-const verActividades = async (caso) => {
+const verActividades = async (caso: { codigo: any; }) => {
   try {
     const codigoCaso = caso.codigo; // Init_Code que ya tienes en el objeto "caso"
     selectedCaseCode.value = codigoCaso; // Almacenar el Init_Code del caso seleccionado
@@ -303,20 +309,22 @@ const verActividades = async (caso) => {
     const response = await axios.get(`${API}/activity/case/${codigoCaso}`);
 
     // Mapear la respuesta a los campos que muestra la tabla de actividades
-    actividades.value = response.data.map((act) => ({
+    actividades.value = response.data.map((act: any) => ({
       id: act.Activity_ID,
-      actividad: act.Activity_Type,
-      ubicacion: act.Location,
-      fecha: act.Activity_Date,
-      abogado: act.Internal_ID, // Cambia si tienes un campo específico para abogado
-      duracion: act.Duration,
-      referenciaExpediente: act.Reference_File,
-      contraparte: act.Counterparty,
-      juez: act.Judge_Name,
-      tipo: act.Activity_Type,
-      tiempo: act.Time,
-      estado: act.Status,
-      documento: act.Documents
+      actividad: act.Activity_Name,
+      ubicacion: act.Activity_Location,
+      fecha: act.Activity_Start_Date,
+      abogado: act.Internal_ID,
+      duracion: act.Activity_Duration,
+      referenciaExpediente: act.Activity_Reference_File,
+      contraparte: act.Activity_Counterparty,
+      juez: act.Activity_Judge_Name,
+      tiempo: act.Activity_Start_Time,
+      juzgado: act.Activity_Judged,
+      aTiempo: act.Activity_OnTime,
+      estado: act.Activity_Status,
+      documento: act.Activity_Document, // This field will be used to check if a document exists
+      hasDocument: act.Activity_Document !== null && act.Activity_Document !== undefined && act.Activity_Document !== "", // New field to check if a document exists
     }));
 
     // Mostrar un mensaje informativo si no hay actividades
@@ -355,7 +363,6 @@ const nuevaActividadContraparte = ref('');
 const nuevaActividadJuez = ref('');
 const nuevaActividadTiempo = ref('');
 const nuevaActividadJuzgado = ref('');
-const documento = ref(null);
 
 // Función para ver el documento
 const verDocumento = async (actividadId: any) => {
@@ -366,7 +373,7 @@ const verDocumento = async (actividadId: any) => {
 
     if (response.status === 200) {
       const contentType = response.headers['content-type'] || 'application/pdf';
-const blob = new Blob([response.data], { type: contentType });
+      const blob = new Blob([response.data], { type: contentType });
       documentoUrl.value = URL.createObjectURL(blob);
       visibleDocumentoDialog.value = true;
     } else {
@@ -391,7 +398,55 @@ const blob = new Blob([response.data], { type: contentType });
   }
 };
 
-//Subir documento
+const uploadDocument = (activity: any) => {
+  selectedActivityForUpload.value = activity;
+  visibleFileUploadDialog.value = true;
+};
+
+const subirDocumento = async () => {
+  try {
+    if (!documento.value) {
+      throw new Error('No se ha seleccionado ningún documento.');
+    }
+
+    const formData = new FormData();
+    formData.append('file', documento.value);
+    const internalID = authStore.user?.id;
+    if (!internalID) {
+      throw new Error('No se pudo obtener el ID del usuario');
+    }
+
+    const response = await axios.put(`${API}/activity/${selectedActivityForUpload.value.id}`, formData, {
+       headers: {
+        'Internal-ID': internalID,
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    
+    if (response.status === 200) {
+      toast.add({
+        severity: 'success',
+        summary: 'Documento Subido',
+        detail: 'El documento se ha subido correctamente.',
+        life: 3000,
+      });
+      visibleFileUploadDialog.value = false;
+      await verActividades({codigo:selectedCaseCode.value})
+      documento.value = null;
+    } else {
+      throw new Error(`Error al subir el documento: ${response.statusText}`);
+    }
+  } catch (error) {
+    console.error('Error al subir el documento:', error);
+    toast.add({
+      severity: 'error',
+      summary: 'Error',
+      detail: 'No se pudo subir el documento.',
+      life: 3000,
+    });
+  }
+};
+
 const onUploadDocumento = (event: any) => {
   documento.value = event.files[0]; // Asigna el archivo seleccionado a documento.value
 };
@@ -534,14 +589,13 @@ const abrirDialogoNuevaActividad = () => {
   <Column field="referenciaExpediente" header="Referencia Expediente" />
   <Column field="contraparte" header="Contraparte" />
   <Column field="juez" header="Juez Asignado" />
-  <Column field="tipo" header="Tipo" />
   <Column field="tiempo" header="Tiempo" />
   <Column field="juzgado" header="Juzgado" />
   <Column field="estado" header="Estado" />
     <Column field="documento" header="Documento">
       <template #body="slotProps">
-        <template v-if="!slotProps.data.documento">
-          <Button icon="pi pi-upload" @click="uploadDocument(slotProps.data)" />
+                <template v-if="!slotProps.data.hasDocument">
+          <Button label ="Subir Documento" icon="pi pi-upload" @click="uploadDocument(slotProps.data)" />
 
 
 
@@ -751,6 +805,22 @@ const abrirDialogoNuevaActividad = () => {
       <Button label="Cerrar" icon="pi pi-times" class="p-button-text" @click="visibleUsuarioDialog = false" />
     </div>
   </div>
+</Dialog>
+
+ <!-- Dialog para visualizar el documento PDF -->
+ <Dialog v-model:visible="visibleFileUploadDialog" modal header="Subir Documento" class="p-6 rounded-lg shadow-lg bg-white max-w-3xl w-full">
+  <FileUpload 
+    mode="basic"
+    :maxFileSize="10000000" 
+    @select="onUploadDocumento" 
+    chooseLabel="Seleccionar Documento"
+    class="w-full"
+  />
+  <template #footer>
+  <div class="flex justify-end">
+    <Button label="Enviar Documento" class="p-button-success" @click="subirDocumento" />
+  </div>
+</template>
 </Dialog>
 
   </div>

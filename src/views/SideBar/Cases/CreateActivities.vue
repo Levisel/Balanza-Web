@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
-import axios from 'axios'
+import axios from 'axios';
 import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
 import Button from 'primevue/button';
@@ -9,12 +9,14 @@ import Calendar from 'primevue/calendar';
 import FileUpload from 'primevue/fileupload';
 import TabView from 'primevue/tabview';
 import TabPanel from 'primevue/tabpanel';
-import Toast from 'primevue/toast'; 
+import Toast from 'primevue/toast';
 import ConfirmDialog from 'primevue/confirmdialog';
-import { useToast } from 'primevue/usetoast'; 
+import { useToast } from 'primevue/usetoast';
 import { useAuthStore } from '@/stores/auth';
 import { API } from "@/ApiRoute";
 import { useConfirm } from 'primevue/useconfirm';
+import Checkbox from 'primevue/checkbox';
+import InputText from 'primevue/inputtext';
 //Importamos las interfaces de los archivos, que contiene las estructuras de los datos que se van a manejar
 import type { User } from '@/ApiRoute';
 import type { Internal_User } from '@/ApiRoute';
@@ -27,37 +29,36 @@ const confirm = useConfirm();
 const authStore = useAuthStore();
 
 //Detalles del Usuario
-const visibleUsuarioDialog = ref(false);
+const visibleUsuarioDialog = ref<boolean>(false);
 
 //USA LAS INTERFACES DE LOS ARCHIVOS DONDE ESTAN LAS VARIABLES DE LOS DATOS
 const usuarioDetalles = ref<User>({} as User); //Se usan las interfaces del archivo ApiRoute.ts
-const casoDetalles = ref<Initial_Consultation>({} as Initial_Consultation);
-const actividadDetalles = ref<Activity>({} as Activity);
-const usuarioInternoDetalles = ref<Internal_User>({} as Internal_User);
 
 //Estado del dialog y actividades
-const visibleDialog = ref(false) 
-const actividades = ref([])   
-const visibleActividadDialog = ref(false)
-const visibleDocumentoDialog = ref(false);
-const documentoUrl = ref('');
-const nuevaActividadEstadoText = ref('En progreso');
+const visibleDialog = ref<boolean>(false);
+const actividades = ref<any[]>([]);
+const visibleActividadDialog = ref<boolean>(false);
+const visibleDocumentoDialog = ref<boolean>(false);
+const documentoUrl = ref<string>('');
+const nuevaActividadEstadoText = ref<string>('En progreso');
+const visibleActividadDetallesDialog = ref<boolean>(false);
+const actividadDetalles = ref<any>({});
 
 // Obtener los casos
-const casosActivos = ref([]);
-const casosInactivos = ref([]);
-const selectedCaseCode = ref('');
-const abogadosActivos = ref([]);
+const casosActivos = ref<any[]>([]);
+const casosInactivos = ref<any[]>([]);
+const selectedCaseCode = ref<string>('');
+const abogadosActivos = ref<any[]>([]);
 
 //Búsqueda
-const searchQuery = ref('');
+const searchQuery = ref<string>('');
 
-const filtrarCasos = (casos, query) => {
+const filtrarCasos = (casos: any[], query: string) => {
   if (!query) {
     return casos;
   }
   const lowerCaseQuery = query.toLowerCase();
-  return casos.filter((caso: { codigo: string; fecha: string; usuario: string; }) => 
+  return casos.filter((caso: { codigo: string; fecha: string; usuario: string; }) =>
     caso.codigo.toLowerCase().includes(lowerCaseQuery) ||
     caso.fecha.toLowerCase().includes(lowerCaseQuery) ||
     caso.usuario.toLowerCase().includes(lowerCaseQuery)
@@ -69,7 +70,7 @@ const casosInactivosFiltrados = computed(() => filtrarCasos(casosInactivos.value
 
 
 // Obtener los datos de los usuarios
-const obtenerNombreUsuario = async (userId) => {
+const obtenerNombreUsuario = async (userId: string | number): Promise<string> => {
   try {
     const response = await axios.get(`${API}/user/${userId}`);
     return `${response.data.User_FirstName} ${response.data.User_LastName}`;
@@ -79,7 +80,7 @@ const obtenerNombreUsuario = async (userId) => {
   }
 }
 
-const verDetallesUsuario = async (cedula) => {
+const verDetallesUsuario = async (cedula: string | number) => {
   try {
     const response = await axios.get(`${API}/user/${cedula}`);
     usuarioDetalles.value = response.data;
@@ -114,7 +115,7 @@ const obtenerCasos = async () => {
     }
 
     // Obtener los detalles de cada caso usando los init_code
-    const casosConUsuarios = await Promise.all(asignacionesResponse.data.map(async (asignacion, index) => {
+    const casosConUsuarios = await Promise.all(asignacionesResponse.data.map(async (asignacion: { Init_Code: any; }, index: number) => {
       const consultaResponse = await axios.get(`${API}/initial-consultations/${asignacion.Init_Code}`);
       const caso = consultaResponse.data;
 
@@ -133,13 +134,18 @@ const obtenerCasos = async () => {
         caso: caso.Init_Topic,
         oficina: caso.Init_Office,
         tema: caso.Init_Subject,
-        estado: caso.Init_Status ? 'Activo' : 'Inactivo',
+        estado: caso.Init_Status,
         tipocliente: caso.Init_ClientType,
       }
     }));
 
-    // Asignar todos los casos a casosActivos
-    casosActivos.value = casosConUsuarios;
+    // Separar los casos activos e inactivos
+    const casosActivosData = casosConUsuarios.filter(caso => caso.estado === 'Activo');
+    const casosInactivosData = casosConUsuarios.filter(caso => caso.estado === 'Inactivo');
+
+    // Asignar los casos a sus respectivas variables
+    casosActivos.value = casosActivosData;
+    casosInactivos.value = casosInactivosData;
 
   } catch (error) {
     console.error('Error al obtener los casos:', error);
@@ -166,7 +172,7 @@ const finalizarCaso = async (caso: { codigo: any; }) => {
     }
 
     const response = await axios.put(`${API}/initial-consultations/${caso.codigo}`, {
-      Init_Status: 0
+      Init_Status: 'Inactivo'
     }, {
       headers: {
         'Internal-ID': internalID,
@@ -182,8 +188,7 @@ const finalizarCaso = async (caso: { codigo: any; }) => {
       });
 
       // Actualizar la lista de casos
-      await obtenerCasos(1); // Cargar casos activos
-      await obtenerCasos(0); // Cargar casos inactivos
+      await obtenerCasos(); // Cargar casos activos
     } else {
       throw new Error(`Error al finalizar el caso: ${response.statusText}`);
     }
@@ -207,7 +212,7 @@ const reactivarCaso = async (caso: { codigo: any; }) => {
     }
 
     const response = await axios.put(`${API}/initial-consultations/${caso.codigo}`, {
-      Init_Status: 1
+      Init_Status: 'Activo' // Cambio: Ahora se envía 1 para indicar "Activo"
     }, {
       headers: {
         'Internal-ID': internalID,
@@ -223,8 +228,7 @@ const reactivarCaso = async (caso: { codigo: any; }) => {
       });
 
       // Actualizar la lista de casos
-      await obtenerCasos(1); // Cargar casos activos
-      await obtenerCasos(0); // Cargar casos inactivos
+      await obtenerCasos(); // Cargar casos activos
     } else {
       throw new Error(`Error al reactivar el caso: ${response.statusText}`);
     }
@@ -239,7 +243,7 @@ const reactivarCaso = async (caso: { codigo: any; }) => {
   }
 };
 
-const eliminarCaso = (caso) => {
+const eliminarCaso = async (caso: { codigo: any; }) => {
   confirm.require({
     message: `¿Estás seguro de que deseas eliminar el caso ${caso.codigo}?`,
     header: 'Confirmación',
@@ -267,8 +271,7 @@ const eliminarCaso = (caso) => {
           });
 
           // Actualizar la lista de casos
-          await obtenerCasos(1); // Cargar casos activos
-          await obtenerCasos(0); // Cargar casos inactivos
+          await obtenerCasos(); // Cargar casos activos
         } else {
           throw new Error(`Error al eliminar el caso: ${response.statusText}`);
         }
@@ -294,7 +297,7 @@ const eliminarCaso = (caso) => {
 };
 
 //Obtener las actividades según código del caso
-const verActividades = async (caso) => {
+const verActividades = async (caso: { codigo: any; }) => {
   try {
     const codigoCaso = caso.codigo; // Init_Code que ya tienes en el objeto "caso"
     selectedCaseCode.value = codigoCaso; // Almacenar el Init_Code del caso seleccionado
@@ -303,20 +306,22 @@ const verActividades = async (caso) => {
     const response = await axios.get(`${API}/activity/case/${codigoCaso}`);
 
     // Mapear la respuesta a los campos que muestra la tabla de actividades
-    actividades.value = response.data.map((act) => ({
+    actividades.value = response.data.map((act: any) => ({
       id: act.Activity_ID,
-      actividad: act.Activity_Type,
-      ubicacion: act.Location,
-      fecha: act.Activity_Date,
-      abogado: act.Internal_ID, // Cambia si tienes un campo específico para abogado
-      duracion: act.Duration,
-      referenciaExpediente: act.Reference_File,
-      contraparte: act.Counterparty,
-      juez: act.Judge_Name,
-      tipo: act.Activity_Type,
-      tiempo: act.Time,
-      estado: act.Status,
-      documento: act.Documents
+      actividad: act.Activity_Name,
+      ubicacion: act.Activity_Location,
+      fecha: act.Activity_Start_Date,
+      abogado: act.Internal_ID,
+      duracion: act.Activity_Duration,
+      referenciaExpediente: act.Activity_Reference_File,
+      contraparte: act.Activity_Counterparty,
+      juez: act.Activity_Judge_Name,
+      tiempo: act.Activity_Start_Time,
+      juzgado: act.Activity_Judged,
+      aTiempo: act.Activity_OnTime,
+      estado: act.Activity_Status,
+      documento: act.Activity_Document, // This field will be used to check if a document exists
+      hasDocument: act.Activity_Document !== null && act.Activity_Document !== undefined && act.Activity_Document !== "", // New field to check if a document exists
     }));
 
     // Mostrar un mensaje informativo si no hay actividades
@@ -345,23 +350,45 @@ const verActividades = async (caso) => {
 
 //Agregar nueva actividad
 // Estado de la actividad
-const nuevaActividadTipo = ref('');
-const nuevaActividadUbicacion = ref('');
-const nuevaActividadFecha = ref(null);
-const nuevaActividadAbogado = ref('');
-const nuevaActividadDuracion = ref('');
-const nuevaActividadReferenciaExpediente = ref('');
-const nuevaActividadContraparte = ref('');
-const nuevaActividadJuez = ref('');
-const nuevaActividadTiempo = ref('');
-const nuevaActividadJuzgado = ref('');
+const nuevaActividadNombre = ref<string>('');
+const nuevaActividadUbicacion = ref<string>('');
+const nuevaActividadFecha = ref<Date | null>(null);
+const nuevaActividadATiempo = ref<boolean>(false);
+const nuevaActividadDuracion = ref<string>('');
+const nuevaActividadReferenciaExpediente = ref<string>('');
+const nuevaActividadContraparte = ref<string>('');
+const nuevaActividadJuez = ref<string>('');
+const nuevaActividadTiempo = ref<string>('');
+const nuevaActividadJuzgado = ref<string>('');
 const documento = ref(null);
+const selectedFileName = ref<string | null>(null);
+
 
 // Función para agregar una nueva actividad
 const agregarNuevaActividad = async () => {
   try {
     if (!selectedCaseCode.value) {
       throw new Error('No se ha seleccionado ningún caso');
+    }
+    // Validar que el campo "Nombre de Actividad" no esté vacío
+    if (!nuevaActividadNombre.value) {
+      toast.add({
+        severity: 'error',
+        summary: 'Error',
+        detail: 'El campo "Nombre de Actividad" es obligatorio.',
+        life: 3000,
+      });
+      return; // Detener la ejecución si el campo está vacío
+    }
+    // Validar que el campo "Hora de Inicio" no esté vacío
+    if (!nuevaActividadTiempo.value) {
+      toast.add({
+        severity: 'error',
+        summary: 'Error',
+        detail: 'El campo "Hora de Inicio" es obligatorio.',
+        life: 3000,
+      });
+      return; // Detener la ejecución si el campo está vacío
     }
 
     // Obtener el Internal_ID del usuario logueado desde el authStore
@@ -375,38 +402,39 @@ const agregarNuevaActividad = async () => {
     formData.append('Internal_ID', internalID); // Usar el valor obtenido
     formData.append('Init_Code', selectedCaseCode.value); // Usar el código del caso seleccionado
 
-    if (nuevaActividadTipo.value) {
-      formData.append('Activity_Type', nuevaActividadTipo.value);
-    }
+    formData.append('Activity_Name', nuevaActividadNombre.value); //Se agrega el nombre de la actividad
     if (nuevaActividadUbicacion.value) {
-      formData.append('Location', nuevaActividadUbicacion.value);
+      formData.append('Activity_Location', nuevaActividadUbicacion.value);
     }
     if (nuevaActividadFecha.value) {
-      formData.append('Activity_Date', nuevaActividadFecha.value);
+        const formattedDate = nuevaActividadFecha.value.toLocaleDateString('en-CA'); // 'en-CA' para YYYY-MM-DD
+        formData.append('Activity_Start_Date', formattedDate);
     } else {
       throw new Error('La fecha de la actividad no puede estar vacía');
     }
-    if (nuevaActividadDuracion.value) {
-      formData.append('Duration', nuevaActividadDuracion.value);
+    if (nuevaActividadTiempo.value) {
+        const formattedTime = nuevaActividadTiempo.value;
+        formData.append('Activity_Start_Time', formattedTime);
     }
+    formData.append('Activity_Duration', nuevaActividadDuracion.value);
     if (nuevaActividadContraparte.value) {
-      formData.append('Counterparty', nuevaActividadContraparte.value);
+      formData.append('Activity_Counterparty', nuevaActividadContraparte.value);
     }
     if (nuevaActividadJuez.value) {
-      formData.append('Judge_Name', nuevaActividadJuez.value);
+      formData.append('Activity_Judge_Name', nuevaActividadJuez.value);
     }
     if (nuevaActividadReferenciaExpediente.value) {
-      formData.append('Reference_File', nuevaActividadReferenciaExpediente.value);
+      formData.append('Activity_Reference_File', nuevaActividadReferenciaExpediente.value);
     }
     if (nuevaActividadJuzgado.value) {
-      formData.append('Judged', nuevaActividadJuzgado.value); // Asegúrate de que el campo juzgado se esté agregando
+      formData.append('Activity_Judged', nuevaActividadJuzgado.value); // Asegúrate de que el campo juzgado se esté agregando
     }
-    formData.append('Status', nuevaActividadEstadoText.value); // Asegúrate de que el estado se esté agregando
+    formData.append('Activity_Status', nuevaActividadEstadoText.value); // Asegúrate de que el estado se esté agregando
+    
+    formData.append('Activity_OnTime', nuevaActividadATiempo.value);
     if (documento.value) {
       formData.append('file', documento.value);
     }
-
-    console.log('FormData:', formData); // Log the FormData
 
     // Realizar la solicitud para agregar la actividad
     const response = await axios.post(`${API}/activity`, formData, {
@@ -415,8 +443,6 @@ const agregarNuevaActividad = async () => {
         'Internal-ID': internalID
       },
     });
-
-    console.log('Response:', response); // Log the response
 
     toast.add({
       severity: 'success',
@@ -427,6 +453,8 @@ const agregarNuevaActividad = async () => {
 
     // Close the dialog
     visibleActividadDialog.value = false;
+
+    await verActividades({ codigo: selectedCaseCode.value }); // Recargar actividades del caso seleccionado
 
   } catch (error) {
     toast.add({
@@ -500,6 +528,23 @@ const eliminarActividad = (actividad: { id: any; }) => {
   });
 };
 
+// Función para ver los detalles de la actividad
+const verDetallesActividad = async (actividadId: any) => {
+  try {
+    const response = await axios.get(`${API}/activity/${actividadId}`);
+    actividadDetalles.value = response.data;
+    visibleActividadDetallesDialog.value = true;
+  } catch (error) {
+    console.error('Error al obtener los detalles de la actividad:', error);
+    toast.add({
+      severity: 'error',
+      summary: 'Error',
+      detail: 'No se pudieron obtener los detalles de la actividad.',
+      life: 3000,
+    });
+  }
+};
+
 // Función para ver el documento
 const verDocumento = async (actividadId: any) => {
   try {
@@ -509,7 +554,7 @@ const verDocumento = async (actividadId: any) => {
 
     if (response.status === 200) {
       const contentType = response.headers['content-type'] || 'application/pdf';
-const blob = new Blob([response.data], { type: contentType });
+      const blob = new Blob([response.data], { type: contentType });
       documentoUrl.value = URL.createObjectURL(blob);
       visibleDocumentoDialog.value = true;
     } else {
@@ -537,6 +582,7 @@ const blob = new Blob([response.data], { type: contentType });
 //Subir documento
 const onUploadDocumento = (event: any) => {
   documento.value = event.files[0]; // Asigna el archivo seleccionado a documento.value
+  selectedFileName.value = event.files[0].name; //Se guarda el nombre del archivo
 };
 
 const obtenerAbogadosActivosPorArea = async () => {
@@ -648,7 +694,6 @@ const abrirDialogoNuevaActividad = () => {
   <template #body="slotProps">
     <div class="flex gap-2">
       <Button icon="pi pi-refresh" class="bg-yellow-500 text-white px-3 py-1 rounded-lg shadow hover:bg-yellow-600" @click="reactivarCaso(slotProps.data)" />
-      <Button icon="pi pi-trash" class="bg-red-500 text-white px-3 py-1 rounded-lg shadow hover:bg-red-600" @click="eliminarCaso(slotProps.data)" />
     </div>
   </template>
 </Column>
@@ -658,58 +703,67 @@ const abrirDialogoNuevaActividad = () => {
 
 <!-- Dialog de Actividades con fecha -->
 <Dialog v-model:visible="visibleDialog" modal header="Actividades del Caso" class="p-6 rounded-lg shadow-lg bg-white max-w-5xl w-full">
-  <div class="flex flex-col space-y-6">
-    <!-- Botón para agregar nueva actividad -->
-    <Button 
-    label="Agregar Nueva Actividad" 
-    icon="pi pi-plus" 
-    class="p-button-success mb-4" 
-    @click="abrirDialogoNuevaActividad" 
-    />
-    
-    <!-- Tabla de actividades -->
-    <DataTable :value="actividades" class="p-datatable-gridlines w-full">
-  <Column field="id" header="ID de Actividad" />
-  <Column field="actividad" header="Actividad" />
-  <Column field="ubicacion" header="Ubicación" />
-  <Column field="fecha" header="Fecha">
-    <template #body="slotProps">
-      {{ new Date(slotProps.data.fecha).toLocaleDateString() }}
-    </template>
-  </Column>
-  <Column field="abogado" header="Abogado Asignado">
-    <template #body="slotProps">
-      {{ slotProps.data.abogado }}
-    </template>
-  </Column>
-  <Column field="duracion" header="Duración" />
-  <Column field="referenciaExpediente" header="Referencia Expediente" />
-  <Column field="contraparte" header="Contraparte" />
-  <Column field="juez" header="Juez Asignado" />
-  <Column field="tipo" header="Tipo" />
-  <Column field="tiempo" header="Tiempo" />
-  <Column field="juzgado" header="Juzgado" />
-  <Column field="estado" header="Estado" />
-  <Column field="documento" header="Documento">
-    <template #body="slotProps">
+    <div class="flex flex-col space-y-6">
+      <!-- Botón para agregar nueva actividad -->
       <Button 
-        label="Ver Documento" 
-        icon="pi pi-file" 
-        class="p-button-info" 
-        @click="verDocumento(slotProps.data.id)" 
+        label="Agregar Nueva Actividad" 
+        icon="pi pi-plus" 
+        class="p-button-success mb-4" 
+        @click="abrirDialogoNuevaActividad" 
       />
-    </template>
-  </Column>
-  <Column header="Acciones">
-    <template #body="slotProps">
-      <div class="flex gap-2">
-        <Button icon="pi pi-trash" class="bg-red-500 text-white px-3 py-1 rounded-lg shadow hover:bg-red-600" @click="eliminarActividad(slotProps.data)" />
-      </div>
-    </template>
-  </Column>
-</DataTable>
-  </div>
-</Dialog>
+      
+      <!-- Tabla de actividades -->
+      <DataTable :value="actividades" class="p-datatable-gridlines w-full">
+        <Column field="id" header="ID de Actividad" class="text-center" headerClass="text-center" />
+        <Column field="actividad" header="Actividad" class="text-center" headerClass="text-center" />
+        <Column field="ubicacion" header="Ubicación" class="text-center" headerClass="text-center" />
+        <Column field="fecha" header="Fecha de Inicio" class="text-center" headerClass="text-center">
+          <template #body="slotProps">
+            <div class="text-center">
+              {{ new Date(slotProps.data.fecha).toLocaleDateString() }}
+            </div>
+          </template>
+        </Column>
+        <Column field="abogado" header="Abogado Asignado" class="text-center" headerClass="text-center">
+          <template #body="slotProps">
+            <div class="text-center">
+              {{ slotProps.data.abogado }}
+            </div>
+          </template>
+        </Column>
+        <Column field="duracion" header="Duración" class="text-center" headerClass="text-center" />
+        <Column field="referenciaExpediente" header="Referencia Expediente" class="text-center" headerClass="text-center" />
+        <Column field="contraparte" header="Contraparte" class="text-center" headerClass="text-center" />
+        <Column field="juez" header="Juez Asignado" class="text-center" headerClass="text-center" />
+        <Column field="tiempo" header="Tiempo" class="text-center" headerClass="text-center" />
+        <Column field="juzgado" header="Juzgado" class="text-center" headerClass="text-center" />
+        <Column field="estado" header="Estado" class="text-center" headerClass="text-center" />
+        <Column field="documento" header="Documento" class="text-center" headerClass="text-center">
+          <template #body="slotProps">
+            <div class="flex justify-center" v-if="slotProps.data.hasDocument">
+              <Button 
+                label="Ver Documento" 
+                icon="pi pi-file" 
+                class="p-button-info" 
+                @click="verDocumento(slotProps.data.id)" 
+              />
+            </div>
+            <div class="text-center" v-else>
+              --------
+            </div>
+          </template>
+        </Column>
+        <Column header="Acciones" class="text-center" headerClass="text-center">
+          <template #body="slotProps">
+            <div class="flex justify-center gap-2">
+              <Button icon="pi pi-info-circle" class="bg-blue-500 text-white px-3 py-1 rounded-lg shadow hover:bg-blue-600" @click="verDetallesActividad(slotProps.data.id)" />
+              <Button icon="pi pi-trash" class="bg-red-500 text-white px-3 py-1 rounded-lg shadow hover:bg-red-600" @click="eliminarActividad(slotProps.data)" />
+            </div>
+          </template>
+        </Column>
+      </DataTable>
+    </div>
+  </Dialog>
 
 <!-- Dialog para visualizar el documento PDF -->
 <Dialog v-model:visible="visibleDocumentoDialog" modal header="Documento de la Actividad" class="p-6 rounded-lg shadow-lg bg-white max-w-7xl w-full">
@@ -717,76 +771,81 @@ const abrirDialogoNuevaActividad = () => {
 </Dialog>
 
     <!-- Dialog de Nueva Actividad -->
-    <Dialog v-model:visible="visibleActividadDialog" modal header="Nueva Actividad" class="p-6 rounded-lg shadow-lg">
-  <div class="space-y-4">
-    <div class="flex gap-4">
-      <div class="flex-1">
-        <label for="tipo" class="block text-sm font-semibold">Tipo de Actividad</label>
-        <input v-model="nuevaActividadTipo" id="tipo" type="text" class="p-inputtext p-component w-full" />
+    <Dialog v-model:visible="visibleActividadDialog" modal header="Nueva Actividad"
+      class="p-6 rounded-lg shadow-lg max-w-4xl w-full">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label for="nombre" class="block text-sm font-semibold">Nombre de Actividad</label>
+          <InputText v-model="nuevaActividadNombre" id="nombre" type="text" class="p-inputtext p-component w-full" />
+        </div>
+        <div>
+          <label for="fecha" class="block text-sm font-semibold">Fecha de Inicio</label>
+          <Calendar v-model="nuevaActividadFecha" id="fecha" type="text" class="w-full" />
+        </div>
+        <div>
+          <label for="hora" class="block text-sm font-semibold">Hora de Inicio</label>
+          <InputText v-model="nuevaActividadTiempo" id="hora"  class="w-full" />
+        </div>
+        <div>
+          <label for="ubicacion" class="block text-sm font-semibold">Ubicación</label>
+          <InputText v-model="nuevaActividadUbicacion" id="ubicacion" type="text"
+            class="p-inputtext p-component w-full" />
+        </div>
+        <div>
+          <label for="duracion" class="block text-sm font-semibold">Duración</label>
+          <InputText v-model="nuevaActividadDuracion" id="duracion" type="text" class="w-full" />
+        </div>
+        <div>
+          <label for="contraparte" class="block text-sm font-semibold">Contraparte</label>
+          <InputText v-model="nuevaActividadContraparte" id="contraparte" type="text"
+            class="p-inputtext p-component w-full" />
+        </div>
+        <div>
+          <label for="juzgado" class="block text-sm font-semibold">Juzgado</label>
+          <InputText v-model="nuevaActividadJuzgado" id="juzgado" type="text"
+            class="p-inputtext p-component w-full" />
+        </div>
+        <div>
+          <label for="juez" class="block text-sm font-semibold">Nombre del Juez</label>
+          <InputText v-model="nuevaActividadJuez" id="juez" type="text" class="p-inputtext p-component w-full" />
+        </div>
+        <div>
+          <label for="referencia" class="block text-sm font-semibold">Referencia de Archivo</label>
+          <InputText v-model="nuevaActividadReferenciaExpediente" id="referencia" type="text"
+            class="p-inputtext p-component w-full" />
+        </div>
+        <div>
+          <label for="estado" class="block text-sm font-semibold">Estado</label>
+          <InputText v-model="nuevaActividadEstadoText" id="estado" type="text"
+            class="p-inputtext p-component w-full" />
+        </div>
+        <div class="flex items-center">
+          <Checkbox v-model="nuevaActividadATiempo" id="aTiempo" :binary="true" />
+          <label for="aTiempo" class="ml-2 text-sm font-semibold">A tiempo</label>
+        </div>
+        <div class="col-span-2">
+          <label for="documento" class="block text-sm font-semibold">Documento</label>
+          <FileUpload
+            name="documento"
+            :maxFileSize="10000000"
+            accept=".pdf"
+            :chooseLabel="'Seleccionar Archivo'"
+            :cancelLabel="'Cancelar'"
+            :uploadLabel="'Subir'"
+            mode="basic"
+            @select="onUploadDocumento"
+            class="w-full"
+          />    
+        </div>
       </div>
-      <div class="flex-1">
-        <label for="ubicacion" class="block text-sm font-semibold">Ubicación</label>
-        <input v-model="nuevaActividadUbicacion" id="ubicacion" type="text" class="p-inputtext p-component w-full" />
-      </div>
-    </div>
 
-    <div class="flex gap-4">
-      <div class="flex-1">
-        <label for="fecha" class="block text-sm font-semibold">Fecha</label>
-        <Calendar v-model="nuevaActividadFecha" id="fecha" class="w-full" />
-      </div>
-      <div class="flex-1">
-        <label for="abogado" class="block text-sm font-semibold">Abogado Asignado</label>
-        <Dropdown v-model="nuevaActividadAbogado" :options="abogadosActivos" optionLabel="label" optionValue="value" placeholder="Seleccionar Abogado" class="w-full" />
-      </div>
-    </div>
 
-    <div class="flex gap-4">
-      <div class="flex-1">
-        <label for="duracion" class="block text-sm font-semibold">Duración</label>
-        <input v-model="nuevaActividadDuracion" id="duracion" type="text" class="p-inputtext p-component w-full" />
+      <div class="flex justify-end gap-4 mt-4">
+        <Button label="Cancelar" icon="pi pi-times" class="p-button-text"
+          @click="visibleActividadDialog = false" />
+        <Button label="Agregar" icon="pi pi-check" class="p-button-success" @click="agregarNuevaActividad" />
       </div>
-      <div class="flex-1">
-        <label for="referenciaExpediente" class="block text-sm font-semibold">Referencia Expediente</label>
-        <input v-model="nuevaActividadReferenciaExpediente" id="referenciaExpediente" type="text" class="p-inputtext p-component w-full" />
-      </div>
-    </div>
-
-    <div class="flex gap-4">
-      <div class="flex-1">
-        <label for="contraparte" class="block text-sm font-semibold">Contraparte</label>
-        <input v-model="nuevaActividadContraparte" id="contraparte" type="text" class="p-inputtext p-component w-full" />
-      </div>
-      <div class="flex-1">
-        <label for="juez" class="block text-sm font-semibold">Juez Asignado</label>
-        <input v-model="nuevaActividadJuez" id="juez" type="text" class="p-inputtext p-component w-full" />
-      </div>
-    </div>
-
-    <div class="flex gap-4">
-      <div class="flex-1">
-        <label for="tiempo" class="block text-sm font-semibold">Tiempo</label>
-        <input v-model="nuevaActividadTiempo" id="tiempo" type="text" class="p-inputtext p-component w-full" />
-      </div>
-      <div class="flex-1">
-        <label for="juzgado" class="block text-sm font-semibold">Juzgado</label>
-        <input v-model="nuevaActividadJuzgado" id="juzgado" type="text" class="p-inputtext p-component w-full" />
-      </div>
-    </div>
-
-    <div class="flex gap-4">
-      <div class="flex-1">
-        <label for="estado" class="block text-sm font-semibold">Estado</label>
-        <input v-model="nuevaActividadEstadoText" id="estado" type="text" class="p-inputtext p-component w-full" disabled />
-      </div>
-    </div>
-    
-    <div class="flex justify-end gap-4">
-      <Button label="Cancelar" icon="pi pi-times" class="p-button-text" @click="visibleActividadDialog = false" />
-      <Button label="Agregar" icon="pi pi-check" class="p-button-success" @click="agregarNuevaActividad" />
-    </div>
-  </div>
-</Dialog>
+    </Dialog>
 
 <Dialog v-model:visible="visibleUsuarioDialog" modal header="Detalles del Usuario" class="p-6 rounded-lg shadow-lg bg-white max-w-3xl w-full">
   <div class="space-y-4">
@@ -965,6 +1024,72 @@ const abrirDialogoNuevaActividad = () => {
     </div>
   </div>
 </Dialog>
+
+<!-- Dialog para ver los detalles de la actividad -->
+<Dialog v-model:visible="visibleActividadDetallesDialog" modal header="Detalles de la Actividad" class="p-6 rounded-lg shadow-lg bg-white max-w-3xl w-full">
+    <div class="space-y-4">
+      <div class="flex gap-4">
+        <div class="flex-1">
+          <label class="block text-sm font-semibold">ID de Actividad</label>
+          <p>{{ actividadDetalles.Activity_ID }}</p>
+        </div>
+        <div class="flex-1">
+          <label class="block text-sm font-semibold">Nombre de Actividad</label>
+          <p>{{ actividadDetalles.Activity_Name }}</p>
+        </div>
+      </div>
+      <div class="flex gap-4">
+        <div class="flex-1">
+          <label class="block text-sm font-semibold">Ubicación</label>
+          <p>{{ actividadDetalles.Activity_Location }}</p>
+        </div>
+        <div class="flex-1">
+          <label class="block text-sm font-semibold">Fecha de Inicio</label>
+          <p>{{ new Date(actividadDetalles.Activity_Start_Date).toLocaleDateString() }}</p>
+        </div>
+      </div>
+      <div class="flex gap-4">
+        <div class="flex-1">
+          <label class="block text-sm font-semibold">Hora de Inicio</label>
+          <p>{{ actividadDetalles.Activity_Start_Time }}</p>
+        </div>
+        <div class="flex-1">
+          <label class="block text-sm font-semibold">Duración</label>
+          <p>{{ actividadDetalles.Activity_Duration }}</p>
+        </div>
+      </div>
+      <div class="flex gap-4">
+        <div class="flex-1">
+          <label class="block text-sm font-semibold">Referencia de Expediente</label>
+          <p>{{ actividadDetalles.Activity_Reference_File }}</p>
+        </div>
+        <div class="flex-1">
+          <label class="block text-sm font-semibold">Contraparte</label>
+          <p>{{ actividadDetalles.Activity_Counterparty }}</p>
+        </div>
+      </div>
+      <div class="flex gap-4">
+        <div class="flex-1">
+          <label class="block text-sm font-semibold">Juez Asignado</label>
+          <p>{{ actividadDetalles.Activity_Judge_Name }}</p>
+        </div>
+        <div class="flex-1">
+          <label class="block text-sm font-semibold">Juzgado</label>
+          <p>{{ actividadDetalles.Activity_Judged }}</p>
+        </div>
+      </div>
+      <div class="flex gap-4">
+        <div class="flex-1">
+          <label class="block text-sm font-semibold">Estado</label>
+          <p>{{ actividadDetalles.Activity_Status }}</p>
+        </div>
+        <div class="flex-1">
+          <label class="block text-sm font-semibold">A Tiempo</label>
+          <p>{{ actividadDetalles.Activity_OnTime ? 'Sí' : 'No' }}</p>
+        </div>
+      </div>
+    </div>
+  </Dialog>
 
   </div>
 </template>
