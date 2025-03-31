@@ -34,8 +34,30 @@ import { useToast } from "primevue/usetoast";
 import { API } from "@/ApiRoute";
 import { Toast } from "primevue";
 import { useConfirm } from "primevue/useconfirm";
+import { useRoute } from "vue-router";
+
+const route = useRoute();
 
 
+
+onMounted(async () => {
+  if (route.query.userID) {
+    searchIDInput.value = route.query.userID as string;
+    // Cargar las consultas del usuario
+    await fetchConsultations();
+    // Si se mandó caseID, ubicar su índice
+    if (route.query.caseID) {
+      const caseID = route.query.caseID as string;
+      const index = consultations.value.findIndex(c => c.Init_Code === caseID);
+      if (index >= 0) {
+        first.value = index; // Establecer el índice del paginador
+        // Si ya tienes lógica para actualizar la ficha actual, ejecútala aquí
+      }
+    }
+    // Llama a searchIDButton() si es necesario para iniciar la búsqueda
+    searchIDButton();
+  }
+});
 
 const toast = useToast();
 
@@ -897,7 +919,13 @@ const initTopicOptions = ref([
 const initService = ref<{ name: string; code: string } | null>(null);
 const initServiceOptions = ref([
   { name: "Asesorias", code: "Asesorias" },
+  { name: "Posible Patrocinio", code: "Posible Patrocinio" },
   { name: "Patrocinio", code: "Patrocinio" },
+]);
+//si el usuario es estudiante, se le oculta el campo de Patrocinio
+const initServiceOptionsStudent = ref([
+  { name: "Asesorias", code: "Asesorias" },
+  { name: "Posible Patrocinio", code: "Posible Patrocinio" },
 ]);
 
 const initLawyer = ref<{ name: string; code: string } | null>(null);
@@ -1574,14 +1602,9 @@ const createInitialConsultation = async () => {
   formData.append("Evidence_Date", evidenceDate.value ? evidenceDate.value.toISOString().split("T")[0] : "");
   formData.append("Evidence_Document_Type", evidenceDocumentType.value || "");
   if (evidenceFile.value) {
-    console.log("ENTRE AL CONDICIONAL PAPI");  
     formData.append("evidenceFile", evidenceFile.value); // Archivo
     formData.append("Evidence_Name", evidenceFileName.value || "");
-    console.log("EVIDENCIA:", evidenceFile.value);
-    console.log("EVIDENCIA NOMBRE:", evidenceFileName.value);
-    console.log("EVIDENCIA ID:", evidenceID.value);
   } else {
-    console.log("no entre al condicional PA");  
     formData.append("evidenceFile", ""); // Si no hay archivo, enviar un string vacío
   }
 
@@ -1828,11 +1851,15 @@ const editUserConsultation = async () => {
     Init_Status: initStatus.value?.code,
     Init_Notes: initNotes.value || "",
     Init_Complexity: initComplexity.value?.code || "",
-    Init_Type: "Nuevo",
+    Init_Type: "",
     Init_SocialWork: initSocialWork.value,
     User_ID: userID.value,
   };
-
+  if(initService.value?.code === "Patrocinio"){
+    consultationData.Init_Type = "Por Asignar";
+  }else if(initService.value?.code === "Asesoría"){
+    consultationData.Init_Type = "En espera";
+  }
   console.log("Datos enviados:", JSON.stringify(consultationData, null, 2));
 
   try {
@@ -3347,7 +3374,7 @@ const checkIdSize = (shouldShowToast: boolean = true): boolean => {
                   <FloatLabel variant="on" class="w-full">
                     <Select
                       v-model="initService"
-                      :options="initServiceOptions"
+                      :options="authStore.user?.type === 'Estudiante' ? initServiceOptions.filter((option) => option.name !== 'Patrocinio') : initServiceOptions"
                       optionLabel="name"
                       class="w-full"
                       :class="
