@@ -287,7 +287,7 @@ const registroAsistenciaClass = computed(() => [
                 :class="activitiesClass"
               >
                 <i class="pi pi-folder-open mr-2"></i>
-                <span class="font-medium text-lg">Crear Acividades</span>
+                <span class="font-medium text-lg">Crear Actividades</span>
               </router-link>
             </li>
             <!-- Sección: REPORTES -->

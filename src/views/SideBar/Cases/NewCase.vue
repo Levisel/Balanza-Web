@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { computed, nextTick, ref, watch } from "vue";
+import { computed, nextTick, ref, watch, onMounted } from "vue";
 import { useAuthStore } from "@/stores/auth";
 const authStore = useAuthStore();
 import type { User } from "@/ApiRoute";
 import type { Initial_Consultation } from "@/ApiRoute";
+import type { Evidence } from "@/ApiRoute";
 import InputNumber from "primevue/inputnumber";
 import InputMask from "primevue/inputmask";
 import InputText from "primevue/inputtext";
@@ -22,16 +23,19 @@ import Paginator from "primevue/paginator";
 import Dialog from "primevue/dialog";
 import Knob from "primevue/knob";
 import Editor from "primevue/editor";
+import ConfirmDialog from 'primevue/confirmdialog';
+import ProgressSpinner from 'primevue/progressspinner';
 
-import { useConfirm } from "primevue/useconfirm";
 
-const confirm = useConfirm();
 
 import Tag from "primevue/tag";
 import axios from "axios";
 import { useToast } from "primevue/usetoast";
 import { API } from "@/ApiRoute";
 import { Toast } from "primevue";
+import { useConfirm } from "primevue/useconfirm";
+
+
 
 const toast = useToast();
 
@@ -40,12 +44,240 @@ const date = currentDateTime.toDateString();
 
 const searchIDInput = ref<string>("");
 const selectedUser = ref<User>({} as User);
+const selectedEvidence = ref<Evidence>({} as Evidence);
 
 const referenceDialog = ref(false);
-const evidenceDialog = ref(false);
-const bandera = ref<boolean>(false);
+const healthDocumentDialog = ref(false);
+const bandera = ref<boolean>(false); //Revisa si la cedula tiene 10 digitos
+
+const userRequestNewDocument = ref(false); //Revisa si el usuario quiere subir un nuevo documento
+const userRequestNewEvidenceDocument = ref(false); //Revisa si el usuario quiere subir un nuevo documento de evidencia
+const fileUploadEvidence = ref<any>(null);
+const isEvidenceLoading = ref(false);
+
 
 const toastCounter = ref(0);
+
+const confirm = useConfirm();
+
+const deleteDocument = () => {
+  confirm.require({
+    message: "¿Estás seguro que deseas eliminar este documento?",
+    header: "Advertencia",
+    icon: "pi pi-info-circle",
+    rejectLabel: "Cancelar",
+    rejectProps: { label: "Cancel", severity: "secondary", outlined: true },
+    acceptProps: { label: "Eliminar", severity: "danger" },
+    accept: async () => {
+      try {
+        await axios.delete(`${API}/user/document/${userID.value}`, {
+          headers: {
+            "internal-id": internalID,
+          },
+        });
+        toast.add({
+          severity: "info",
+          summary: "Eliminado",
+          detail: "El documento se eliminó exitosamente.",
+          life: 3000,
+        });
+        fetchUser(); // Actualiza la información del usuario después de eliminar el documento
+      }
+      catch (error: any) {
+        toast.add({
+          severity: "error",
+          summary: "Error",
+          detail: error.response.data.message,
+          life: 3000,
+        });
+      }
+    },
+  });
+};
+
+//Metodo para eliminar la evidencia
+const deleteEvidenceDocument = () => {
+  confirm.require({
+    message: "¿Estás seguro que deseas eliminar este documento?",
+    header: "Advertencia",
+    icon: "pi pi-info-circle",
+    rejectLabel: "Cancelar",
+    rejectProps: { label: "Cancel", severity: "secondary", outlined: true },
+    acceptProps: { label: "Eliminar", severity: "danger" },
+    accept: async () => {
+      try {
+        await axios.delete(`${API}/evidence/document/${evidenceID.value}`, {
+          headers: {
+            "internal-id": internalID,
+          },
+        });
+        toast.add({
+          severity: "info",
+          summary: "Eliminado",
+          detail: "El documento se eliminó exitosamente.",
+          life: 3000,
+        });
+        fetchConsultations(); // Actualiza la información de la consulta después de eliminar el documento
+        fetchEvidence(initCode.value); // Actualiza la información de la evidencia después de eliminar el documento
+      }
+      catch (error: any) {
+        toast.add({
+          severity: "error",
+          summary: "Error",
+          detail: error.response.data.message,
+          life: 3000,
+        });
+      }
+    },
+  });
+};
+
+//Metodo para subir un nuevo documento
+// Se utiliza el mismo método que para la evidencia, pero se cambia la URL y el header
+// para que se ajuste a la API de documentos de usuario
+
+const uploadNewEvidenceDocument = () => {
+  confirm.require({
+    message: "¿Estás seguro que deseas subir un nuevo documento?",
+    header: "Confirmación",
+    icon: "pi pi-cloud-upload",
+    rejectLabel: "Cancelar",
+    rejectProps: { label: "Cancelar", severity: "secondary", outlined: true },
+    acceptProps: { label: "Subir", severity: "success" },
+    accept: async () => {
+      try {
+        // Crear FormData y agregar el archivo y el nombre personalizado
+        const formData = new FormData();
+        if (evidenceFile.value) {
+            formData.append("evidenceFile", evidenceFile.value);
+          
+          // Agregar el nombre del archivo recibido en la variable
+          if (evidenceFileName.value) {
+            formData.append("Evidence_Name", evidenceFileName.value);
+          } else {
+            console.warn("No se proporcionó nombre para el archivo. Se usará el original.");
+          }
+          userRequestNewEvidenceDocument.value = false; // Reiniciamos el estado del boton de subir nuevo documento
+        } else {
+          toast.add({
+            severity: "warn",
+            summary: "Atención",
+            detail: "No se ha seleccionado ningún archivo.",
+            life: 3000,
+          });
+          return;
+        }
+        // Realizar el PUT
+        await axios.put(`${API}/evidence/new/document/${evidenceID.value}`, formData, {
+          headers: {
+            "Content-Type": "multipart/form-data",
+            "internal-id": internalID,
+          },
+        });
+        fetchConsultations();
+        restartEvidence(); // Reiniciamos el estado del FileUpload
+        fetchEvidence(initCode.value); // Actualizamos la información del usuario después de subir el documento
+        toast.add({
+          severity: "info",
+          summary: "Archivo subido",
+          detail: "El documento se actualizó exitosamente.",
+          life: 3000,
+        });
+      } catch (error: any) {
+        console.error("Error en la subida del documento:", error);
+        toast.add({
+          severity: "error",
+          summary: "Error",
+          detail: error.response?.data?.message || "Error al subir el documento",
+          life: 3000,
+        });
+      }
+    },
+  });
+};
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+const uploadNewDocument = () => { 
+  confirm.require({
+    message: "¿Estás seguro que deseas subir un nuevo documento?",
+    header: "Confirmación",
+    icon: "pi pi-cloud-upload",
+    rejectLabel: "Cancelar",
+    rejectProps: { label: "Cancelar", severity: "secondary", outlined: true },
+    acceptProps: { label: "Subir", severity: "success" },
+    accept: async () => {
+      try {
+        // Crear FormData y agregar el archivo y el nombre personalizado
+        const formData = new FormData();
+        if (userHealthDocuments.value) {
+          formData.append("healthDocuments", userHealthDocuments.value);
+          
+          // Agregar el nombre del archivo recibido en la variable
+          if (userHealthDocumentsName.value) {
+            formData.append("User_HealthDocumentsName", userHealthDocumentsName.value);
+          } else {
+            console.warn("No se proporcionó nombre para el archivo. Se usará el original.");
+          }
+        } else {
+          toast.add({
+            severity: "warn",
+            summary: "Atención",
+            detail: "No se ha seleccionado ningún archivo.",
+            life: 3000,
+          });
+          return;
+        }
+        // Realizar el PUT
+        await axios.put(`${API}/user/document/${userID.value}`, formData, {
+          headers: {
+            "Content-Type": "multipart/form-data",
+            "internal-id": internalID,
+          },
+        });
+        fetchUser(); // Actualizamos la información del usuario después de subir el documento
+        userRequestNewDocument.value = false; //Ocultamos el boton de subir nuevo documento
+        healthDocumentDialog.value = false; // Cerrar el diálogo después de subir el documento
+        toast.add({
+          severity: "info",
+          summary: "Archivo subido",
+          detail: "El documento se actualizó exitosamente.",
+          life: 3000,
+        });
+      } catch (error: any) {
+        console.error("Error en la subida del documento:", error);
+        toast.add({
+          severity: "error",
+          summary: "Error",
+          detail: error.response?.data?.message || "Error al subir el documento",
+          life: 3000,
+        });
+      }
+    },
+  });
+};
+
+
+
 
 //-------------------------------------------------------------------------------------------------------------//
 
@@ -53,75 +285,70 @@ const toastCounter = ref(0);
 
 const totalSize = ref(0);
 const totalSizePercent = ref(0);
-const visibleDocumentoDialog = ref(false);
+const watchDocumentDialog = ref(false);
 const documentoUrl = ref("");
 
-// // Método para cancelar y cerrar el modal (si se desea reiniciar la carga en cancelar)
-// function cancelUpload() {
-//   evidenceDialog.value = false;
-//   // Si quieres limpiar el archivo en cancelar, descomenta la siguiente línea:
-//   // userHealthDocuments.value = null;
-// }
-
-// // Método para capturar el archivo al seleccionar en FileUpload
-// function onUploadDocument(event: { files: (File | { readonly lastModified: number; readonly name: string; readonly webkitRelativePath: string; readonly size: number; readonly type: string; arrayBuffer: () => Promise<ArrayBuffer>; bytes: () => Promise<Uint8Array>; slice: (start?: number, end?: number, contentType?: string) => Blob; stream: () => ReadableStream<Uint8Array>; text: () => Promise<string>; } | null)[]; }) {
-//   // Se espera que event.files contenga el archivo seleccionado
-//   userHealthDocuments.value = event.files[0];
-//   console.log("Archivo cargado:", userHealthDocuments.value);
-// }
-
-// // Método para guardar el documento
-// function onSaveDocument() {
-//   if (userHealthDocuments.value) {
-//     // Aquí puedes agregar validaciones o enviar el archivo a la API si es necesario.
-//     console.log("Guardando documento:", userHealthDocuments.value);
-//     evidenceDialog.value = false; // Cierra el modal
-//   } else {
-//     console.log("No se ha cargado ningún archivo.");
-//     // Puedes mostrar una notificación o alerta para indicar que debe cargar un archivo.
-//   }
-// }
-// Método para cancelar y cerrar el diálogo (opcionalmente limpiar el archivo)
-function cancelUpload() {
-  evidenceDialog.value = false;
-  // Si deseas limpiar el archivo pendiente al cancelar, descomenta la siguiente línea:
-  // userHealthDocuments.value = null;
-}
-
-// Método para capturar el archivo seleccionado en FileUpload
-function onUploadDocument(event: { files: File[] }) {
+// Captura el archivo seleccionado en FileUpload y lo guarda en userHealthDocuments
+function onSelectedFiles(event: { files: File[] }) {
+  //Comprobamos que el archivo no pese mas de 5MB
   if (event.files && event.files.length > 0) {
-    userHealthDocuments.value = event.files[0];
-    console.log("Archivo cargado:", userHealthDocuments.value);
+    const file = event.files[0];
+    const maxSize = 5 * 1024 * 1024; // 5MB en bytes
+    if (file.size > maxSize) {
+      healthDocumentDialog.value = false; // Cerrar el diálogo si el archivo es demasiado grande
+      toast.add({
+        severity: "warn",
+        summary: "Atención",
+        detail: "El archivo excede el tamaño máximo de 5MB.",
+        life: 5000,
+      });
+      userHealthDocuments.value = null; // Limpiar el archivo pendiente
+      return;
+    }
+    else if (file.size <= maxSize) {
+      userHealthDocuments.value = event.files[0]; // Guardar el archivo
+      userHealthDocumentsName.value = event.files[0].name; // Guardar el nombre del archivo
+      console.log("Archivo cargado:", userHealthDocuments.value);
+      console.log("Nombre del archivo:", userHealthDocumentsName.value);
+      userRequestNewDocument.value = true; 
+    }
   }
 }
-
-// Función para quitar el archivo pendiente usando el callback de FileUpload
-function removeFile(removeFileCallback: Function) {
-  removeFileCallback(0);
+// Elimina el archivo pendiente usando el callback del FileUpload
+function onRemoveTemplatingFile(
+  file: File,
+  removeFileCallback: Function,
+  index: number
+) {
+  removeFileCallback(index);
   userHealthDocuments.value = null;
 }
 
-// Función para quitar el archivo ya guardado (permitiendo su reemplazo)
+// Elimina el archivo ya guardado para poder reemplazarlo
 function removeUploadedFile() {
   userHealthDocuments.value = null;
 }
 
-// Método para guardar el documento (lo "persiste" en el estado; aquí podrías enviar el archivo al backend)
+// Cierra el diálogo sin guardar (opcionalmente se puede limpiar el archivo pendiente)
+function cancelUpload() {
+  healthDocumentDialog.value = false;
+  if(doesUserExist.value && selectedUser.value.User_HealthDocuments === null) {
+    userHealthDocuments.value = null; // Limpiar el archivo pendiente
+  }
+}
+
+// Guarda el documento (se mantiene en el estado; aquí puedes agregar la llamada al backend)
 function onSaveDocument() {
   if (userHealthDocuments.value) {
-    console.log("Guardando documento:", userHealthDocuments.value);
+    healthDocumentDialog.value = false;
     toast.add({
       severity: "success",
       summary: "Documento guardado",
       detail: userHealthDocuments.value.name,
       life: 3000,
     });
-    evidenceDialog.value = false;
-    // Aquí podrías agregar la lógica para enviar el archivo al backend,
-    // o simplemente mantenerlo en el estado para que se muestre al volver a abrir el diálogo.
+    userRequestNewDocument.value = false; //Ocultamos el boton de subir nuevo documento
   } else {
-    console.log("No se ha cargado ningún archivo.");
     toast.add({
       severity: "warn",
       summary: "Atención",
@@ -131,6 +358,7 @@ function onSaveDocument() {
   }
 }
 
+// Función para cargar un documento existente desde el backend (si aplica)
 const loadUserHealthDocument = async (userID: string) => {
   try {
     const response = await axios.get(`${API}/user/document/${userID}`, {
@@ -141,7 +369,7 @@ const loadUserHealthDocument = async (userID: string) => {
       const contentType = response.headers["content-type"] || "application/pdf";
       const blob = new Blob([response.data], { type: contentType });
       documentoUrl.value = URL.createObjectURL(blob);
-      visibleDocumentoDialog.value = true;
+      watchDocumentDialog.value = true;
     } else {
       throw new Error(`Error al obtener el documento: ${response.statusText}`);
     }
@@ -153,15 +381,116 @@ const loadUserHealthDocument = async (userID: string) => {
       life: 3000,
     });
     console.error("Error al cargar el documento PDF:", error);
+  }
+};
 
-    if (axios.isAxiosError(error)) {
-      console.error("Error response data:", error.response?.data); // Log the response data
-      console.error("Error response status:", error.response?.status); // Log the response status
-      console.error("Error response headers:", error.response?.headers); // Log the response headers
+//-------------------------------------------------------------------------------------------------------------//
+//MANEJO DE EVIDENCIAS
+
+function onSelectedFilesEvidence(event: { files: File[] }) {
+  userRequestNewEvidenceDocument.value = true;
+  if (event.files && event.files.length > 0) {
+    const file = event.files[0];
+    const maxSize = 5 * 1024 * 1024; // 5MB
+    if (file.size > maxSize) {
+      toast.add({
+        severity: "warn",
+        summary: "Atención",
+        detail: "El archivo excede el tamaño máximo de 5MB.",
+        life: 5000,
+      });
+      evidenceFile.value = null;
+      return;
     } else {
-      console.error("Unexpected error:", error);
+      evidenceFile.value = file;
+      evidenceFileName.value = file.name;
+      console.log("Archivo cargado:", evidenceFile.value);
+      console.log("Nombre del archivo:", evidenceFileName.value);
+      onSaveDocumentEvidence(); // Opcionalmente notifica que se ha guardado
     }
   }
+}
+
+
+function onRemoveTemplatingFileEvidence(
+  file: File,
+  removeFileCallback: Function,
+  index: number
+) {
+  removeFileCallback(index);
+  evidenceFile.value = null;
+}
+
+function onSaveDocumentEvidence() {
+  if (evidenceFile.value) {
+    toast.add({
+      severity: "success",
+      summary: "Documento guardado",
+      detail: evidenceFile.value.name,
+      life: 3000,
+    });
+  } else {
+    toast.add({
+      severity: "warn",
+      summary: "Atención",
+      detail: "No se ha seleccionado ningún archivo.",
+      life: 3000,
+    });
+  }
+}
+
+const loadUserEvidenceDocument = async (evidenceID: number) => {
+  try {
+    const response = await axios.get(`${API}/evidence/document/${evidenceID}`, {
+      responseType: "blob", // Asegúrate de que el backend envíe el archivo como un blob
+    });
+
+    if (response.status === 200) {
+      const contentType = response.headers["content-type"] || "application/pdf"; // Tipo de archivo
+      const blob = new Blob([response.data], { type: contentType }); // Crear un blob a partir del buffer
+      documentoUrl.value = URL.createObjectURL(blob); // Crear una URL para visualizar el archivo
+      watchDocumentDialog.value = true; // Mostrar el diálogo con el documento
+    } else {
+      throw new Error(`Error al obtener el documento: ${response.statusText}`);
+    }
+  } catch (error) {
+    toast.add({
+      severity: "error",
+      summary: "Error",
+      detail: "No se pudo cargar el documento PDF.",
+      life: 3000,
+    });
+    console.error("Error al cargar el documento PDF:", error);
+  }
+};
+
+
+
+
+
+
+
+
+
+//--------------------------------------------------------------------------------------------------------------//
+
+const restartDocument = () => {
+  userHealthDocuments.value = null;
+  userHealthDocumentsName.value = "";
+  totalSize.value = 0;
+  totalSizePercent.value = 0;
+  userRequestNewDocument.value = false; //Reiniciamos el estado del boton de subir nuevo documento
+};
+
+const restartEvidence = () => {
+  // Limpia la lista interna del FileUpload
+  fileUploadEvidence.value?.clear();
+  evidenceFile.value = null;
+  evidenceFileName.value = "";
+  selectedEvidence.value = {} as Evidence;
+  selectedEvidence.value.Evidence_Name = "";
+  totalSize.value = 0;
+  totalSizePercent.value = 0;
 };
 
 //-------------------------------------------------------------------------------------------------------------//
@@ -180,11 +509,14 @@ const userFirstName = ref("");
 const userLastName = ref("");
 
 const userGender = ref<{ name: string; value: string } | null>(null);
-const userGenderOptions = ref([
-  { name: "Masculino", value: "Masculino" },
-  { name: "Femenino", value: "Femenino" },
-  { name: "Otro", value: "Otro" },
-]);
+const userGenderOptions = ref<{ name: string; value: string }[]>([]);
+
+axios.get(`${API}/sexes`).then((response) => {
+    userGenderOptions.value = response.data.map((item: any) => ({
+        name: item.Sex_Name,
+        value: item.Sex_ID.toString(), // o item.Sex_ID según convenga
+    }));
+});
 
 const userBirthDate = ref<Date | null>(null);
 
@@ -251,17 +583,22 @@ const countriesList = ref([
   { name: "Australia", code: "AU" },
   { name: "Nueva Zelanda", code: "NZ" },
 ]);
+axios.get(`${API}/countries`).then((response) => {
+  countriesList.value = response.data.map((item: any) => ({
+    name: item.Country_Name,
+    code: item.Country_ID.toString(), // o item.Country_ID según convenga
+  }));
+});
+
 
 const userEthnicity = ref<{ name: string; value: string } | null>(null);
-const userEthnicityOptions = ref([
-  { name: "Mestizo", value: "Mestizo" },
-  { name: "Afroecuatoriano", value: "Afroecuatoriano" },
-  { name: "Indígena", value: "Indígena" },
-  { name: "Blanco", value: "Blanco" },
-  { name: "Montubio", value: "Montubio" },
-  { name: "Mulato", value: "Mulato" },
-  { name: "Otro", value: "Otro" },
-]);
+const userEthnicityOptions = ref<{ name: string; value: string }[]>([]);
+axios.get(`${API}/ethnicities`).then((response) => {
+    userEthnicityOptions.value = response.data.map((item: any) => ({
+        name: item.Ethnicity_Name,
+        value: item.Ethnicity_ID.toString(), // o item.Sex_ID según convenga
+    }));
+});
 
 const userProvince = ref<{ name: string; code: string } | null>(null);
 const userProvinceOptions = ref([
@@ -511,6 +848,7 @@ const userCatastrophicIllnessOptions = ref([
 ]);
 
 const userHealthDocuments = ref<File | null>(null);
+const userHealthDocumentsName = ref("");
 
 //-------------------------------------------------------------------------------------------------------------//
 //VARIABLES DE LA FICHA DE ASESORÍA
@@ -583,15 +921,25 @@ const initComplexityOptions = ref([
   { name: "Alto", code: "Alto" },
 ]);
 
-const initType = ref("Nuevo");
-
 const initSocialWork = ref<boolean>(false);
+
+//-------------------------------------------------------------------------------------------------------------//
+//VARIABLES DE LA EVIDENCIA DE ASESORÍA
+const evidenceID = ref<number>(0);
+const evidenceFileName = ref<string>("");
+const evidenceDocumentType = ref<string>("");
+const evidenceDate = ref(new Date(date));
+const evidenceFile = ref<File | null>(null);
+
+
+
 
 //-------------------------------------------------------------------------------------------------------------//
 
 //MANEJO DE USUARIOS EXTERNOS
 const areInputsDisabled = ref(true);
 const doesUserExist = ref(false);
+const doesEvidenceExist = ref(false);
 const isSearchInputDisabled = ref(false);
 const isSearchButtonDisabled = ref(false);
 
@@ -697,13 +1045,15 @@ const restartUserForm = () => {
   userCatastrophicIllness.value = null;
   userHasDisability.value = false;
   userHasAnyIllness.value = false;
-
+  restartDocument();
+  restartEvidence();
   // Deshabilitar los campos
   areInputsDisabled.value = true;
   userHasDisability.value = false;
   userHasAnyIllness.value = false;
   doesUserExist.value = false;
   doesConsultationExist.value = false;
+  doesEvidenceExist.value = false;
   //reiniciamos la paginación
   isInitialLoad.value = true;
   first.value = 0;
@@ -908,6 +1258,9 @@ const fetchUser = async () => {
     if (selectedUser.value.User_CatastrophicIllness !== "Ninguna") {
       userHasAnyIllness.value = true;
     }
+    userHealthDocuments.value = selectedUser.value.User_HealthDocuments; 
+    userHealthDocumentsName.value = selectedUser.value.User_HealthDocumentsName ?? "";
+      
   } catch (error) {
     doesUserExist.value = false;
     isRestartButtonDisabled.value = false;
@@ -924,7 +1277,8 @@ const fetchUser = async () => {
   }
 };
 
-const updateFormWithConsultation = (data: Initial_Consultation): void => {
+const updateFormWithConsultation = async (data: Initial_Consultation): Promise<void> => {
+  restartEvidence(); // Reiniciar la evidencia antes de cargar una nueva consulta
   if (!data) return;
   initCode.value = data.Init_Code;
   initStatus.value =
@@ -968,7 +1322,12 @@ const updateFormWithConsultation = (data: Initial_Consultation): void => {
       (option) => option.code === data.Init_Referral
     ) || null;
   initSocialWork.value = data.Init_SocialWork;
+  await fetchEvidence(initCode.value); // Cargar la evidencia de la consulta
+
 };
+
+
+
 
 const isInitialLoad = ref(true);
 
@@ -1006,6 +1365,45 @@ const fetchConsultations = async (): Promise<void> => {
   }
 };
 
+const fetchEvidence = async (initCode: string): Promise<void> => {
+  isEvidenceLoading.value = true;
+  try {
+    // Si no hay consultas, no hay evidencia
+    if (consultations.value.length === 0) {
+      evidenceFileName.value = "";
+      return;
+    }
+    const response = await axios.get(`${API}/evidence/consultation/${initCode}`);
+    // Asegúrate de que la respuesta contenga al menos un objeto
+    if (response.data) {
+      selectedEvidence.value = response.data; // Accede al primer elemento del arreglo
+      evidenceID.value = selectedEvidence.value.Evidence_ID;
+      evidenceDocumentType.value = selectedEvidence.value.Evidence_Document_Type;
+      evidenceDate.value = new Date(selectedEvidence.value.Evidence_Date);
+      evidenceFile.value = selectedEvidence.value.Evidence_File;
+      evidenceFileName.value = selectedEvidence.value.Evidence_Name;
+      doesEvidenceExist.value = true; // Si hay evidencia, actualiza el estado
+
+    } else {
+      evidenceFileName.value = "";
+      console.warn("No se encontró evidencia")  ;
+      doesEvidenceExist.value = false; // Si no hay evidencia, actualiza el estado
+    }
+  } catch (error: any) {
+    // Manejo de error (opcional)
+  } finally {
+    isEvidenceLoading.value = false;
+  }
+};
+
+
+
+
+
+
+
+
+
 const first = ref(0); // Página actual
 
 watch(first, (newFirst) => {
@@ -1014,125 +1412,12 @@ watch(first, (newFirst) => {
     updateFormWithConsultation(consultations.value[newFirst]);
   } else {
     restartConsultationForm();
+    restartEvidence();
   }
 });
 
 const doesConsultationExist = ref<boolean>(false);
-
-// const createInitialConsultation = async () => {
-//   // Validar que existan algunos campos obligatorios (por ejemplo, código de consulta y User_ID)
-//   if (!userID.value) {
-//     toast.add({
-//       severity: "error",
-//       summary: "Error",
-//       detail: "Faltan datos obligatorios para crear la consulta inicial.",
-//       life: 4000,
-//     });
-//     return;
-//   }
-
-//   const formData = new FormData();
-
-//   // Construir el objeto que agrupa los datos de ambas tablas
-//   const consultationData = {
-
-//     User_ID: userID.value,
-//     User_ID_Type: userIDType.value?.value || "",
-//     User_Age: userAge.value || "",
-//     User_Academic_Instruction: userAcademicInstruction.value?.code || "",
-//     User_FirstName: userFirstName.value || "",
-//     User_LastName: userLastName.value || "",
-//     User_Gender: userGender.value?.value || "",
-//     User_BirthDate: userBirthDate.value
-//       ? userBirthDate.value.toISOString().split("T")[0]
-//       : "",
-//     User_Nationality: userNationality.value?.name || "",
-//     User_Ethnicity: userEthnicity.value?.value || "",
-//     User_Province: userProvince.value?.name || "",
-//     User_City: userCity.value?.name || "",
-//     //DATOS DE CONTACTO Y CONTACTO DE REFERENCIA
-//     User_Phone: userPhone.value.replace(/\D/g, "") || "",
-//     User_Email: userEmail.value || "",
-//     User_Address: userAddress.value || "",
-//     User_Sector: userSector.value || "",
-//     User_Zone: userZone.value?.code || "",
-//     User_ReferenceRelationship: userReferenceRelationship.value || "",
-//     User_ReferenceName: userReferenceName.value || "",
-//     User_ReferencePhone: userReferencePhone.value.replace(/\D/g, "") || "",
-//     //DATOS DEMOGRÁFICOS
-//     User_SocialBenefit: userSocialBenefit.value,
-//     User_EconomicDependence: userEconomicDependece.value,
-//     User_AcademicInstruction: userAcademicInstruction.value?.code || "",
-//     User_Profession: userProfession.value?.code || "",
-//     User_MaritalStatus: userMaritalStatus.value?.code || "",
-//     User_Dependents: userDependents.value !== null ? userDependents.value : 0,
-//     User_IncomeLevel: userIncomeLevel.value?.code || "",
-//     User_FamilyIncome: userFamilyIncome.value?.code || "",
-//     User_FamilyGroup: userFamilyGroup.value.map((group) => group.code),
-//     User_EconomicActivePeople:
-//       userEconomicActivePeople.value !== null
-//         ? userEconomicActivePeople.value
-//         : 0,
-//     //DATOS SOCIOECONÓMICOS Y DE SALUD
-//     User_OwnAssets: userOwnAssets.value.map((asset) => asset.code),
-//     User_HousingType: userHousingType.value?.code || "",
-//     User_Pensioner: userPensioner.value?.code || "",
-//     User_HealthInsurance: userHealthInsurance.value?.code || "",
-//     User_VulnerableSituation: userVulnerableSituation.value?.code || "",
-//     User_SupportingDocuments: userSupportingDocuments.value?.code || "",
-//     User_Disability: userDisability.value?.code || "Ninguna",
-//     User_DisabilityPercentage: userDisabilityPercentage.value || 0,
-//     User_CatastrophicIllness: userCatastrophicIllness.value?.code || "Ninguna",
-
-//     // Datos de la consulta inicial (Initial_Consultations)
-//     //Init_Code: No se envia nada porque el backend lo genera automáticamente
-//     Internal_ID: internalID,
-//     Init_SocialWork: initSocialWork.value,
-//     Init_Status: initStatus.value?.code,
-//     Init_Office: initOffice.value,
-//     Init_Date: initDate.value
-//       ? initDate.value.toISOString().split("T")[0]
-//       : null,
-//     Init_FinishDate: initEndDate.value
-//       ? initEndDate.value.toISOString().split("T")[0]
-//       : null,
-//     Init_ClientType: initClientType.value?.code,
-//     Init_Subject: initSubject.value?.code,
-//     Init_Topic: initTopic.value?.code,
-//     Init_Service: initService.value?.code,
-//     Init_Complexity: initComplexity.value?.code || null,
-//     Init_Lawyer: initLawyer.value?.code,
-//     Init_Referral: initReferral.value?.code,
-//     Init_Notes: initNotes.value || "",
-//     Init_Type: "Por Revisar",
-//   };
-
-//   console.log("Datos enviados:", JSON.stringify(consultationData, null, 2));
-
-//   try {
-//     await axios.post(`${API}/initial-consultations`, consultationData, {
-//       headers: {
-//         "internal-id": authStore.user?.id,
-//       },
-//     });
-
-//     toast.add({
-//       severity: "info",
-//       summary: "Consulta Inicial Creada",
-//       detail: "La consulta inicial ha sido creada con éxito.",
-//       life: 4000,
-//     });
-
-//     restartUserForm();
-//   } catch (error: any) {
-//     toast.add({
-//       severity: "error",
-//       summary: "Error",
-//       detail: "No se pudo crear la consulta inicial",
-//       life: 4000,
-//     });
-//   }
-// };
+const doesUserRequestEditConsultation = ref<boolean>(false); // Check if user wants to create a new consultation, so the pagination will be disabled
 
 //CONSULTATION OPERATIONS
 //NEW CONSULTATION
@@ -1245,12 +1530,21 @@ const createInitialConsultation = async () => {
     userCatastrophicIllness.value?.code || "Ninguna"
   );
 
-  // Agregar el archivo (documento de salud)
+
   // Agregar el archivo de documento de salud
   if (userHealthDocuments.value) {
-    formData.append("healthDocuments", userHealthDocuments.value);
-  } else {
-    formData.append("healthDocuments", "");
+    formData.append("healthDocuments", userHealthDocuments.value); // Archivo
+    formData.append(
+      "User_HealthDocumentsName",
+       userHealthDocumentsName.value || ''
+    ); 
+  }
+  else {
+    formData.append("healthDocuments", ""); // Si no hay archivo, enviar un string vacío
+    formData.append(
+      "User_HealthDocumentsName",
+      userHealthDocumentsName.value || ""
+    ); 
   }
 
   // Datos de la consulta inicial (Initial_Consultations)
@@ -1275,6 +1569,21 @@ const createInitialConsultation = async () => {
   formData.append("Init_Referral", initReferral.value?.code || "");
   formData.append("Init_Notes", initNotes.value || "");
   formData.append("Init_Type", "Por Revisar");
+
+  //Datos de la evidencia de asesoría (Evidence)
+  formData.append("Evidence_Date", evidenceDate.value ? evidenceDate.value.toISOString().split("T")[0] : "");
+  formData.append("Evidence_Document_Type", evidenceDocumentType.value || "");
+  if (evidenceFile.value) {
+    console.log("ENTRE AL CONDICIONAL PAPI");  
+    formData.append("evidenceFile", evidenceFile.value); // Archivo
+    formData.append("Evidence_Name", evidenceFileName.value || "");
+    console.log("EVIDENCIA:", evidenceFile.value);
+    console.log("EVIDENCIA NOMBRE:", evidenceFileName.value);
+    console.log("EVIDENCIA ID:", evidenceID.value);
+  } else {
+    console.log("no entre al condicional PA");  
+    formData.append("evidenceFile", ""); // Si no hay archivo, enviar un string vacío
+  }
 
   console.log("Datos enviados:", formData);
 
@@ -1306,6 +1615,7 @@ const createInitialConsultation = async () => {
 const requestNewConsultation = async () => {
   doesUserRequestOp.value = true;
   restartConsultationForm();
+  restartEvidence();
   newConsultationButtonDisabled.value = false;
   isSaveButtonDisabled.value = true;
   isEditButtonDisabled.value = true;
@@ -1344,7 +1654,7 @@ const newUserConsultation = async () => {
 
   const consultationData = {
     //Init_Code: No se envia nada porque el backend lo genera automáticamente
-    Internal_ID: internalID,
+    //Internal_ID: internalI tampoco se envia porque en el header ya estamos enviando el internalID
     Init_ClientType: initClientType.value?.code,
     Init_Subject: initSubject.value?.code,
     Init_Lawyer: initLawyer.value?.code,
@@ -1356,7 +1666,7 @@ const newUserConsultation = async () => {
     Init_Status: initStatus.value?.code,
     Init_Notes: initNotes.value || "",
     Init_Complexity: initComplexity.value?.code || "",
-    Init_Type: "Nuevo",
+    Init_Type: "Por Revisar",
     Init_SocialWork: initSocialWork.value,
     User_ID: userID.value,
   };
@@ -1364,9 +1674,9 @@ const newUserConsultation = async () => {
   console.log("Datos enviados:", JSON.stringify(consultationData, null, 2));
 
   try {
-    await axios.post(`${API}/initial-consultations`, consultationData, {
+    await axios.post(`${API}/initial-consultations/new`, consultationData, {
       headers: {
-        "internal-id": authStore.user?.id,
+        "internal-id": internalID || authStore.user?.id,
       },
     });
 
@@ -1376,12 +1686,63 @@ const newUserConsultation = async () => {
       detail: "La nueva ficha ha sido creada con éxito.",
       life: 4000,
     });
+
+    //Luego de que se crea la ficha, procedemos a obtener la ultima ficha creada
+    const response = await axios.get(
+      `${API}/initial-consultations/user/${userID.value}`
+    );
+    const lastConsultation = response.data[response.data.length - 1];
+    initCode.value = lastConsultation.Init_Code; // Guardamos el código de la última consulta creada
+
+
+      // Procedemos a crear la evidencia si es que existe y lo enviamos como formData
+      const formData = new FormData();
+
+      // Agregar datos de la consulta inicial
+      formData.append("Internal_ID", internalID || "");
+      formData.append("Init_Code", initCode.value || "");
+      formData.append("Evidence_Name", evidenceFileName.value || "");
+
+      // Agregar archivo de evidencia
+      if (evidenceFile.value) {
+      console.log("Archivo de evidencia:", evidenceFile.value);
+      formData.append("evidenceFile", evidenceFile.value); // Archivo
+    } else {
+      console.log("No se adjuntó ningún archivo de evidencia.");
+    }
+
+      try {
+        const response = await axios.post(`${API}/evidence`, formData, {
+          headers: {
+            "Content-Type": "multipart/form-data", // Importante para enviar archivos
+          },
+        });
+
+        toast.add({
+          severity: "success",
+          summary: "Evidencia subida",
+          detail: "La evidencia se subió correctamente.",
+          life: 4000,
+        });
+
+        console.log("Respuesta del servidor:", response.data);
+      } catch (error) {
+        console.error("Error al subir la evidencia:", error);
+        toast.add({
+          severity: "error",
+          summary: "Error",
+          detail: "No se pudo subir la evidencia.",
+          life: 4000,
+        });
+      }
+
     newConsultationButtonDisabled.value = true;
     doesUserRequestOp.value = false;
     isSaveButtonDisabled.value = false;
     isEditButtonDisabled.value = false;
     isDeleteButtonDisabled.value = false;
     isExportButtonDisabled.value = false;
+    restartEvidence();
     restartConsultationForm();
     await fetchConsultations();
     first.value = consultations.value.length - 1; //Para que muestre la última consulta creada
@@ -1398,6 +1759,7 @@ const newUserConsultation = async () => {
 //EDIT CONSULTATION
 const requestEditConsultation = async () => {
   doesUserRequestOp.value = true;
+  doesUserRequestEditConsultation.value = true;
   editConsultationButtonDisabled.value = false;
   isInitStatusDisabled.value = false;
   isInitEndDateDisabled.value = false;
@@ -1418,6 +1780,7 @@ const cancelEditConsultation = async () => {
   isEditButtonDisabled.value = false;
   isDeleteButtonDisabled.value = false;
   isExportButtonDisabled.value = false;
+  doesUserRequestEditConsultation.value = false;
   isInitStatusDisabled.value = true;
   isInitEndDateDisabled.value = true;
   restartConsultationForm();
@@ -1497,6 +1860,7 @@ const editUserConsultation = async () => {
     isEditButtonDisabled.value = false;
     isDeleteButtonDisabled.value = false;
     isExportButtonDisabled.value = false;
+    doesUserRequestEditConsultation.value = false;
     restartConsultationForm();
     await fetchConsultations();
     // Buscar el índice de la ficha editada y mantener el paginador en esa posición
@@ -1821,12 +2185,15 @@ const checkIdSize = (shouldShowToast: boolean = true): boolean => {
   }
   return bandera.value;
 };
+
+
+
 </script>
 
 <template>
   <!--MENU-->
   <Toast />
-  <ConfirmPopup></ConfirmPopup>
+  <ConfirmDialog></ConfirmDialog>
   <div class="card mr-4">
     <div class="flex items-center gap-2">
       <InputText
@@ -2544,142 +2911,190 @@ const checkIdSize = (shouldShowToast: boolean = true): boolean => {
             </div>
           </transition>
 
+          <!---------------------------------------------------------------------------------------------->
           <!-- Documentos de respaldo (Discapacidad/Enfermedad) -->
-
-          <!-- Usando v-show para evitar la destrucción del diálogo -->
-          <!-- <Dialog
-  v-model:visible="evidenceDialog"
-  modal
-  header="Documento de respaldo"
-  :style="{ width: '30rem' }"
->
-  <div class="p-6">
-    <div class="grid grid-cols-1 gap-6 mb-20">
-      <FileUpload
-        name="file"
-        accept=".pdf"
-        :multiple="false"
-        :maxFileSize="5000000"
-        class="w-full:md:w-70"
-        @select="onUploadDocument"
-        :autoClear="false"  
-      >
-        <template #empty>
-          <span>Arrastra los archivos aquí para subirlos.</span>
-        </template>
-      </FileUpload>
-    </div>
-  </div>
-  <div class="flex justify-end p-4 rounded-b-lg">
-    <Button
-      type="button"
-      icon="pi pi-times"
-      label="Cancelar"
-      severity="secondary"
-      class="mr-3"
-      @click="cancelUpload()"
-    />
-    <Button
-      type="button"
-      icon="pi pi-check"
-      label="Guardar"
-      class="bg-blue-600 hover:bg-blue-700 text-white"
-      @click="onSaveDocument()"
-    />
-  </div>
-</Dialog> -->
-
-
-<!-- Diálogo para cargar el documento de respaldo -->
-<Dialog
-    v-model:visible="evidenceDialog"
-    modal
-    header="Documento de respaldo"
-    :style="{ width: '30rem' }"
-  >
-    <div class="p-6">
-      <div class="grid grid-cols-1 gap-6 mb-20">
-        <FileUpload
-          name="file"
-          accept=".pdf"
-          :multiple="false"
-          :maxFileSize="5000000"
-          class="w-full md:w-70"
-          @select="onUploadDocument"
-          :autoClear="false"
-        >
-          <!-- Template para cuando no hay archivo pendiente -->
-          <template #empty>
-            <div class="flex flex-col items-center justify-center p-6 border border-dashed border-gray-300 rounded">
-              <i class="pi pi-file-pdf text-6xl text-red-600"></i>
-              <span class="mt-4 text-lg font-semibold">Arrastra el archivo PDF aquí</span>
+          <Dialog
+            v-model:visible="healthDocumentDialog"
+            modal
+            header="Documento de respaldo"
+            :style="{ width: '40rem' }"
+            @hide="cancelUpload"
+          >
+            <div class="p-6">
+              <Toast />
+              <FileUpload
+                name="file"
+                accept=".pdf"
+                :multiple="false"
+                @select="onSelectedFiles"
+                :autoClear="false"
+                class="w-full md:w-100"
+              >
+                <!-- Header: solo se muestra el botón para elegir archivo -->
+                <template #header="{ chooseCallback, files }">
+                  <div
+                    class="flex flex-wrap justify-between items-center gap-4"
+                  >
+                    <Button
+                      @click="chooseCallback()"
+                      icon="pi pi-images"
+                      rounded
+                      v-tooltip="'Seleccionar archivo'"
+                      outlined
+                      severity="secondary"
+                      :disabled="!!userHealthDocuments && !!doesUserExist"
+                    />
+                  </div>
+                </template>
+                <!-- Content: muestra la vista previa del archivo pendiente o ya guardado -->
+                <template #content="{ files, removeFileCallback }">
+                  <div class="flex flex-col gap-8 pt-4">
+                    <!-- Si hay archivo pendiente en FileUpload -->
+                    <div
+                      v-if="files.length > 0"
+                      class="flex flex-col items-center"
+                    >
+                      <div
+                        class="w-24 h-24 flex items-center justify-center border border-dashed border-gray-300 rounded"
+                      >
+                        <i class="pi pi-file-pdf text-5xl text-red-600"></i>
+                      </div>
+                      <span
+                        class="mt-2 font-semibold text-ellipsis max-w-60 whitespace-nowrap overflow-hidden"
+                      >
+                        {{ files[0].name }}
+                      </span>
+                      <Button
+                        icon="pi pi-times"
+                        label="Eliminar"
+                        class="p-button-danger mt-2"
+                        @click="
+                          onRemoveTemplatingFile(
+                            files[0],
+                            removeFileCallback,
+                            0
+                          )
+                        "
+                        outlined
+                        rounded
+                      />
+                    </div>
+                    <!-- Usuario no existe, pero ya se había cargado un archivo -->
+                    <div v-else-if="userHealthDocuments && !doesUserExist" class="flex flex-col items-center">
+                      <div
+                        class="w-24 h-24 flex items-center justify-center border border-dashed border-gray-300 rounded"
+                      >
+                        <i class="pi pi-file-pdf text-5xl text-red-600"></i>
+                      </div>
+                      <span
+                        class="mt-2 font-semibold text-ellipsis max-w-60 whitespace-nowrap overflow-hidden"
+                      >
+                        {{ userHealthDocumentsName }}
+                      </span>
+                      <div class="flex gap-2 mt-2">
+                          <Button
+                          icon="pi pi-times"
+                          label="Reemplazar"
+                          class="p-button-danger mt-2"
+                          @click="removeUploadedFile"
+                          outlined
+                          rounded
+                          />
+                      </div>
+                      
+                    </div>
+                    
+                    <!-- Usuario ya existe, se carga el archivo -->
+                    <div
+                      v-else-if="userHealthDocuments && doesUserExist"
+                      class="flex flex-col items-center"
+                    >
+                      <div
+                        class="w-24 h-24 flex items-center justify-center border border-dashed border-gray-300 rounded"
+                      >
+                        <i class="pi pi-file-pdf text-5xl text-red-600"></i>
+                      </div>
+                      <span
+                        class="mt-2 font-semibold text-ellipsis max-w-60 whitespace-nowrap overflow-hidden"
+                      >
+                        {{ selectedUser.User_HealthDocumentsName }}
+                      </span>
+                      <div class="flex gap-2 mt-2">
+                          <Button
+                          icon="pi pi-times"
+                          label="Reemplazar"
+                          class="p-button-danger mt-2"
+                          @click="deleteDocument()"
+                          outlined
+                          rounded
+                        />
+                        <div v-if="doesUserExist && userHealthDocumentsName != null">
+                            <Button 
+                            icon="pi pi-eye"
+                            label="Ver"
+                            class="p-button-info mt-2"
+                            @click="loadUserHealthDocument(userID)"
+                            outlined
+                            rounded
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </template>
+                <!-- Dos opciones para que salga el templete. El usuario no existe y no tiene archivos. El usuario existe pero no tiene documentos -->
+                <template #empty>
+                  <div v-if="!userHealthDocuments && !doesUserExist"  class="flex items-center justify-center flex-col">
+                    <i
+                      class="pi pi-cloud-upload !border-2 !rounded-full !p-8 !text-4xl !text-muted-color"
+                    />
+                    <p class="mt-6 mb-0">
+                      Arrastra y suelta el archivo PDF aquí.
+                    </p>
+                  </div>
+                  <div v-else-if="!userHealthDocuments && doesUserExist" class="flex items-center justify-center flex-col">
+                    <i
+                      class="pi pi-cloud-upload !border-2 !rounded-full !p-8 !text-4xl !text-muted-color"
+                    />
+                    <p class="mt-6 mb-0">
+                      Arrastra y suelta el archivo PDF aquí.
+                    </p>
+                  </div>
+                </template>
+              </FileUpload>
             </div>
-          </template>
-          <!-- Contenido personalizado: vista previa del archivo pendiente o ya guardado -->
-          <template #content="{ files, removeFileCallback }">
-            <!-- Si hay archivo pendiente de subir -->
-            <div v-if="files.length > 0" class="flex flex-col items-center">
-              <div class="w-24 h-24 flex items-center justify-center border border-dashed border-gray-300 rounded">
-                <i class="pi pi-file-pdf text-5xl text-red-600"></i>
-              </div>
-              <p class="mt-2 font-semibold">{{ files[0].name }}</p>
+            <!-- Pie del diálogo con las acciones de Guardar y Cancelar -->
+            <div class="flex justify-end p-4 rounded-b-lg">
               <Button
+                type="button"
                 icon="pi pi-times"
-                label="Eliminar"
-                class="p-button-danger mt-2"
-                @click="removeFile(removeFileCallback)"
+                label="Salir"
+                severity="secondary"
+                class="mr-3"
+                @click="cancelUpload()"
               />
-            </div>
-            <!-- Si no hay archivo pendiente pero ya se guardó uno previamente -->
-            <div v-else-if="userHealthDocuments" class="flex flex-col items-center">
-              <div class="w-24 h-24 flex items-center justify-center border border-dashed border-gray-300 rounded">
-                <i class="pi pi-file-pdf text-5xl text-red-600"></i>
+              <div v-if="userHealthDocuments && !doesUserExist && userRequestNewDocument">
+                  <Button
+                  type="button"
+                  icon="pi pi-save"
+                  label="Guardar"
+                  class="bg-blue-600 hover:bg-blue-700 text-white"
+                  @click="onSaveDocument()"
+                />
               </div>
-              <p class="mt-2 font-semibold">{{ userHealthDocuments.name }}</p>
-              <Button
-                icon="pi pi-times"
-                label="Quitar y reemplazar"
-                class="p-button-danger mt-2"
-                @click="removeUploadedFile"
-              />
+              <div v-if="userHealthDocuments && doesUserExist && userRequestNewDocument">
+                  <Button
+                  type="button"
+                  icon="pi pi-save"
+                  label="Guardar"
+                  class="bg-blue-600 hover:bg-blue-700 text-white"
+                  @click="uploadNewDocument()"
+                />
+              </div>            
             </div>
-            <!-- Mensaje en caso de que no exista ningún archivo -->
-            <div v-else class="flex items-center justify-center">
-              <span>No hay archivo seleccionado</span>
-            </div>
-          </template>
-        </FileUpload>
-      </div>
-    </div>
-    <div class="flex justify-end p-4 rounded-b-lg">
-      <Button
-        type="button"
-        icon="pi pi-times"
-        label="Cancelar"
-        severity="secondary"
-        class="mr-3"
-        @click="cancelUpload"
-      />
-      <Button
-        type="button"
-        icon="pi pi-check"
-        label="Guardar"
-        class="bg-blue-600 hover:bg-blue-700 text-white"
-        @click="onSaveDocument"
-      />
-    </div>
-  </Dialog>
+          </Dialog>
 
-
-
-
-
-
-
-
-
-
-
+          <!---------------------------------------------------------------------------------------------->
 
           <transition
             enter-active-class="transition ease-out duration-300"
@@ -2691,7 +3106,7 @@ const checkIdSize = (shouldShowToast: boolean = true): boolean => {
           >
             <div v-if="userHasDisability || userHasAnyIllness">
               <Button
-                @click="evidenceDialog = true"
+                @click="healthDocumentDialog = true"
                 label="Documento de respaldo"
                 icon="pi pi-file-pdf"
                 severity="contrast"
@@ -2701,9 +3116,9 @@ const checkIdSize = (shouldShowToast: boolean = true): boolean => {
 
               <!-- Dialog para visualizar el documento PDF -->
               <Dialog
-                v-model:visible="visibleDocumentoDialog"
+                v-model:visible="watchDocumentDialog"
                 modal
-                header="Documento de la Actividad"
+                header="Evidencia"
                 class="p-6 rounded-lg shadow-lg bg-white max-w-7xl w-full"
               >
                 <iframe
@@ -2712,15 +3127,6 @@ const checkIdSize = (shouldShowToast: boolean = true): boolean => {
                   frameborder="0"
                 ></iframe>
               </Dialog>
-
-              <Button
-                @click="loadUserHealthDocument(userID)"
-                label="Ver documento"
-                icon="pi pi-file-pdf"
-                severity="contrast"
-                class="w-full md:w-70 md:h-12"
-                :disabled="areInputsDisabled"
-              />
             </div>
           </transition>
         </div>
@@ -3025,7 +3431,7 @@ const checkIdSize = (shouldShowToast: boolean = true): boolean => {
                 <Editor
                   v-model="initNotes"
                   class="w-full"
-                  editorStyle="height: 212px"
+                  editorStyle="height: 239px"
                   :class="[
                     !doesUserRequestOp && doesUserExist
                       ? 'mouse pointer-events-none'
@@ -3057,82 +3463,141 @@ const checkIdSize = (shouldShowToast: boolean = true): boolean => {
               <div class="flex flex-col">
                 <label for="archivo" class="mb-2">Evidencias</label>
                 <FileUpload
-                  id="archivo"
-                  name="demo[]"
-                  class="h-40"
-                  url="/api/upload"
-                  @upload=""
-                  :multiple="true"
-                  accept="image/*"
-                  :maxFileSize="1000000"
-                  @select=""
-                  @clear=""
-                  :disabled="areInputsDisabled"
-                >
-                  <template
-                    #header="{
-                      chooseCallback,
-                      uploadCallback,
-                      clearCallback,
-                      files,
-                    }"
+                ref="fileUploadEvidence"
+                name="file"
+                accept=".pdf"
+                :multiple="false"
+                @select="onSelectedFilesEvidence"
+                :autoClear="false"
+                class="w-full md:w-100"
+              >
+                <!-- Header: solo se muestra el botón para elegir archivo -->
+                <template #header="{ chooseCallback, files }">
+                  <div
+                    class="flex flex-wrap justify-between items-center gap-4"
                   >
-                    <div
-                      class="flex flex-wrap justify-between items-center gap-4"
-                    >
-                      <div class="flex gap-2">
-                        <Button
-                          @click="chooseCallback()"
-                          icon="pi pi-images"
-                          rounded
-                          :class="
-                            !doesUserRequestOp && doesUserExist
-                              ? 'mouse pointer-events-none'
-                              : ''
-                          "
-                          outlined
-                          severity="secondary"
-                        ></Button>
-                        <Button
-                          @click=""
-                          icon="pi pi-cloud-upload"
-                          rounded
-                          outlined
-                          severity="success"
-                          :disabled="!files || files.length === 0"
-                        ></Button>
-                        <Button
-                          @click="clearCallback()"
-                          icon="pi pi-times"
-                          rounded
-                          outlined
-                          severity="danger"
-                          :disabled="!files || files.length === 0"
-                        ></Button>
-                      </div>
-                      <ProgressBar
-                        :value="totalSizePercent"
-                        :showValue="false"
-                        class="md:w-20rem h-1 w-full md:ml-auto"
-                      >
-                        <span class="whitespace-nowrap"
-                          >{{ totalSize }}B / 1Mb</span
-                        >
-                      </ProgressBar>
-                    </div>
-                  </template>
-
-                  <template #empty>
-                    <div class="flex items-center justify-center flex-col">
-                      <i
-                        class="pi pi-cloud-upload !border-2 !rounded-full !p-8 !text-4xl !text-muted-color"
+                    <Button
+                      @click="chooseCallback()"
+                      icon="pi pi-images"
+                      rounded
+                      v-tooltip="'Seleccionar archivo'"
+                      outlined
+                      severity="secondary"
+                      :disabled="!!evidenceFile && !!doesUserExist"
+                    />
+                    <div v-if="doesUserExist && userRequestNewEvidenceDocument" class="flex gap-2"> 
+                      <Button 
+                      @click="uploadNewEvidenceDocument()"
+                      icon="pi pi-upload"
+                      rounded
+                      v-tooltip="'Subir archivo'"
+                      outlined
+                      severity="success"
+                      :disabled="!evidenceFile && !!doesUserExist"
                       />
-                      <p class="mt-6 mb-0">
-                        Arrastra y suelta los archivos aquí para subirlos.
-                      </p>
                     </div>
-                  </template>
-                </FileUpload>
+
+                  </div>
+                </template>
+                <!-- Content: muestra la vista previa del archivo pendiente o ya guardado -->
+                <template #content="{ files, removeFileCallback }">
+                  <div class="flex flex-col gap-8 pt-4">
+                    <!-- Si hay archivo pendiente en FileUpload -->
+                    <div
+                      v-if="files.length > 0"
+                      class="flex flex-col items-center"
+                    >
+                      <div
+                        class="w-24 h-24 flex items-center justify-center border border-dashed border-gray-300 rounded"
+                      >
+                        <i class="pi pi-file-pdf text-5xl text-red-600"></i>
+                      </div>
+                      <span
+                        class="mt-2 font-semibold text-ellipsis max-w-60 whitespace-nowrap overflow-hidden"
+                      >
+                        {{ files[0].name }}
+                      </span>
+                      <Button
+                        icon="pi pi-times"
+                        label="Eliminar"
+                        class="p-button-danger mt-2"
+                        @click="
+                          onRemoveTemplatingFileEvidence(
+                            files[0],
+                            removeFileCallback,
+                            0
+                          )
+                        "
+                        outlined
+                        rounded
+                      />
+                    </div>
+                    
+                    <!-- Usuario ya existe, se carga el archivo -->
+                    <div
+                      v-else-if="evidenceFile && doesUserExist"
+                      class="flex flex-col items-center"
+                    >
+                      <div
+                        class="w-24 h-24 flex items-center justify-center border border-dashed border-gray-300 rounded"
+                      >
+                        <i class="pi pi-file-pdf text-5xl text-red-600"></i>
+                      </div>
+                      <span
+                        class="mt-2 font-semibold text-ellipsis max-w-60 whitespace-nowrap overflow-hidden"
+                      >
+                        {{ selectedEvidence.Evidence_Name }}
+                      </span>
+                      <div class="flex gap-2 mt-2">
+                        <div v-if="doesUserExist && doesUserRequestEditConsultation">
+                            <Button
+                            icon="pi pi-times"
+                            label="Reemplazar"
+                            class="p-button-danger mt-2"
+                            @click="deleteEvidenceDocument()"
+                            outlined
+                            rounded
+                            />
+                        </div>
+                        <div v-if="doesUserExist && evidenceFile != null">
+                            <Button 
+                            icon="pi pi-eye"
+                            label="Ver"
+                            class="p-button-info mt-2"
+                            @click="loadUserEvidenceDocument(evidenceID)"
+                            outlined
+                            rounded
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </template>
+                <!-- Dos opciones para que salga el templete. El usuario no existe y no tiene archivos. El usuario existe pero no tiene documentos -->
+                <template #empty>
+
+                  <div v-if="isEvidenceLoading" class="flex justify-center">
+                    <ProgressSpinner style="width:50px;height:50px" strokeWidth="8" fill="transparent" animationDuration=".5s" aria-label="Custom ProgressSpinner"/>
+                  </div>
+
+                  <div v-else-if="!evidenceFile && !doesUserExist"  class="flex items-center justify-center flex-col">
+                    <i
+                      class="pi pi-cloud-upload !border-2 !rounded-full !p-8 !text-4xl !text-muted-color"
+                    />
+                    <p class="mt-6 mb-0">
+                      Arrastra y suelta el archivo PDF aquí.
+                    </p>
+                  </div>
+                  <div v-else-if="!evidenceFile && doesUserExist" class="flex items-center justify-center flex-col">
+                    <i
+                      class="pi pi-cloud-upload !border-2 !rounded-full !p-8 !text-4xl !text-muted-color"
+                    />
+                    <p class="mt-6 mb-0">
+                      Arrastra y suelta el archivo PDF aquí.
+                    </p>
+                  </div>
+                </template>
+              </FileUpload>
               </div>
             </div>
           </div>
@@ -3189,9 +3654,6 @@ const checkIdSize = (shouldShowToast: boolean = true): boolean => {
         @click="editUserConsultation()"
       />
     </div>
-    <!-- <div v-if="!editConsultationButtonDisabled" class="flex justify-center mr-25">
-        <Button label="Editar Ficha" icon="pi pi-folder-edit" @click="" />
-      </div> -->
   </div>
 </template>
 
@@ -3202,5 +3664,15 @@ const checkIdSize = (shouldShowToast: boolean = true): boolean => {
 
 .input-spacing > :not(:last-child) {
   margin-bottom: 4px;
+}
+.p-fileupload-advanced {
+  height: 280px !important;
+
+}
+.fade-enter-active, .fade-leave-active {
+  transition: opacity 1s;
+}
+.fade-enter-from, .fade-leave-to {
+  opacity: 0;
 }
 </style>

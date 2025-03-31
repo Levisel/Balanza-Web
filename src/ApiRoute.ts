@@ -61,6 +61,7 @@ export interface User {
     User_DisabilityPercentage: number;
     User_CatastrophicIllness: string;
     User_HealthDocuments: File | null;
+    User_HealthDocumentsName: string | null;
 }
 // 📌 Initial_Consultation (Manages all the information of the initial consultation)
 export interface Initial_Consultation {
@@ -82,6 +83,19 @@ export interface Initial_Consultation {
     Init_SocialWork: boolean;
     User_ID: string;
 }
+
+
+export interface Evidence {
+    Evidence_ID: number;
+    Internal_ID: string;
+    Init_Code: string;
+    Evidence_Name: string;
+    Evidence_Document_Type: string;
+    Evidence_Date: Date;
+    Evidence_File: File | null; 
+}
+
+
 // 📌 Initial_Consultation (The activities assigned to the student)
 export interface Activity {
     Activity_ID: string;
