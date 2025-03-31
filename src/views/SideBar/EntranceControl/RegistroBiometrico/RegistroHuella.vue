@@ -157,14 +157,14 @@ const cargarEstudiante = async () => {
   }
   cargando.value = true;
   try {
-    const response = await fetch(`${API}/usuarios/${estudianteId.value}`);
+    const response = await fetch(`${API}/usuariointerno/${estudianteId.value}`);
     if (!response.ok) throw new Error("Error al obtener el estudiante");
     const data: Usuario = await response.json();
-    cedula.value = data.Usuario_Cedula;
-    nombres.value = data.Usuario_Nombres;
-    apellidos.value = data.Usuario_Apellidos;
-    correo.value = data.Usuario_Correo;
-    area.value = data.Usuario_Area || "";
+    cedula.value = data.Internal_ID;
+    nombres.value = data.Internal_Name;
+    apellidos.value = data.Internal_LastName;
+    correo.value = data.Internal_Email;
+    area.value = data.Internal_Area || "";
   } catch (error) {
     console.error("Error al cargar el estudiante:", error);
     errorMensaje.value = "Error al cargar los datos del estudiante.";

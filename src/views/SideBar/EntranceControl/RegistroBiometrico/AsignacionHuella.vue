@@ -50,35 +50,35 @@
       class="w-full max-w-6xl shadow-lg"
       removableSort
     >
-      <Column field="Usuario_Cedula" header="Cédula" sortable>
+      <Column field="Internal_ID" header="Cédula" sortable>
         <template #body="slotProps">
-          {{ slotProps.data.Usuario_Cedula || "N/A" }}
+          {{ slotProps.data.Internal_ID || "N/A" }}
         </template>
       </Column>
-      <Column field="Usuario_Nombres" header="Nombres" sortable>
+      <Column field="Internal_Name" header="Nombres" sortable>
         <template #body="slotProps">
-          {{ slotProps.data.Usuario_Nombres || "N/A" }}
+          {{ slotProps.data.Internal_Name || "N/A" }}
         </template>
       </Column>
-      <Column field="Usuario_Apellidos" header="Apellidos" sortable>
+      <Column field="Internal_LastName" header="Apellidos" sortable>
         <template #body="slotProps">
-          {{ slotProps.data.Usuario_Apellidos || "N/A" }}
+          {{ slotProps.data.Internal_LastName || "N/A" }}
         </template>
       </Column>
-      <Column field="Usuario_Correo" header="Correo Institucional" sortable>
+      <Column field="Internal_Email" header="Correo Institucional" sortable>
         <template #body="slotProps">
-          {{ slotProps.data.Usuario_Correo?.trim() || "N/A" }}
+          {{ slotProps.data.Internal_Email?.trim() || "N/A" }}
         </template>
       </Column>
-      <Column field="Usuario_Area" header="Área" sortable>
+      <Column field="Internal_Area" header="Área" sortable>
         <template #body="slotProps">
-          {{ slotProps.data.Usuario_Area?.trim() || "N/A" }}
+          {{ slotProps.data.Internal_Area?.trim() || "N/A" }}
         </template>
       </Column>
       <!-- Columna para mostrar si tiene huella -->
       <Column field="TieneHuella" header="Tiene Huella?" sortable>
         <template #body="slotProps">
-          <span v-if="slotProps.data.Usuario_Huella" class="text-green-600 font-bold">✔️</span>
+          <span v-if="slotProps.data.Internal_Huella" class="text-green-600 font-bold">✔️</span>
           <span v-else class="text-red-600 font-bold">❌</span>
         </template>
       </Column>
@@ -90,7 +90,7 @@
             <Button
               icon="pi pi-arrow-right"
               class="p-button-rounded p-button-info"
-              @click="irRegistroHuella(slotProps.data.Usuario_Cedula)"
+              @click="irRegistroHuella(slotProps.data.Internal_ID)"
               v-tooltip.bottom="{
                 value: 'Asignar Huella Digital',
                 pt: {
@@ -102,16 +102,16 @@
                   text: '!bg-primary !text-primary-contrast !font-medium'
                 }
               }"
-              :disabled="!!slotProps.data.Usuario_Huella"
+              :disabled="!!slotProps.data.Internal_Huella"
               :tooltipOptions="{ position: 'top', showDelay: 300 }"
             />
 
             <!-- Botón para registrar asistencia -->
             <Button
-              v-if="slotProps.data.Usuario_Huella"
+              v-if="slotProps.data.Internal_Huella"
               icon="pi pi-address-book"
               class="p-button-rounded p-button-success"
-              @click="irRegistroAsistencia(slotProps.data.Usuario_Cedula)"
+              @click="irRegistroAsistencia(slotProps.data.Internal_ID)"
               v-tooltip.bottom="{
                 value: 'Registrar Asistencia',
                 pt: {
@@ -129,7 +129,7 @@
 
             <!-- Botón para borrar huella -->
             <Button
-              v-if="slotProps.data.Usuario_Huella"
+              v-if="slotProps.data.Internal_Huella"
               icon="pi pi-trash"
               class="p-button-rounded p-button-danger"
               @click="confirmarBorrarHuella(slotProps.data)"
@@ -201,9 +201,10 @@ const estudianteSeleccionado = ref<UsuarioXPeriodoDVM | null>(null);
 
 // Computed: Filtrar la relación usuario-período según los filtros
 const usuariosFiltrados = computed(() => {
-  return usuariosXPeriodoDVM.value.filter((est) => {
-    const nombreCompleto = `${est.Usuario_Nombres} ${est.Usuario_Apellidos}`.toLowerCase();
-    const cedula = est.Usuario_Cedula.toLowerCase();
+  // Primero, aplicamos los filtros actuales
+  const filtrados = usuariosXPeriodoDVM.value.filter((est) => {
+    const nombreCompleto = `${est.Internal_Name} ${est.Internal_LastName}`.toLowerCase();
+    const cedula = est.Internal_ID.toLowerCase();
     const filtroNombre = busquedaNombre.value.trim()
       ? nombreCompleto.includes(busquedaNombre.value.toLowerCase().trim())
       : true;
@@ -215,8 +216,16 @@ const usuariosFiltrados = computed(() => {
       : true;
     return filtroNombre && filtroCedula && filtroPeriodo;
   });
-});
 
+  // Ahora, agrupamos por Internal_ID para evitar duplicados
+  const mapa = new Map();
+  filtrados.forEach((est) => {
+    if (!mapa.has(est.Internal_ID)) {
+      mapa.set(est.Internal_ID, est);
+    }
+  });
+  return Array.from(mapa.values());
+});
 // Función para redirigir a RegistroHuella.vue pasando la cédula
 const irRegistroHuella = (cedula: string) => {
   router.push(`/RegistroHuella/${cedula}`);
@@ -251,12 +260,12 @@ const fetchUsuariosXPeriodo = async () => {
     const data = await res.json();
     // Convertir la estructura a la interfaz UsuarioXPeriodoDVM
     usuariosXPeriodoDVM.value = data.map((rel: any) => ({
-      Usuario_Cedula: rel.usuario.Usuario_Cedula,
-      Usuario_Nombres: rel.usuario.Usuario_Nombres,
-      Usuario_Apellidos: rel.usuario.Usuario_Apellidos,
-      Usuario_Correo: rel.usuario.Usuario_Correo,
-      Usuario_Area: rel.usuario.Usuario_Area || "N/A",
-      Usuario_Huella: rel.usuario.Usuario_Huella || null, // Verificamos si tiene huella
+      Internal_ID: rel.usuario.Internal_ID,
+      Internal_Name: rel.usuario.Internal_Name,
+      Internal_LastName: rel.usuario.Internal_LastName,
+      Internal_Email: rel.usuario.Internal_Email,
+      Internal_Area: rel.usuario.Internal_Area || "N/A",
+      Internal_Huella: rel.usuario.Internal_Huella || null, // Verificamos si tiene huella
       Periodo_ID: rel.periodo.Periodo_ID,
       PeriodoNombre: rel.periodo.PeriodoNombre,
     }));
@@ -278,26 +287,26 @@ const confirmarBorrarHuella = (usuario: UsuarioXPeriodoDVM) => {
   modalBorrarHuella.value = true;
 };
 
-// Función para borrar la huella: se manda la cédula en query y en el body solo Usuario_Huella null
+// Función para borrar la huella: se manda la cédula en query y en el body solo Internal_Huella null
 const borrarHuella = async () => {
   if (!estudianteSeleccionado.value) return;
   try {
-    const cedula = estudianteSeleccionado.value.Usuario_Cedula;
+    const cedula = estudianteSeleccionado.value.Internal_ID;
     const response = await fetch(`${API}/usuarios/${cedula}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        Usuario_Huella: null,
+        Internal_Huella: null,
       }),
     });
     if (!response.ok) throw new Error("No se pudo borrar la huella.");
 
     // Actualizar localmente: quitar la huella del usuario en la lista
     const index = usuariosXPeriodoDVM.value.findIndex(
-      (u) => u.Usuario_Cedula === estudianteSeleccionado.value?.Usuario_Cedula
+      (u) => u.Internal_ID === estudianteSeleccionado.value?.Internal_ID
     );
     if (index !== -1) {
-      usuariosXPeriodoDVM.value[index].Usuario_Huella = null;
+      usuariosXPeriodoDVM.value[index].Internal_Huella = null;
     }
 
     toast.add({

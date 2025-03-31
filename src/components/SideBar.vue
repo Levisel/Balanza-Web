@@ -287,7 +287,7 @@ const registroAsistenciaClass = computed(() => [
                 :class="activitiesClass"
               >
                 <i class="pi pi-folder-open mr-2"></i>
-                <span class="font-medium text-lg">Crear Acividades</span>
+                <span class="font-medium text-lg">Crear Actividades</span>
               </router-link>
             </li>
             <!-- Sección: REPORTES -->
@@ -352,117 +352,154 @@ const registroAsistenciaClass = computed(() => [
           <!-- Sección: Entrance Control -->
 
           <!--Gestión de Periodos-->
-          <div
-            v-if="
-              authStore.user?.type == 'Administrador' ||
-              authStore.user?.type == 'Secretaria'
-            "
-          >
-            <li>
-              <a
-                v-ripple
-                v-styleclass="{ selector: '@next', toggleClass: 'closed' }"
-                class="select-none flex items-center cursor-pointer p-4 rounded text-surface-700 transition-colors"
-              >
-                <i class="pi pi-calendar-clock mr-2"></i>
-                <span class="font-medium text-lg">Gestión de Periodos</span>
-                <i class="pi pi-chevron-down ml-auto"></i>
-              </a>
-              <ul class="submenu closed list-none p-0 m-0">
+          <div v-if="authStore.user?.type == 'Administrador' || authStore.user?.type == 'Secretaria'">
+            <li class="mt-4">
+              <div class="text-xs font-semibold text-surface-400 uppercase tracking-wider pl-4 mb-2">Gestión Académica</div>
+              <ul class="list-none p-0 m-0">
+                <!-- PERIODOS ACADÉMICOS -->
                 <li>
-                  <router-link
-                    to="/Cronograma"
-                    draggable="false"
-                    v-ripple
-                    :class="cronogramaClass"
-                  >
-                    <i class="pi pi-graduation-cap mr-2"></i>
-                    <span class="font-medium text-lg"
-                      >Cronograma Académico</span
-                    >
-                  </router-link>
+                  <a v-ripple v-styleclass="{ selector: '@next', toggleClass: 'closed' }"
+                    class="select-none flex items-center cursor-pointer p-4 rounded text-surface-700 transition-colors">
+                    <i class="pi pi-calendar-clock mr-2"></i>
+                    <span class="font-medium text-lg">Periodos Académicos</span>
+                    <i class="pi pi-chevron-down ml-auto"></i>
+                  </a>
+                  <ul class="submenu closed list-none p-0 m-0">
+                    <li>
+                      <router-link to="/Cronograma" draggable="false" v-ripple :class="cronogramaClass">
+                        <i class="pi pi-graduation-cap mr-2"></i>
+                        <span class="font-medium text-lg">Cronograma</span>
+                      </router-link>
+                    </li>
+                    <li>
+                      <router-link to="/PeriodoSemanal" draggable="false" v-ripple :class="cronogramaClass">
+                        <i class="pi pi-graduation-cap mr-2"></i>
+                        <span class="font-medium text-lg">Periodo Semanal</span>
+                      </router-link>
+                    </li>
+                  </ul>
                 </li>
-              </ul>
-            </li>
 
-            <!--Gestión de Estudiantes -->
-            <li>
-              <a
-                v-ripple
-                v-styleclass="{ selector: '@next', toggleClass: 'closed' }"
-                class="select-none flex items-center cursor-pointer p-4 rounded text-surface-700 transition-colors"
-              >
-                <i class="pi pi-users mr-2"></i>
-                <span class="font-medium text-lg">Gestión de Estudiantes</span>
-                <i class="pi pi-chevron-down ml-auto"></i>
-              </a>
-              <ul class="submenu closed list-none p-0 m-0">
+                <!-- GESTIÓN DE ESTUDIANTES -->
                 <li>
-                  <router-link
-                    to="/IngresoEstudiantesExcel"
-                    draggable="false"
-                    v-ripple
-                    :class="ingresoEstudiantesExcelClass"
-                  >
-                    <i class="pi pi-file-excel mr-2"></i>
-                    <span class="font-medium text-lg">Ingreso por Archivo</span>
-                  </router-link>
+                  <a v-ripple v-styleclass="{ selector: '@next', toggleClass: 'closed' }"
+                    class="select-none flex items-center cursor-pointer p-4 rounded text-surface-700 transition-colors">
+                    <i class="pi pi-users mr-2"></i>
+                    <span class="font-medium text-lg">Gestión de Estudiantes</span>
+                    <i class="pi pi-chevron-down ml-auto"></i>
+                  </a>
+                  <ul class="submenu closed list-none p-0 m-0">
+                    <li>
+                      <router-link to="/IngresoEstudiantesExcel" draggable="false" v-ripple :class="ingresoEstudiantesExcelClass">
+                        <i class="pi pi-file-excel mr-2"></i>
+                        <span class="font-medium text-lg">Ingreso por Archivo</span>
+                      </router-link>
+                    </li>
+                    <li>
+                      <router-link to="/IngresoManualEstudiantes" draggable="false" v-ripple :class="ingresoManualEstudiantesClass">
+                        <i class="pi pi-user-edit mr-2"></i>
+                        <span class="font-medium text-lg">Ingreso Manual</span>
+                      </router-link>
+                    </li>
+                    <li>
+                      <router-link to="/ListadoEstudiantes" draggable="false" v-ripple :class="listadoEstudiantesClass">
+                        <i class="pi pi-list mr-2"></i>
+                        <span class="font-medium text-lg">Listado</span>
+                      </router-link>
+                    </li>
+                    <li>
+                      <router-link to="/AsignacionPeriodo" draggable="false" v-ripple :class="asignacionPeriodoClass">
+                        <i class="pi pi-address-book mr-2"></i>
+                        <span class="font-medium text-lg">Asignar Periodo</span>
+                      </router-link>
+                    </li>
+                    <li>
+                      <router-link to="/RemoverPeriodo" draggable="false" v-ripple :class="removerPeriodoClass">
+                        <i class="pi pi-user-minus mr-2"></i>
+                        <span class="font-medium text-lg">Quitar de Periodo</span>
+                      </router-link>
+                    </li>
+                    <li>
+                      <router-link to="/IngresoArea" draggable="false" v-ripple :class="ingresoAreaClass">
+                        <i class="pi pi-building-columns mr-2"></i>
+                        <span class="font-medium text-lg">Asignar Área</span>
+                      </router-link>
+                    </li>
+                  </ul>
                 </li>
+
+                <!-- HORARIOS -->
                 <li>
-                  <router-link
-                    to="/IngresoManualEstudiantes"
-                    draggable="false"
-                    v-ripple
-                    :class="ingresoManualEstudiantesClass"
-                  >
-                    <i class="pi pi-user-edit mr-2"></i>
-                    <span class="font-medium text-lg">Ingreso Manual</span>
-                  </router-link>
+                  <a v-ripple v-styleclass="{ selector: '@next', toggleClass: 'closed' }"
+                    class="select-none flex items-center cursor-pointer p-4 rounded text-surface-700 transition-colors">
+                    <i class="pi pi-clock mr-2"></i>
+                    <span class="font-medium text-lg">Administración de Horarios</span>
+                    <i class="pi pi-chevron-down ml-auto"></i>
+                  </a>
+                  <ul class="submenu closed list-none p-0 m-0">
+                    <li>
+                      <router-link to="/IngresoHorario" draggable="false" v-ripple :class="ingresoHorarioClass">
+                        <i class="pi pi-calendar-plus mr-2"></i>
+                        <span class="font-medium text-lg">Horario Presencial</span>
+                      </router-link>
+                    </li>
+                    <li>
+                      <router-link to="/IngresoHorarioVirtual" draggable="false" v-ripple :class="ingresoHorarioVirtualClass">
+                        <i class="pi pi-video mr-2"></i>
+                        <span class="font-medium text-lg">Horario Virtual</span>
+                      </router-link>
+                    </li>
+                    <li>
+                      <router-link to="/VistaHorarios" draggable="false" v-ripple :class="vistaHorariosClass">
+                        <i class="pi pi-eye mr-2"></i>
+                        <span class="font-medium text-lg">Visualizar Horarios</span>
+                      </router-link>
+                    </li>
+                  </ul>
                 </li>
+
+                <!-- BIOMETRÍA -->
                 <li>
-                  <router-link
-                    to="/ListadoEstudiantes"
-                    draggable="false"
-                    v-ripple
-                    :class="listadoEstudiantesClass"
-                  >
-                    <i class="pi pi-list mr-2"></i>
-                    <span class="font-medium text-lg">Listado</span>
-                  </router-link>
+                  <a v-ripple v-styleclass="{ selector: '@next', toggleClass: 'closed' }"
+                    class="select-none flex items-center cursor-pointer p-4 rounded text-surface-700 transition-colors">
+                    <i class="pi pi-fingerprint mr-2"></i>
+                    <span class="font-medium text-lg">Control Biométrico</span>
+                    <i class="pi pi-chevron-down ml-auto"></i>
+                  </a>
+                  <ul class="submenu closed list-none p-0 m-0">
+                    <li>
+                      <router-link to="/AsignacionHuella" draggable="false" v-ripple :class="asignacionHuellaClass">
+                        <i class="pi pi-plus-circle mr-2"></i>
+                        <span class="font-medium text-lg">Registro Biométrico</span>
+                      </router-link>
+                    </li> 
+                    <li>
+                      <router-link to="/RegistroPorCedula" draggable="false" v-ripple :class="registroAsistenciaClass">
+                        <i class="pi pi-check-circle mr-2"></i>
+                        <span class="font-medium text-lg">Registro de Asistencia</span>
+                      </router-link>
+                    </li>
+                  </ul>
                 </li>
+
                 <li>
-                  <router-link
-                    to="/AsignacionPeriodo"
-                    draggable="false"
-                    v-ripple
-                    :class="asignacionPeriodoClass"
-                  >
-                    <i class="pi pi-address-book mr-2"></i>
-                    <span class="font-medium text-lg">Asignar Periodo</span>
-                  </router-link>
+                  <a v-ripple v-styleclass="{ selector: '@next', toggleClass: 'closed' }"
+                    class="select-none flex items-center cursor-pointer p-4 rounded text-surface-700 transition-colors">
+                    <i class="pi pi-fingerprint mr-2"></i>
+                    <span class="font-medium text-lg">Control Asistencia</span>
+                    <i class="pi pi-chevron-down ml-auto"></i>
+                  </a>
+                  <ul class="submenu closed list-none p-0 m-0">
+                    <li>
+                      <router-link to="/SeguimientoGeneral" draggable="false" v-ripple :class="asignacionHuellaClass">
+                        <i class="pi pi-plus-circle mr-2"></i>
+                        <span class="font-medium text-lg">Seguimiento de Horas</span>
+                      </router-link>
+                    </li> 
+  
+                  </ul>
                 </li>
-                <li>
-                  <router-link
-                    to="/RemoverPeriodo"
-                    draggable="false"
-                    v-ripple
-                    :class="removerPeriodoClass"
-                  >
-                    <i class="pi pi-user-minus mr-2"></i>
-                    <span class="font-medium text-lg">Quitar de Periodo</span>
-                  </router-link>
-                </li>
-                <li>
-                  <router-link
-                    to="/IngresoArea"
-                    draggable="false"
-                    v-ripple
-                    :class="ingresoAreaClass"
-                  >
-                    <i class="pi pi-building-columns mr-2"></i>
-                    <span class="font-medium text-lg">Asignar Area</span>
-                  </router-link>
-                </li>
+<!--front final-->
               </ul>
             </li>
           </div>

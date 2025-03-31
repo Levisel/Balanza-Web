@@ -1,22 +1,48 @@
 <template>
   <main class="flex flex-col items-center p-8 min-h-screen">
-    <!-- Encabezado con botón "Volver" a la izquierda -->
+    <!-- Encabezado -->
     <div class="w-full flex items-center justify-between mb-8">
       <Button
         icon="pi pi-arrow-left"
         class="p-button-text text-blue-600 hover:text-blue-800"
-        @click="volverAsignacionHuella"
+        @click="volver"
         tooltip="Volver al listado"
         tooltipOptions="{ position: 'top' }"
       />
-      <h1 class="text-3xl font-bold text-center flex-grow">Registro de Huella</h1>
+      <h1 class="text-3xl font-bold text-center flex-grow">Registro de Asistencia Automático</h1>
       <div class="w-10"></div>
     </div>
 
     <Toast />
 
-    <!-- Mostrar datos del estudiante -->
-    <div :class="['w-full max-w-3xl p-6 rounded-lg shadow-lg', cardClass]">
+    <!-- Modal de error en caso de no encontrar el estudiante -->
+    <Dialog
+      v-model:visible="showErrorModal"
+      header="Error"
+      :modal="true"
+      :closable="true"
+      style="width: 30rem"
+    >
+      <p class="text-center">{{ errorModalMessage }}</p>
+      <div class="flex justify-center mt-4">
+        <Button label="Cerrar" @click="showErrorModal = false" />
+      </div>
+    </Dialog>
+
+    <!-- Formulario para ingresar cédula -->
+    <div class="w-full max-w-md p-6 rounded-lg shadow-lg mb-8" :class="cardClass">
+      <h2 class="text-xl font-semibold text-center mb-4">Ingrese su Cédula</h2>
+      <input
+        v-model="cedulaInput"
+        type="text"
+        placeholder="Ingrese su cédula"
+        class="w-full p-3 border rounded-lg"
+      />
+      <Button label="Buscar" class="mt-4" @click="buscarEstudiante" />
+    </div>
+
+    <!-- Si se cargaron los datos del estudiante, se muestran -->
+    <div v-if="estudianteCargado" :class="['w-full max-w-3xl p-6 rounded-lg shadow-lg', cardClass]">
       <h2 class="text-xl font-semibold text-center mb-6">Detalles del Estudiante</h2>
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
         <div>
@@ -41,35 +67,39 @@
         </div>
       </div>
 
-      <!-- Intervalo de tiempo (quemado para pruebas) -->
+      <!-- Mostrar información del período actual -->
+      <div v-if="periodoActual" class="mt-4 text-center">
+        <p class="text-lg text-green-600">
+          Estás en el período: {{ periodoActual.periodo.PeriodoNombre }}
+        </p>
+      </div>
+
+      <!-- Intervalo de tiempo (para pruebas, siempre se permite) -->
       <div class="mt-6 text-center">
         <p class="text-lg">
           Hora programada: <strong>{{ scheduledTimeString }}</strong>
         </p>
         <p class="text-sm text-gray-600">
-          Se permite capturar siempre (pruebas sin restricción de tiempo).
+          (Pruebas sin restricción de tiempo)
         </p>
       </div>
 
-      <!-- Mostrar hora de entrada si ya existe -->
+      <!-- Si ya existe registro de entrada, mostrar la hora de entrada convertida a local -->
       <div v-if="tipoRegistro === 'salida' && registroEntradaLocal" class="mt-4 text-center">
         <p class="text-lg text-blue-600">
           Ya ingresaste a las: {{ registroEntradaLocal }}
         </p>
       </div>
 
-      <!-- Sección de botones -->
+      <!-- Sección de botones para huella -->
       <div class="flex flex-col items-center mt-8 gap-5">
         <div class="flex flex-col items-center">
-          <!-- Botón Capturar Huella, con label dinámico según el tipo de registro -->
           <Button
             v-if="!huellaCapturada"
             :label="tipoRegistro === 'entrada' ? 'Capturar Huella (Registrar Entrada)' : 'Capturar Huella (Registrar Salida)'"
-            class="px-6 py-3 rounded-full bg-emerald-500 hover:bg-emerald-600 text-white mr-4"
+            class="px-6 py-3 rounded-full bg-emerald-500 hover:bg-emerald-600 text-white"
             @click="iniciarCaptura"
           />
-
-          <!-- Si ya se capturó la huella, mostrar mensaje y botón para Guardar -->
           <div v-if="huellaCapturada" class="flex flex-col items-center mt-1 mb-3">
             <Message severity="success" class="mb-4">
               Huella capturada correctamente.
@@ -81,13 +111,11 @@
               @click="guardarHuella"
             />
           </div>
-
-          <!-- Botón Cancelar (siempre presente) -->
           <Button
             label="Cancelar"
             severity="danger"
             class="px-6 py-3 rounded-full bg-red-500 hover:bg-red-600 text-white mt-2"
-            @click="volverAsignacionHuella"
+            @click="volver"
           />
         </div>
       </div>
@@ -111,11 +139,7 @@
           animationDuration=".8s"
         />
         <div class="flex gap-4 mt-4">
-          <Button
-            label="Cancelar"
-            class="p-button-danger"
-            @click="cancelarCaptura"
-          />
+          <Button label="Cancelar" class="p-button-danger" @click="cancelarCaptura" />
         </div>
       </div>
     </Dialog>
@@ -123,7 +147,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from "vue";
+import { ref, computed } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import Button from "primevue/button";
 import Message from "primevue/message";
@@ -139,15 +163,14 @@ const route = useRoute();
 const toast = useToast();
 const { isDarkTheme } = useDarkMode();
 
-// Obtener cédula del estudiante (de la ruta)
-const estudianteCedula = computed(() =>
-  route.params.cedula ? String(route.params.cedula) : route.params.id ? String(route.params.id) : null
-);
+// Variable para ingresar la cédula manualmente
+const cedulaInput = ref("");
+// Modal de error si no se encuentra el estudiante
+const showErrorModal = ref(false);
+const errorModalMessage = ref("");
 
-// Obtener el periodoId de la ruta
-const periodoId = computed(() =>
-  route.params.periodoId ? String(route.params.periodoId) : null
-);
+// Indicador para saber si ya se cargaron los datos del estudiante
+const estudianteCargado = ref(false);
 
 // Variables del estudiante
 const cedula = ref("");
@@ -165,8 +188,11 @@ const huellaCapturada = ref(false);
 const registroAbierto = ref(null);
 const tipoRegistro = ref("entrada"); // 'entrada' o 'salida'
 
-// Variable para usuarioXPeriodoId (obtenido de la consulta a /usuarioXPeriodo)
+// Variable para usuarioXPeriodoId (se obtiene de /usuarioXPeriodo/usuario/:cedula)
 const usuarioXPeriodoId = ref("");
+
+// Variable para almacenar el período actual (filtrado entre Periodo_Inicio y Periodo_Fin)
+const periodoActual = ref(null);
 
 // Estados UI
 const errorMensaje = ref("");
@@ -174,13 +200,13 @@ const cargando = ref(false);
 const dialogoActivo = ref(false);
 const capturando = ref(false);
 
-// Horario programado (quemado para pruebas)
-const scheduledTime = ref(new Date("2025-03-24T21:03:00")); // Para pruebas
+// Horario programado (para pruebas, quemado)
+const scheduledTime = ref(new Date("2025-03-24T21:03:00"));
 const scheduledTimeString = computed(() =>
   scheduledTime.value.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
 );
 
-// Propiedad computada para mostrar la hora de entrada en formato local (Ecuador)
+// Propiedad computada para mostrar la hora de entrada (convertida a local Ecuador)
 const registroEntradaLocal = computed(() => {
   if (registroAbierto.value && registroAbierto.value.Registro_Entrada) {
     return new Date(registroAbierto.value.Registro_Entrada).toLocaleString("es-EC", {
@@ -203,16 +229,22 @@ const inputClass = computed(() =>
     : "bg-white text-gray-900 border-gray-300"
 );
 
-// Función para cargar la información del estudiante
-const cargarEstudiante = async () => {
-  if (!estudianteCedula.value) {
-    errorMensaje.value = "No se encontró la cédula del estudiante en la ruta.";
+// Función para buscar y cargar los datos del estudiante y sus períodos
+const buscarEstudiante = async () => {
+  if (!cedulaInput.value) {
+    toast.add({
+      severity: "warn",
+      summary: "Falta cédula",
+      detail: "Ingrese una cédula para buscar.",
+      life: 3000,
+    });
     return;
   }
   cargando.value = true;
   try {
-    const response = await fetch(`${API}/usuariointerno/${estudianteCedula.value}`);
-    if (!response.ok) throw new Error("Error al obtener el estudiante");
+    // Obtener datos del estudiante
+    const response = await fetch(`${API}/usuariointerno/${cedulaInput.value}`);
+    if (!response.ok) throw new Error("Estudiante no encontrado");
     const data: Usuario = await response.json();
     cedula.value = data.Internal_ID;
     nombres.value = data.Internal_Name;
@@ -220,44 +252,46 @@ const cargarEstudiante = async () => {
     correo.value = data.Internal_Email;
     area.value = data.Internal_Area || "";
 
-    // Opcional: obtener la huella almacenada para comparar
+    // Opcional: obtener la huella almacenada
     const resHuella = await fetch(`${API}/usuarios/obtener-huella/${data.Internal_ID}`);
     if (resHuella.ok) {
       const huellaData = await resHuella.json();
       huellaGuardada.value = huellaData.huella || "";
     }
-    // Una vez cargados los datos del estudiante, consultamos usuarioXPeriodo
-    await cargarUsuarioXPeriodo();
-    // Y consultamos si hay un registro de asistencia abierto para hoy
+    // Consultar los períodos del estudiante (ruta: /usuarioXPeriodo/usuario/:usuarioCedula)
+    const resPeriodos = await fetch(`${API}/usuarioXPeriodo/usuario/${cedula.value}`);
+    if (!resPeriodos.ok) throw new Error("Error al obtener los períodos del estudiante");
+    const periodos = await resPeriodos.json();
+    console.log("Períodos del estudiante:", periodos);
+    // Filtrar para obtener el período actual (donde hoy esté entre Periodo_Inicio y Periodo_Fin)
+    const hoy = new Date();
+
+    periodoActual.value = periodos.find((p: any) => {
+    console.log("Periodo_Inicio:", p.periodo.Periodo_Inicio, "Periodo_Fin:", p.periodo.Periodo_Fin);
+    const inicio = new Date(p.periodo.Periodo_Inicio);
+    const fin = new Date(p.periodo.Periodo_Fin);
+    return hoy >= inicio && hoy <= fin;
+  });
+    if (!periodoActual.value) {
+      throw new Error("No se encontró un período activo para el estudiante");
+    }
+    // Establecer usuarioXPeriodoId a partir del período actual (se asume que el objeto tiene la propiedad UsuarioXPeriodo_ID)
+    usuarioXPeriodoId.value = periodoActual.value.UsuarioXPeriodo_ID;
+    console.log("Periodo actual:", periodoActual.value);
+    console.log("usuarioXPeriodoId:", usuarioXPeriodoId.value);
+    // Consultar si ya existe un registro de asistencia abierto para hoy
     await cargarRegistroAsistenciaAbierto();
-  } catch (error) {
+    estudianteCargado.value = true;
+  } catch (error: any) {
     console.error("Error al cargar el estudiante:", error);
-    errorMensaje.value = "Error al cargar los datos del estudiante.";
+    errorModalMessage.value = error.message || "Error al cargar los datos del estudiante.";
+    showErrorModal.value = true;
   } finally {
     cargando.value = false;
   }
 };
 
-// Función para obtener el usuarioXPeriodoId usando la ruta: /usuarioXPeriodo/:periodoId/:cedula
-const cargarUsuarioXPeriodo = async () => {
-  if (!cedula.value || !periodoId.value) {
-    console.log("Faltan datos para cargar usuarioXPeriodo:", { cedula: cedula.value, periodoId: periodoId.value });
-    return;
-  }
-  try {
-    console.log("Cargando usuarioXPeriodo con ruta:", `${API}/usuarioXPeriodo/${periodoId.value}/${cedula.value}`);
-    const response = await fetch(`${API}/usuarioXPeriodo/${periodoId.value}/${cedula.value}`);
-    if (!response.ok) throw new Error("Error al obtener usuarioXPeriodo");
-    const data = await response.json();
-    console.log("Respuesta usuarioXPeriodo:", data);
-    usuarioXPeriodoId.value = data.UsuarioXPeriodo_ID;
-    console.log("usuarioXPeriodoId:", usuarioXPeriodoId.value);
-  } catch (error) {
-    console.error("Error al cargar usuarioXPeriodo:", error);
-  }
-};
-
-// Función para cargar el registro de asistencia abierto (si existe) para el día actual
+// Función para cargar el registro de asistencia abierto para el día actual
 const cargarRegistroAsistenciaAbierto = async () => {
   if (!cedula.value) return;
   try {
@@ -287,7 +321,7 @@ const cargarRegistroAsistenciaAbierto = async () => {
 // Función para iniciar la captura de huella
 const iniciarCaptura = async () => {
   if (capturando.value) {
-    console.log("Captura ya en proceso, evitando múltiples intentos.");
+    console.log("Captura ya en proceso.");
     return;
   }
   capturando.value = true;
@@ -314,9 +348,7 @@ const iniciarCaptura = async () => {
       signal: controller.signal,
     });
     clearTimeout(timeoutId);
-    if (!response.ok) {
-      throw new Error(`Respuesta HTTP inválida: ${response.status}`);
-    }
+    if (!response.ok) throw new Error(`Respuesta HTTP inválida: ${response.status}`);
     const data = await response.json();
     if (data.ErrorCode === 0 && data.TemplateBase64) {
       huellaBase64.value = data.TemplateBase64;
@@ -351,6 +383,7 @@ const cancelarCaptura = () => {
 };
 
 // Función para guardar la asistencia (POST para entrada, PUT para salida)
+// Al registrar la salida, se actualiza la asistencia y se guarda/actualiza el resumen de horas.
 const guardarHuella = async () => {
   if (!huellaBase64.value || !cedula.value) {
     toast.add({
@@ -371,7 +404,6 @@ const guardarHuella = async () => {
     return;
   }
   try {
-    // Comparar huellas mediante /SGIMatchScore
     const params = new URLSearchParams();
     params.append("Template1", huellaGuardada.value);
     params.append("Template2", huellaBase64.value);
@@ -411,11 +443,12 @@ const guardarHuella = async () => {
         });
         console.log("Huella válida, score:", score);
         if (tipoRegistro.value === "entrada") {
-          // Crear nuevo registro de asistencia (POST) usando usuarioXPeriodoId
+          // Registro de entrada (POST)
           try {
             const registroData = {
               UsuarioXPeriodo_ID: usuarioXPeriodoId.value,
-              Registro_Entrada: new Date('2025-03-24T17:15:00Z'), // Hora simulada para pruebas
+              // Para pruebas, se simula la hora de entrada (ajusta según necesites)
+              Registro_Entrada: new Date('2025-03-24T17:15:00Z'),
               Registro_Salida: null,
               Registro_Tipo: "Presencial",
               Registro_Observaciones: null,
@@ -440,7 +473,7 @@ const guardarHuella = async () => {
             return;
           }
         } else {
-          // Actualizar registro existente para marcar salida (PUT)
+          // Registro de salida (PUT)
           try {
             const registroId = registroAbierto.value?.Registro_ID;
             if (!registroId) {
@@ -452,7 +485,7 @@ const guardarHuella = async () => {
               });
               return;
             }
-            // Para pruebas, simula la hora de salida como 23:15 hora local (equivalente a 04:15Z del día siguiente si Ecuador es UTC-5)
+            // Para pruebas, se simula la hora de salida (ajusta según necesites)
             const salidaSimulada = new Date('2025-03-24T22:15:00Z');
             const response = await fetch(`${API}/registros/${registroId}`, {
               method: "PUT",
@@ -461,7 +494,7 @@ const guardarHuella = async () => {
             });
             if (!response.ok) throw new Error("No se pudo actualizar el registro de asistencia.");
             console.log("Registro de salida actualizado correctamente.");
-            // Llamar a la función para guardar resumen de horas
+            // Guardar o actualizar el resumen de horas (acumulativo)
             await guardarResumenHoras(registroAbierto.value.Registro_Entrada, salidaSimulada);
           } catch (error) {
             console.error("Error actualizando registro de salida:", error);
@@ -498,29 +531,29 @@ const guardarHuella = async () => {
   }
 };
 
-// Función para guardar el resumen de horas de asistencia
+// Función para guardar el resumen de horas de asistencia (acumulativo)
+// Se suma el total actual a lo previamente registrado (si existe); si es el primer registro se crea.
 const guardarResumenHoras = async (entrada, salida) => {
   try {
     // Calcular la diferencia en horas sin redondear
     const diffMs = new Date(salida) - new Date(entrada);
     const horasActuales = diffMs / (1000 * 60 * 60);
-
-    // Consultar si ya existe un resumen para el usuario
+  
+    // Consultar si ya existe un resumen para el usuario (por cédula)
     const resGet = await fetch(`${API}/resumenHoras/user/${cedula.value}`);
     let resumenExistente = null;
     if (resGet.ok) {
       resumenExistente = await resGet.json();
       console.log("Resumen existente:", resumenExistente);
     }
-
+  
     let resumenData = {};
     if (resumenExistente && resumenExistente.Resumen_ID) {
-      // Si ya existe un resumen, sumar las horas acumuladas con las actuales
+      // Si ya existe, se suma lo acumulado con las horas actuales
       const totalAcumulado = Number(resumenExistente.Resumen_Horas_Totales) + horasActuales;
       resumenData = {
-        // Se mantiene la fecha de inicio original
         Resumen_Horas_Totales: totalAcumulado
-        // No se modifica Resumen_Inicio ni Resumen_Fin (se ignora Resumen_Fin por ahora)
+        // No se toca Resumen_Inicio (queda con la fecha del primer registro)
       };
       const resPut = await fetch(`${API}/resumenHoras/${resumenExistente.Resumen_ID}`, {
         method: "PUT",
@@ -530,12 +563,11 @@ const guardarResumenHoras = async (entrada, salida) => {
       if (!resPut.ok) throw new Error("Error al actualizar el resumen de horas.");
       console.log("Resumen de horas actualizado correctamente.");
     } else {
-      // Si no existe, se crea el resumen usando la hora de entrada del primer registro y las horas actuales
+      // Si no existe, se crea un nuevo resumen usando la fecha de entrada del primer registro
       resumenData = {
-        Internal_ID: cedula.value,
-        Resumen_Inicio: entrada,  // Fecha de inicio del primer registro
+        Usuario_Cedula: cedula.value,
+        Resumen_Inicio: entrada,
         Resumen_Horas_Totales: horasActuales
-        // Resumen_Fin se ignora por el momento
       };
       const resPost = await fetch(`${API}/resumenHoras`, {
         method: "POST",
@@ -556,16 +588,12 @@ const guardarResumenHoras = async (entrada, salida) => {
   }
 };
 
-
 // Función para volver a la vista de AsignacionHuella
-const volverAsignacionHuella = () => {
+const volver = () => {
   router.push("/AsignacionHuella");
 };
 
-// Al montar, cargar datos del estudiante (y luego usuarioXPeriodo y registro abierto)
-onMounted(async () => {
-  await cargarEstudiante();
-});
+// No se carga nada al montar; la carga se inicia cuando el usuario ingresa la cédula y pulsa "Buscar".
 </script>
 
 <style scoped>

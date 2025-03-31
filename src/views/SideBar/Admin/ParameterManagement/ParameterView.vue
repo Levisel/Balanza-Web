@@ -561,6 +561,7 @@ const deleteConfirm = (data: any) => {
       <Select
         v-model="selectedTableLabel"
         v-tooltip="'Selecciona'"
+        filter
         :options="Object.values(tableNames)"
         placeholder="Seleccione una tabla"
         @change="loadData"

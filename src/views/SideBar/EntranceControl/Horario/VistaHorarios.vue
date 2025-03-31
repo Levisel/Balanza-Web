@@ -1,4 +1,3 @@
-<!-- VistaHorarios.vue -->
 <template>
   <main class="flex flex-col items-center p-6 min-h-screen">
     <h1 class="text-3xl font-bold mb-6 text-gray-800 dark:text-sky-50">Visualización de Horarios</h1>
@@ -49,19 +48,18 @@
         responsiveLayout="scroll"
       >
         <Column selectionMode="single" headerStyle="width: 3rem" />
-        <Column field="usuario.Usuario_Cedula" header="Cédula" />
-        <Column field="usuario.Usuario_Nombres" header="Nombres" />
-        <Column field="usuario.Usuario_Apellidos" header="Apellidos" />
-        <Column field="usuario.Usuario_Area" header="Área" />
+        <!-- Se actualizan las columnas para leer de la propiedad internal -->
+        <Column field="usuario.Internal_ID" header="Cédula" />
+        <Column field="usuario.Internal_Name" header="Nombres" />
+        <Column field="usuario.Internal_LastName" header="Apellidos" />
+        <Column field="usuario.Internal_Area" header="Área" />
       </DataTable>
     </div>
 
-<!-- Cuadrícula de Horarios para el estudiante seleccionado -->
-<div v-if="estudianteSeleccionado && schedulesSeleccionados.length" class="w-full max-w-6xl">
-  <CuadriculaHorario :schedules="schedulesSeleccionados" />
-</div>
-
-
+    <!-- Cuadrícula de Horarios para el estudiante seleccionado -->
+    <div v-if="estudianteSeleccionado && schedulesSeleccionados.length" class="w-full max-w-6xl">
+      <CuadriculaHorario :schedules="schedulesSeleccionados" />
+    </div>
   </main>
 </template>
 
@@ -107,9 +105,10 @@ const estudiantesFiltrados = computed(() => {
   const name = busquedaNombre.value.toLowerCase()
   const ced = busquedaCedula.value
   return estudiantes.value.filter(est => {
-    const nombre = est.usuario.Usuario_Nombres?.toLowerCase() || ''
-    const apellido = est.usuario.Usuario_Apellidos?.toLowerCase() || ''
-    const cedula = est.usuario.Usuario_Cedula || ''
+    // Se accede a la información del estudiante a través de "internal"
+    const nombre = est.usuario.Internal_Name?.toLowerCase() || ''
+    const apellido = est.usuario.Internal_LastName?.toLowerCase() || ''
+    const cedula = est.usuario.Internal_ID || ''
     return (
       (nombre.includes(name) || apellido.includes(name)) &&
       cedula.includes(ced)
@@ -117,14 +116,12 @@ const estudiantesFiltrados = computed(() => {
   })
 })
 
-// Computed: extraer todos los registros de horario del estudiante seleccionado (por cédula)
+// Computed: extraer todos los registros de horario del estudiante seleccionado (por Internal_ID)
 const schedulesSeleccionados = computed(() => {
   if (!estudianteSeleccionado.value) return []
-  const ced = estudianteSeleccionado.value.usuario.Usuario_Cedula
-  return horariosCompletos.value.filter((registro: any) => registro.Usuario_Cedula === ced)
+  const ced = estudianteSeleccionado.value.usuario.Internal_ID
+  return horariosCompletos.value.filter((registro: any) => registro.Internal_ID === ced)
 })
-
-
 
 // Cargar períodos al montar
 onMounted(() => {
@@ -186,24 +183,13 @@ async function cargarHorariosCompletos() {
   try {
     const pid = periodoSeleccionado.value.Periodo_ID
     const area = encodeURIComponent(areaSeleccionada.value)
-    const url = `${API}/horario/completo?periodoId=${pid}&area=${area}`
+    const url = `${API}/horarioEstudiantes/completo?periodoId=${pid}&area=${area}`
     const res = await fetch(url)
     horariosCompletos.value = await res.json()
     console.log('Horarios completos cargados:', horariosCompletos.value)
   } catch (err) {
     console.error('Error al cargar horarios completos:', err)
   }
-}
-
-// Función para limpiar filtros y datos (sin resetear los dropdowns de período y área)
-function limpiarFiltros() {
-  areaSeleccionada.value = ''
-  periodoSeleccionado.value = null
-  busquedaNombre.value = ''
-  busquedaCedula.value = ''
-  estudiantes.value = []
-  horariosCompletos.value = []
-  estudianteSeleccionado.value = null
 }
 </script>
 
