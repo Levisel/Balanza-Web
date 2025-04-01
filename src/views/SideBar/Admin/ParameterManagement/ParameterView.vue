@@ -17,6 +17,7 @@ import { useToast } from "primevue/usetoast";
 import { API } from "@/ApiRoute";
 import { useConfirm } from "primevue/useconfirm";
 
+
 // PrimeVue Toast para notificaciones
 const toast = useToast();
 
@@ -138,7 +139,41 @@ const tableConfig = {
   Practical_Hours: [
     { field: "Practical_Hours", header: "Nombre", type: "string" },
     { field: "Practical_Hours_Status", header: "Estado", type: "boolean" },
-  ]
+  ],
+  Country: [
+    { field: "Country_Name", header: "Nombre", type: "string" },
+    { field: "Country_Status", header: "Estado", type: "boolean" },
+  ],
+  Province: [
+    { field: "Country_FK", header: "País", type: "string" },
+    { field: "Province_Name", header: "Nombre", type: "string" },
+    { field: "Province_Status", header: "Estado", type: "boolean" },
+  ],	
+  City: [
+    { field: "Province_FK", header: "Provincia", type: "string" },
+    { field: "City_Name", header: "Nombre", type: "string" },
+    { field: "City_Status", header: "Estado", type: "boolean" },
+  ],
+  Zone: [
+    { field: "Zone_Name", header: "Nombre", type: "string" },
+    { field: "Zone_Status", header: "Estado", type: "boolean" },
+  ],
+  Sector: [
+    { field: "Zone_FK", header: "Zona", type: "string" },
+    { field: "Sector_Name", header: "Nombre", type: "string" },
+    { field: "Sector_Status", header: "Estado", type: "boolean" },
+  ],
+  Subject: [
+    { field: "Subject_Name", header: "Nombre", type: "string" },
+    { field: "Subject_NRC", header: "NRC", type: "string" },
+    { field: "Subject_Status", header: "Estado", type: "boolean" },
+  ],
+  Topic: [
+    { field: "Subject_FK", header: "Materia", type: "string" },
+    { field: "Topic_Name", header: "Tema", type: "string" },
+    { field: "Topic_Status", header: "Estado", type: "boolean" },
+  ],
+
 };
 
 // Función para resetear el registro seleccionado
@@ -174,6 +209,13 @@ const tableNames: { [key in keyof typeof tableConfig]: string } = {
   Sex: "Sexo",
   Civil_Status: "Estado Civil",
   Derived_By: "Derivado por",
+  Country: "País",
+  Province: "Provincia",
+  City: "Ciudad",
+  Zone: "Zona",
+  Sector: "Sector",
+  Subject: "Materia",
+  Topic: "Tema",
 };
 
 // Mapeo de campos de ID según la tabla
@@ -204,6 +246,13 @@ const idFieldMap: { [key in keyof typeof tableConfig]: string } = {
   Sex: "Sex_ID",
   Civil_Status: "Civil_Status_ID",
   Derived_By: "Derived_By_ID",
+  Country: "Country_ID",
+  Province: "Province_ID",
+  City: "City_ID",
+  Zone: "Zone_ID",
+  Sector: "Sector_ID",
+  Subject: "Subject_ID",
+  Topic: "Topic_ID",
 };
 
 // Computamos la clave (key) a partir del label seleccionado
@@ -253,6 +302,50 @@ const validateRecord = (): boolean => {
   return true;
 };
 
+
+
+
+const foreignOptions = ref<{ [key: string]: any[] }>({});
+
+const loadForeignOptions = async () => {
+    // Recorremos las columnas que tengan FK (campo que termine en "_FK")
+    for (const col of columns.value) {
+        if (col.field.endsWith('_FK')) {
+            const fkTable = col.field.replace('_FK', '');
+            if (!foreignOptions.value[fkTable]) {
+                try {
+                    // Se asume que el endpoint es: API/{nombre en minúscula}s (excepto "city" que se convierte a "cities")
+                    let endpoint = '';
+                    if (fkTable.toLowerCase() === 'country') {
+                        endpoint = `${API}/countries`;
+                    } else if (fkTable.toLowerCase() === 'province') {
+                        endpoint = `${API}/provinces`;
+                    } else if (fkTable.toLowerCase() === 'zone') {
+                        endpoint = `${API}/zone`;
+                    } else if (fkTable.toLowerCase() === 'subject') {
+                        endpoint = `${API}/subjects`;
+                    } else {
+                        endpoint = `${API}/${fkTable.toLowerCase()}s`;
+                    }
+                    const { data } = await axios.get(endpoint);
+                    foreignOptions.value[fkTable] = Array.isArray(data) ? data : [];
+                } catch (error) {
+                    console.error('Error al cargar opciones para ' + fkTable, error);
+                    foreignOptions.value[fkTable] = [];
+                }
+            }
+        }
+    }
+};
+
+const getForeignName = (fkField: string, id: any) => {
+    const fkTable = fkField.replace('_FK', '');
+    const options = foreignOptions.value[fkTable] || [];
+    return options.find((item: any) => item[`${fkTable}_ID`] === id)?.[`${fkTable}_Name`] || id;
+};
+
+
+
 const loadData = async () => {
   if (selectedTableKey.value) {
     console.log("Clave de tabla seleccionada:", selectedTableKey.value);
@@ -283,7 +376,14 @@ const loadData = async () => {
         Practical_Hours: `${API}/practical-hours`,
         Sex: `${API}/sexes`,
         Civil_Status: `${API}/civil-statuses`,
-        Derived_By: `${API}/derived-by`
+        Derived_By: `${API}/derived-by`,
+        Country: `${API}/countries`,
+        Province: `${API}/provinces`,
+        City: `${API}/cities`,
+        Zone: `${API}/zone`,
+        Sector: `${API}/sectors`,
+        Subject: `${API}/subjects`,
+        Topic: `${API}/topics`,
       };
       console.log("Cargando datos desde:", urlMap[selectedTableKey.value]);
       const { data } = await axios.get(urlMap[selectedTableKey.value]);
@@ -295,6 +395,7 @@ const loadData = async () => {
         );
         tableData.value = [];
       }
+      await loadForeignOptions();
     } catch (error) {
       console.error("Error al cargar los datos:", error);
       toast.add({
@@ -338,7 +439,14 @@ const createData = async () => {
         Practical_Hours: `${API}/practical-hours`,
         Sex: `${API}/sexes`,
         Civil_Status: `${API}/civil-statuses`,
-        Derived_By: `${API}/derived-by`
+        Derived_By: `${API}/derived-by`,
+        Country: `${API}/countries`,
+        Province: `${API}/provinces`,
+        City: `${API}/cities`,
+        Zone: `${API}/zone`,
+        Sector: `${API}/sectors`,
+        Subject: `${API}/subjects`,
+        Topic: `${API}/topics`,
       };
       console.log("Enviando datos para creación:", selectedRecord.value);
       await axios.post(urlMap[selectedTableKey.value], selectedRecord.value);
@@ -349,6 +457,7 @@ const createData = async () => {
         life: 3000,
       });
       selectedRecord.value = {};
+      await loadData();
     } catch (error) {
       console.error("Error al crear el dato:", error);
       toast.add({
@@ -392,7 +501,14 @@ const updateData = async () => {
         Practical_Hours: `${API}/practical-hours`,
         Sex: `${API}/sexes`,
         Civil_Status: `${API}/civil-statuses`,
-        Derived_By: `${API}/derived-by`
+        Derived_By: `${API}/derived-by`,
+        Country: `${API}/countries`,
+        Province: `${API}/provinces`,
+        City: `${API}/cities`,
+        Zone: `${API}/zone`,
+        Sector: `${API}/sectors`,
+        Subject: `${API}/subjects`,
+        Topic: `${API}/topics`,
       };
       const idField = idFieldMap[selectedTableKey.value];
       const recordId = selectedRecord.value[idField] || selectedRecord.value.id;
@@ -417,6 +533,7 @@ const updateData = async () => {
         detail: "El registro se actualizó exitosamente.",
         life: 3000,
       });
+      await loadData();
     } catch (error) {
       if ((error as any).response?.status === 404) {
         toast.add({
@@ -468,7 +585,14 @@ const deleteData = async () => {
         Practical_Hours: `${API}/practical-hours`,
         Sex: `${API}/sexes`,
         Civil_Status: `${API}/civil-statuses`,
-        Derived_By: `${API}/derived-by`
+        Derived_By: `${API}/derived-by`,
+        Country: `${API}/countries`,
+        Province: `${API}/provinces`,
+        City: `${API}/cities`,
+        Zone: `${API}/zone`,
+        Sector: `${API}/sectors`,
+        Subject: `${API}/subjects`,
+        Topic: `${API}/topics`,
 
       };
       const idField = idFieldMap[selectedTableKey.value];
@@ -547,6 +671,20 @@ const deleteConfirm = (data: any) => {
     },
   });
 };
+
+
+onMounted(() => {
+  loadData();
+});
+
+
+
+
+
+
+
+
+
 </script>
 
 <template>
@@ -600,6 +738,9 @@ const deleteConfirm = (data: any) => {
                   :value="slotProps.data[col.field] ? 'Activo' : 'Inactivo'"
                   :severity="slotProps.data[col.field] ? 'success' : 'danger'"
                 />
+              </span>
+              <span v-else-if="col.field.endsWith('_FK')">
+                {{ getForeignName(col.field, slotProps.data[col.field]) }}
               </span>
               <span v-else>
                 {{ slotProps.data[col.field] }}
@@ -670,7 +811,7 @@ const deleteConfirm = (data: any) => {
         <div v-for="col in editableColumns" :key="col.field" class="field">
           <FloatLabel variant="in">
             <InputText
-              v-if="col.type === 'string'"
+              v-if="col.type === 'string' && !col.field.endsWith('_FK')"
               :id="col.field"
               v-model="selectedRecord[col.field]"
               autocomplete="off"
@@ -680,6 +821,18 @@ const deleteConfirm = (data: any) => {
                 root: { class: 'border-round' },
               }"
             />
+            <div v-if="col.field.endsWith('_FK')">
+              <Select
+                :id="col.field"
+                v-model="selectedRecord[col.field]"
+                :options="foreignOptions[col.field.replace('_FK', '')]"
+                :optionLabel="col.field.replace('_FK', '') + '_Name'"
+                :optionValue="col.field.replace('_FK', '') + '_ID'"
+                class="w-full"
+                :pt="{ root: { class: 'border-round' } }"
+              />
+            </div>
+      
 
             <InputNumber
               v-if="col.type === 'number'"
@@ -752,7 +905,7 @@ const deleteConfirm = (data: any) => {
         <div v-for="col in editableColumns" :key="col.field" class="field">
           <FloatLabel variant="in">
             <InputText
-              v-if="col.type === 'string'"
+              v-if="col.type === 'string' && !col.field.endsWith('_FK')"
               :id="col.field"
               v-model="selectedRecord[col.field]"
               autocomplete="off"
@@ -762,6 +915,18 @@ const deleteConfirm = (data: any) => {
                 root: { class: 'border-round' },
               }"
             />
+            <div v-if="col.field.endsWith('_FK')">
+              <Select
+                :id="col.field"
+                v-model="selectedRecord[col.field]"
+                :options="foreignOptions[col.field.replace('_FK', '')]"
+                :optionLabel="col.field.replace('_FK', '') + '_Name'"
+                :optionValue="col.field.replace('_FK', '') + '_ID'"
+                class="w-full"
+                :pt="{ root: { class: 'border-round' } }"
+              />
+            </div>
+      
 
             <InputNumber
               v-if="col.type === 'number'"
@@ -832,6 +997,9 @@ const deleteConfirm = (data: any) => {
               :value="selectedRecord[col.field] ? 'Activo' : 'Inactivo'"
               :severity="selectedRecord[col.field] ? 'success' : 'danger'"
             />
+            <span v-else-if="col.field.endsWith('_FK')">
+              {{ getForeignName(col.field, selectedRecord[col.field]) }}
+            </span>
             <span v-else class="text-color-secondary">
               {{ selectedRecord[col.field] || "-" }}
             </span>

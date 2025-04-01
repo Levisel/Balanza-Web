@@ -271,6 +271,7 @@ const uploadNewDocument = () => {
           return;
         }
         // Realizar el PUT
+        console.log("NOMBRE DEL DOCUMENTO ANTES DE SUBIR:", userHealthDocumentsName.value);
         await axios.put(`${API}/user/document/${userID.value}`, formData, {
           headers: {
             "Content-Type": "multipart/form-data",
@@ -976,7 +977,7 @@ const initSocialWork = ref<boolean>(false);
 
 //-------------------------------------------------------------------------------------------------------------//
 //VARIABLES DE LA EVIDENCIA DE ASESORÍA
-const evidenceID = ref<number>(0);
+const evidenceID = ref<number>(0);	
 const evidenceFileName = ref<string>("");
 const evidenceDocumentType = ref<string>("");
 const evidenceDate = ref(new Date(date));
@@ -1800,6 +1801,7 @@ const newUserConsultation = async () => {
 const requestEditConsultation = async () => {
   doesUserRequestOp.value = true;
   doesUserRequestEditConsultation.value = true;
+  userRequestNewEvidenceDocument.value = true;
   editConsultationButtonDisabled.value = false;
   isInitStatusDisabled.value = false;
   isInitEndDateDisabled.value = false;
