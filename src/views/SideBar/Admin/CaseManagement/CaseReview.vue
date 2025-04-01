@@ -140,6 +140,33 @@ const openEditDialog = (data: Initial_Consultation) => {
 const redirectToConsultation = (data: Initial_Consultation) => {
     router.push({ name: "NewCase", query: { userID: data.User_ID, caseID: data.Init_Code } });
 };
+const urlDocument = ref("");
+const watchDocumentDialog = ref(false);
+
+const loadUserAttentionSheet = async (initCode: string) => {
+  try {
+    const response = await axios.get(`${API}/initial-consultations/attention/${initCode}`, {
+      responseType: "blob",
+    });
+
+    if (response.status === 200) {
+      const contentType = response.headers["content-type"] || "application/pdf";
+      const blob = new Blob([response.data], { type: contentType });
+      urlDocument.value = URL.createObjectURL(blob);
+      watchDocumentDialog.value = true;
+    } else {
+      throw new Error(`Error al obtener la hoja de atención: ${response.statusText}`);
+    }
+  } catch (error) {
+    toast.add({
+      severity: "error",
+      summary: "Error",
+      detail: "No se pudo cargar la hoja de atención.",
+      life: 3000,
+    });
+    console.error("Error al cargar la hoja de atención:", error);
+  }
+};
 
 onMounted(() => {
   fetchReviewCases("Por Asignar", "Activo");
@@ -237,13 +264,12 @@ onMounted(() => {
         <template #body="{ data }">
           <div class="flex justify-center items-center gap-2">
             <Button 
-              @click="openViewDialog(data)" 
-              v-tooltip.bottom="'Ver Consulta'" 
-              icon="pi pi-search"
+              @click="loadUserAttentionSheet(data.Init_Code)" 
+              v-tooltip.bottom="'Ver Ficha Técnica'" 
+              icon="pi pi-file-pdf"
               severity="secondary" 
               rounded 
               variant="outlined" 
-              aria-label="Ver Consulta" 
             />
             <Button 
                 @click="redirectToConsultation(data)" 
@@ -259,196 +285,18 @@ onMounted(() => {
     </DataTable>
 
     <!-- Dialog de Información completa de la consulta -->
-    <Dialog 
-  v-model:visible="viewDialogVisible" 
-  header="Información de Consulta" 
-  modal 
-  class="p-6 w-3/4" 
-  appendTo="body" 
-  :blockScroll="true"
->
-  <div class="grid grid-cols-2 gap-6">
-    <!-- Columna Izquierda -->
-
-    <div class="space-y-4">
-      <div>
-        <label for="user" class="block text-sm font-semibold">Usuario</label>
-        <InputText
-          id="user"
-          :value="resolveUserName(selectedConsultation.User_ID)"
-          class="w-full rounded border-gray-300 focus:ring-blue-500"
-          size="large"
-          :disabled="true"
-        />
-      </div>
-      <div>
-        <label for="code" class="block text-sm font-semibold">Código de Consulta</label>
-        <InputText
-          id="code"
-          v-model="selectedConsultation.Init_Code"
-          class="w-full rounded border-gray-300 focus:ring-blue-500"
-          size="large"
-          :disabled="true"
-        />
-      </div>
-      <div>
-        <label for="internal" class="block text-sm font-semibold">Creado Por</label>
-        <InputText
-          id="internal"
-          :value="resolveInternalUserName(selectedConsultation.Internal_ID)"
-          class="w-full rounded border-gray-300 focus:ring-blue-500"
-          size="large"
-          :disabled="true"
-        />
-      </div>
-      <div>
-        <label for="clientType" class="block text-sm font-semibold">Tipo de Cliente</label>
-        <InputText
-          id="clientType"
-          v-model="selectedConsultation.Init_ClientType"
-          class="w-full rounded border-gray-300 focus:ring-blue-500"
-          size="large"
-          :disabled="true"
-        />
-      </div>
-      <div>
-        <label for="subject" class="block text-sm font-semibold">Tema</label>
-        <InputText
-          id="subject"
-          v-model="selectedConsultation.Init_Subject"
-          class="w-full rounded border-gray-300 focus:ring-blue-500"
-          size="large"
-          :disabled="true"
-        />
-      </div>
-      <div>
-        <label for="lawyer" class="block text-sm font-semibold">Abogado</label>
-        <InputText
-          id="lawyer"
-          v-model="selectedConsultation.Init_Lawyer"
-          class="w-full rounded border-gray-300 focus:ring-blue-500"
-          size="large"
-          :disabled="true"
-        />
-      </div>
-      <div>
-        <label for="date" class="block text-sm font-semibold">Fecha</label>
-        <InputText
-          id="date"
-          :value="selectedConsultation.Init_Date ? new Date(selectedConsultation.Init_Date).toISOString().split('T')[0] : ''"
-          class="w-full rounded border-gray-300 focus:ring-blue-500"
-          size="large"
-          :disabled="true"
-        />
-      </div>
-      <div>
-        <label for="endDate" class="block text-sm font-semibold">Fecha de Finalización</label>
-        <InputText
-          id="endDate"
-          :value="selectedConsultation.Init_EndDate ? new Date(selectedConsultation.Init_EndDate).toISOString().split('T')[0] : ''"
-          class="w-full rounded border-gray-300 focus:ring-blue-500"
-          size="large"
-          :disabled="true"
-        />
-      </div>
-    </div>
-    <!-- Columna Derecha -->
-    <div class="space-y-4">
-      <div>
-        <label for="office" class="block text-sm font-semibold">Oficina</label>
-        <InputText
-          id="office"
-          v-model="selectedConsultation.Init_Office"
-          class="w-full rounded border-gray-300 focus:ring-blue-500"
-          size="large"
-          :disabled="true"
-        />
-      </div>
-      <div>
-        <label for="topic" class="block text-sm font-semibold">Tópico</label>
-        <InputText
-          id="topic"
-          v-model="selectedConsultation.Init_Topic"
-          class="w-full rounded border-gray-300 focus:ring-blue-500"
-          size="large"
-          :disabled="true"
-        />
-      </div>
-      <div>
-        <label for="service" class="block text-sm font-semibold">Servicio</label>
-        <InputText
-          id="service"
-          v-model="selectedConsultation.Init_Service"
-          class="w-full rounded border-gray-300 focus:ring-blue-500"
-          size="large"
-          :disabled="true"
-        />
-      </div>
-      <div>
-        <label for="referral" class="block text-sm font-semibold">Referido Por</label>
-        <InputText
-          id="referral"
-          v-model="selectedConsultation.Init_Referral"
-          class="w-full rounded border-gray-300 focus:ring-blue-500"
-          size="large"
-          :disabled="true"
-        />
-      </div>
-      <div>
-        <label for="status" class="block text-sm font-semibold">Estado</label>
-        <Dropdown
-          id="status"
-          v-model="selectedConsultation.Init_Status"
-          :options="statuses"
-          class="w-full rounded border-gray-300 focus:ring-blue-500"
-          size="large"
-          :disabled="true"
-        />
-      </div>
-      <div>
-        <label for="notes" class="block text-sm font-semibold">Notas</label>
-        <InputText
-          id="notes"
-          v-model="selectedConsultation.Init_Notes"
-          class="w-full rounded border-gray-300 focus:ring-blue-500"
-          size="large"
-          :disabled="true"
-        />
-      </div>
-      <div>
-        <label for="complexity" class="block text-sm font-semibold">Complejidad</label>
-        <InputText
-          id="complexity"
-          v-model="selectedConsultation.Init_Complexity"
-          class="w-full rounded border-gray-300 focus:ring-blue-500"
-          size="large"
-          :disabled="true"
-        />
-      </div>
-      <div>
-        <label for="type" class="block text-sm font-semibold">Tipo de Consulta</label>
-        <InputText
-          id="type"
-          v-model="selectedConsultation.Init_Type"
-          class="w-full rounded border-gray-300 focus:ring-blue-500"
-          size="large"
-          :disabled="true"
-        />
-      </div>
-      <div>
-        <label for="socialWork" class="block text-sm font-semibold">Trabajo Social</label>
-        <InputText
-          id="socialWork"
-          :value="selectedConsultation.Init_SocialWork ? 'Sí' : 'No'"
-          class="w-full rounded border-gray-300 focus:ring-blue-500"
-          size="large"
-          :disabled="true"
-        />
-      </div>
-
-    </div>
-  </div>
-</Dialog>
+    <Dialog
+                v-model:visible="watchDocumentDialog"
+                modal
+                header="Evidencia"
+                class="p-6 rounded-lg shadow-lg bg-white max-w-7xl w-full"
+              >
+                <iframe
+                  :src="urlDocument"
+                  class="w-full h-250"
+                  frameborder="0"
+                ></iframe>
+              </Dialog>
   </div>
 </template>
 

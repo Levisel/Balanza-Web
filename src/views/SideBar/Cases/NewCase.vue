@@ -141,6 +141,7 @@ const deleteEvidenceDocument = () => {
         });
         fetchConsultations(); // Actualiza la información de la consulta después de eliminar el documento
         fetchEvidence(initCode.value); // Actualiza la información de la evidencia después de eliminar el documento
+        userRequestNewEvidenceDocument.value = true;
       }
       catch (error: any) {
         toast.add({
@@ -308,20 +309,20 @@ const uploadNewDocument = () => {
 const totalSize = ref(0);
 const totalSizePercent = ref(0);
 const watchDocumentDialog = ref(false);
-const documentoUrl = ref("");
+const urlDocument = ref("");
 
 // Captura el archivo seleccionado en FileUpload y lo guarda en userHealthDocuments
 function onSelectedFiles(event: { files: File[] }) {
-  //Comprobamos que el archivo no pese mas de 5MB
+  //Comprobamos que el archivo no pese mas de 2MB
   if (event.files && event.files.length > 0) {
     const file = event.files[0];
-    const maxSize = 5 * 1024 * 1024; // 5MB en bytes
+    const maxSize = 2 * 1024 * 1024; // 2MB en bytes
     if (file.size > maxSize) {
       healthDocumentDialog.value = false; // Cerrar el diálogo si el archivo es demasiado grande
       toast.add({
         severity: "warn",
         summary: "Atención",
-        detail: "El archivo excede el tamaño máximo de 5MB.",
+        detail: "El archivo excede el tamaño máximo de 2MB.",
         life: 5000,
       });
       userHealthDocuments.value = null; // Limpiar el archivo pendiente
@@ -390,7 +391,7 @@ const loadUserHealthDocument = async (userID: string) => {
     if (response.status === 200) {
       const contentType = response.headers["content-type"] || "application/pdf";
       const blob = new Blob([response.data], { type: contentType });
-      documentoUrl.value = URL.createObjectURL(blob);
+      urlDocument.value = URL.createObjectURL(blob);
       watchDocumentDialog.value = true;
     } else {
       throw new Error(`Error al obtener el documento: ${response.statusText}`);
@@ -410,15 +411,14 @@ const loadUserHealthDocument = async (userID: string) => {
 //MANEJO DE EVIDENCIAS
 
 function onSelectedFilesEvidence(event: { files: File[] }) {
-  userRequestNewEvidenceDocument.value = true;
   if (event.files && event.files.length > 0) {
     const file = event.files[0];
-    const maxSize = 5 * 1024 * 1024; // 5MB
+    const maxSize = 2 * 1024 * 1024; // 2MB
     if (file.size > maxSize) {
       toast.add({
         severity: "warn",
         summary: "Atención",
-        detail: "El archivo excede el tamaño máximo de 5MB.",
+        detail: "El archivo excede el tamaño máximo de 2MB.",
         life: 5000,
       });
       evidenceFile.value = null;
@@ -470,7 +470,7 @@ const loadUserEvidenceDocument = async (evidenceID: number) => {
     if (response.status === 200) {
       const contentType = response.headers["content-type"] || "application/pdf"; // Tipo de archivo
       const blob = new Blob([response.data], { type: contentType }); // Crear un blob a partir del buffer
-      documentoUrl.value = URL.createObjectURL(blob); // Crear una URL para visualizar el archivo
+      urlDocument.value = URL.createObjectURL(blob); // Crear una URL para visualizar el archivo
       watchDocumentDialog.value = true; // Mostrar el diálogo con el documento
     } else {
       throw new Error(`Error al obtener el documento: ${response.statusText}`);
@@ -486,7 +486,30 @@ const loadUserEvidenceDocument = async (evidenceID: number) => {
   }
 };
 
+const loadUserAttentionSheet = async (initCode: string) => {
+  try {
+    const response = await axios.get(`${API}/initial-consultations/attention/${initCode}`, {
+      responseType: "blob",
+    });
 
+    if (response.status === 200) {
+      const contentType = response.headers["content-type"] || "application/pdf";
+      const blob = new Blob([response.data], { type: contentType });
+      urlDocument.value = URL.createObjectURL(blob);
+      watchDocumentDialog.value = true;
+    } else {
+      throw new Error(`Error al obtener la hoja de atención: ${response.statusText}`);
+    }
+  } catch (error) {
+    toast.add({
+      severity: "error",
+      summary: "Error",
+      detail: "No se pudo cargar la hoja de atención.",
+      life: 3000,
+    });
+    console.error("Error al cargar la hoja de atención:", error);
+  }
+};
 
 
 
@@ -1637,6 +1660,7 @@ const createInitialConsultation = async () => {
 
 const requestNewConsultation = async () => {
   doesUserRequestOp.value = true;
+  userRequestNewEvidenceDocument.value = false;
   restartConsultationForm();
   restartEvidence();
   newConsultationButtonDisabled.value = false;
@@ -1741,13 +1765,6 @@ const newUserConsultation = async () => {
           },
         });
 
-        toast.add({
-          severity: "success",
-          summary: "Evidencia subida",
-          detail: "La evidencia se subió correctamente.",
-          life: 4000,
-        });
-
         console.log("Respuesta del servidor:", response.data);
       } catch (error) {
         console.error("Error al subir la evidencia:", error);
@@ -1796,7 +1813,6 @@ const requestEditConsultation = async () => {
 const cancelEditConsultation = async () => {
   // Conservamos el índice actual de la ficha que se estaba editando
   const currentPage = first.value;
-
   editConsultationButtonDisabled.value = true;
   doesUserRequestOp.value = false;
   isSaveButtonDisabled.value = false;
@@ -2112,6 +2128,17 @@ const editUser = async () => {
     }
   }
 };
+
+
+const limitText = () => {
+  if (initNotes.value.length > 500) {
+    initNotes.value = initNotes.value.substring(0, 500);
+  }
+};
+
+
+
+
 
 //gaurdamos el documento en la variable User_HealthDocuments
 
@@ -3149,7 +3176,7 @@ const checkIdSize = (shouldShowToast: boolean = true): boolean => {
                 class="p-6 rounded-lg shadow-lg bg-white max-w-7xl w-full"
               >
                 <iframe
-                  :src="documentoUrl"
+                  :src="urlDocument"
                   class="w-full h-250"
                   frameborder="0"
                 ></iframe>
@@ -3220,6 +3247,7 @@ const checkIdSize = (shouldShowToast: boolean = true): boolean => {
               rounded
               aria-label="Exportar PDF"
               size="large"
+              @click="loadUserAttentionSheet(initCode)"
               severity="contrast"
               :disabled="!doesUserExist || isExportButtonDisabled"
             />
@@ -3459,13 +3487,14 @@ const checkIdSize = (shouldShowToast: boolean = true): boolean => {
                   v-model="initNotes"
                   class="w-full"
                   editorStyle="height: 239px"
+                  @input="limitText"
                   :class="[
-                    !doesUserRequestOp && doesUserExist
+                     doesUserExist && !doesUserRequestOp
                       ? 'mouse pointer-events-none'
                       : '',
                     areInputsDisabled ? 'select-none opacity-50' : '',
                   ]"
-                  :readonly="areInputsDisabled"
+                  :readonly="!doesUserExist && areInputsDisabled"
                 >
                   <template v-slot:toolbar>
                     <span class="ql-formats">
