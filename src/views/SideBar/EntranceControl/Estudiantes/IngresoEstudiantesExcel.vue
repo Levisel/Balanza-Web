@@ -527,10 +527,11 @@ function guardarEdicion() {
 
 <style scoped>
 /* Fila resaltada si incompleta */
-::v-deep .incomplete-row.light {
+:deep(.incomplete-row.light) {
   background-color: #ffe6e6 !important; /* rojo suave (modo claro) */
 }
-::v-deep .incomplete-row.dark {
+:deep(.incomplete-row.dark) {
   background-color: #7f1d1d !important; /* rojo oscuro (modo oscuro) */
 }
 </style>
+

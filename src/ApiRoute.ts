@@ -41,7 +41,7 @@ export interface User {
     //DATOS DEMOGRÁFICOS
     User_SocialBenefit: boolean;
     User_EconomicDependence: boolean;
-    User_Academic_Instruction: string;
+    User_AcademicInstruction: string;
     User_Profession: string;
     User_MaritalStatus: string;
     User_Dependents: number;

@@ -17,7 +17,6 @@ import { useToast } from "primevue/usetoast";
 import { API } from "@/ApiRoute";
 import { useConfirm } from "primevue/useconfirm";
 
-
 // PrimeVue Toast para notificaciones
 const toast = useToast();
 
@@ -148,7 +147,7 @@ const tableConfig = {
     { field: "Country_FK", header: "País", type: "string" },
     { field: "Province_Name", header: "Nombre", type: "string" },
     { field: "Province_Status", header: "Estado", type: "boolean" },
-  ],	
+  ],
   City: [
     { field: "Province_FK", header: "Provincia", type: "string" },
     { field: "City_Name", header: "Nombre", type: "string" },
@@ -173,7 +172,10 @@ const tableConfig = {
     { field: "Topic_Name", header: "Tema", type: "string" },
     { field: "Topic_Status", header: "Estado", type: "boolean" },
   ],
-
+  Client_Type: [
+    { field: "Client_Type_Name", header: "Nombre", type: "string" },
+    { field: "Client_Type_Status", header: "Estado", type: "boolean" },
+  ],
 };
 
 // Función para resetear el registro seleccionado
@@ -183,39 +185,44 @@ const resetSelectedRecord = () => {
 
 // Mapeo de nombres amigables para el select
 const tableNames: { [key in keyof typeof tableConfig]: string } = {
-  Vulnerable_Situation: "Situación Vulnerable",
-  Catastrophic_Illness: "Enfermedad Catastrófica",
-  Disability: "Discapacidad",
-  Protocols: "Protocolos",
-  Case_Status: "Estado del Caso",
-  Type_Of_Attention: "Tipo de Atención",
-  Schedule: "Horario",
-  Profiles: "Perfiles",
-  Occupations: "Ocupaciones",
-  Income_Level: "Nivel de Ingresos",
-  Family_Group: "Grupo Familiar",
-  Family_Income: "Ingresos Familiares",
-  Type_Of_Housing: "Tipo de Vivienda",
-  Own_Assets: "Bienes Propios",
-  Pensioner: "Pensionado",
-  Health_Insurance: "Seguro de Salud",
-  Ethnicity: "Etnia",
-  Academic_Instruction: "Instrucción Académica",
-  Number_Of_Attempts: "Número de Intentos",
-  Complexity: "Complejidad",
-  Documentation_Backup: "Documentación de respaldo",
-  Period_Type: "Tipo de Período",
-  Practical_Hours: "Horas Prácticas",
+  //USUARIO
   Sex: "Sexo",
-  Civil_Status: "Estado Civil",
-  Derived_By: "Derivado por",
-  Country: "País",
+  Country: "País de origen",
+  Ethnicity: "Etnia",
   Province: "Provincia",
   City: "Ciudad",
   Zone: "Zona",
   Sector: "Sector",
+  Academic_Instruction: "Instrucción",
+  Occupations: "Ocupación",
+  Civil_Status: "Estado Civil",
+  Income_Level: "Nivel de Ingresos",
+  Family_Income: "Ingresos Familiares",
+  Family_Group: "Grupo Familiar",
+  Own_Assets: "Patrimonio Propio",
+  Type_Of_Housing: "Tipo de vivienda",
+  Pensioner: "Pensionista",
+  Health_Insurance: "Seguro de Salud",
+  Vulnerable_Situation: "Situación de vulnerabilidad",
+  Documentation_Backup: "Documentos de respaldo",
+  Disability: "Discapacidad",
+  Catastrophic_Illness: "Enfermedad Catastrófica",
+  //FICHA TÉCNICA
+  Case_Status: "Estado del Caso",
+  Client_Type: "Tipo de Cliente",
   Subject: "Materia",
   Topic: "Tema",
+  Type_Of_Attention: "Tipo de Atención",
+  Complexity: "Complejidad",
+  Derived_By: "Derivado por",
+  //CONTROL DE INGRESOS
+  Schedule: "Horario",
+  Profiles: "Perfiles",
+  Period_Type: "Tipo de Período",
+  Practical_Hours: "Horas Prácticas",
+  //EXTRA
+  Number_Of_Attempts: "Número de Intentos",
+  Protocols: "Protocolos",
 };
 
 // Mapeo de campos de ID según la tabla
@@ -253,6 +260,7 @@ const idFieldMap: { [key in keyof typeof tableConfig]: string } = {
   Sector: "Sector_ID",
   Subject: "Subject_ID",
   Topic: "Topic_ID",
+  Client_Type: "Client_Type_ID",
 };
 
 // Computamos la clave (key) a partir del label seleccionado
@@ -302,49 +310,48 @@ const validateRecord = (): boolean => {
   return true;
 };
 
-
-
-
 const foreignOptions = ref<{ [key: string]: any[] }>({});
 
 const loadForeignOptions = async () => {
-    // Recorremos las columnas que tengan FK (campo que termine en "_FK")
-    for (const col of columns.value) {
-        if (col.field.endsWith('_FK')) {
-            const fkTable = col.field.replace('_FK', '');
-            if (!foreignOptions.value[fkTable]) {
-                try {
-                    // Se asume que el endpoint es: API/{nombre en minúscula}s (excepto "city" que se convierte a "cities")
-                    let endpoint = '';
-                    if (fkTable.toLowerCase() === 'country') {
-                        endpoint = `${API}/countries`;
-                    } else if (fkTable.toLowerCase() === 'province') {
-                        endpoint = `${API}/provinces`;
-                    } else if (fkTable.toLowerCase() === 'zone') {
-                        endpoint = `${API}/zone`;
-                    } else if (fkTable.toLowerCase() === 'subject') {
-                        endpoint = `${API}/subjects`;
-                    } else {
-                        endpoint = `${API}/${fkTable.toLowerCase()}s`;
-                    }
-                    const { data } = await axios.get(endpoint);
-                    foreignOptions.value[fkTable] = Array.isArray(data) ? data : [];
-                } catch (error) {
-                    console.error('Error al cargar opciones para ' + fkTable, error);
-                    foreignOptions.value[fkTable] = [];
-                }
-            }
+  // Recorremos las columnas que tengan FK (campo que termine en "_FK")
+  for (const col of columns.value) {
+    if (col.field.endsWith("_FK")) {
+      const fkTable = col.field.replace("_FK", "");
+      if (!foreignOptions.value[fkTable]) {
+        try {
+          // Se asume que el endpoint es: API/{nombre en minúscula}s (excepto "city" que se convierte a "cities")
+          let endpoint = "";
+          if (fkTable.toLowerCase() === "country") {
+            endpoint = `${API}/countries`;
+          } else if (fkTable.toLowerCase() === "province") {
+            endpoint = `${API}/provinces`;
+          } else if (fkTable.toLowerCase() === "zone") {
+            endpoint = `${API}/zone`;
+          } else if (fkTable.toLowerCase() === "subject") {
+            endpoint = `${API}/subjects`;
+          } else {
+            endpoint = `${API}/${fkTable.toLowerCase()}s`;
+          }
+          const { data } = await axios.get(endpoint);
+          foreignOptions.value[fkTable] = Array.isArray(data) ? data : [];
+        } catch (error) {
+          console.error("Error al cargar opciones para " + fkTable, error);
+          foreignOptions.value[fkTable] = [];
         }
+      }
     }
+  }
 };
 
 const getForeignName = (fkField: string, id: any) => {
-    const fkTable = fkField.replace('_FK', '');
-    const options = foreignOptions.value[fkTable] || [];
-    return options.find((item: any) => item[`${fkTable}_ID`] === id)?.[`${fkTable}_Name`] || id;
+  const fkTable = fkField.replace("_FK", "");
+  const options = foreignOptions.value[fkTable] || [];
+  return (
+    options.find((item: any) => item[`${fkTable}_ID`] === id)?.[
+      `${fkTable}_Name`
+    ] || id
+  );
 };
-
-
 
 const loadData = async () => {
   if (selectedTableKey.value) {
@@ -367,7 +374,7 @@ const loadData = async () => {
         Own_Assets: `${API}/own-assets`,
         Pensioner: `${API}/pensioner`,
         Health_Insurance: `${API}/health-insurance`,
-        Ethnicity:`${API}/ethnicities`,
+        Ethnicity: `${API}/ethnicities`,
         Academic_Instruction: `${API}/academic-instructions`,
         Number_Of_Attempts: `${API}/number-of-attempts`,
         Complexity: `${API}/complexities`,
@@ -384,6 +391,7 @@ const loadData = async () => {
         Sector: `${API}/sectors`,
         Subject: `${API}/subjects`,
         Topic: `${API}/topics`,
+        Client_Type: `${API}/client-types`,
       };
       console.log("Cargando datos desde:", urlMap[selectedTableKey.value]);
       const { data } = await axios.get(urlMap[selectedTableKey.value]);
@@ -447,6 +455,7 @@ const createData = async () => {
         Sector: `${API}/sectors`,
         Subject: `${API}/subjects`,
         Topic: `${API}/topics`,
+        Client_Type: `${API}/client-types`,
       };
       console.log("Enviando datos para creación:", selectedRecord.value);
       await axios.post(urlMap[selectedTableKey.value], selectedRecord.value);
@@ -492,7 +501,7 @@ const updateData = async () => {
         Own_Assets: `${API}/own-assets`,
         Pensioner: `${API}/pensioner`,
         Health_Insurance: `${API}/health-insurance`,
-        Ethnicity:`${API}/ethnicities`,
+        Ethnicity: `${API}/ethnicities`,
         Academic_Instruction: `${API}/academic-instructions`,
         Number_Of_Attempts: `${API}/number-of-attempts`,
         Complexity: `${API}/complexities`,
@@ -509,6 +518,7 @@ const updateData = async () => {
         Sector: `${API}/sectors`,
         Subject: `${API}/subjects`,
         Topic: `${API}/topics`,
+        Client_Type: `${API}/client-types`,
       };
       const idField = idFieldMap[selectedTableKey.value];
       const recordId = selectedRecord.value[idField] || selectedRecord.value.id;
@@ -576,7 +586,7 @@ const deleteData = async () => {
         Own_Assets: `${API}/own-assets`,
         Pensioner: `${API}/pensioner`,
         Health_Insurance: `${API}/health-insurance`,
-        Ethnicity:`${API}/ethnicities`,
+        Ethnicity: `${API}/ethnicities`,
         Academic_Instruction: `${API}/academic-instructions`,
         Number_Of_Attempts: `${API}/number-of-attempts`,
         Complexity: `${API}/complexities`,
@@ -593,7 +603,7 @@ const deleteData = async () => {
         Sector: `${API}/sectors`,
         Subject: `${API}/subjects`,
         Topic: `${API}/topics`,
-
+        Client_Type: `${API}/client-types`,
       };
       const idField = idFieldMap[selectedTableKey.value];
       const recordId = selectedRecord.value[idField] || selectedRecord.value.id;
@@ -672,19 +682,9 @@ const deleteConfirm = (data: any) => {
   });
 };
 
-
 onMounted(() => {
   loadData();
 });
-
-
-
-
-
-
-
-
-
 </script>
 
 <template>
@@ -832,7 +832,6 @@ onMounted(() => {
                 :pt="{ root: { class: 'border-round' } }"
               />
             </div>
-      
 
             <InputNumber
               v-if="col.type === 'number'"
@@ -926,7 +925,6 @@ onMounted(() => {
                 :pt="{ root: { class: 'border-round' } }"
               />
             </div>
-      
 
             <InputNumber
               v-if="col.type === 'number'"

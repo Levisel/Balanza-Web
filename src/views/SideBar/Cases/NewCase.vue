@@ -1,7 +1,11 @@
 <script setup lang="ts">
-import { computed, nextTick, ref, watch, onMounted } from "vue";
+import { nextTick, ref, watch, onMounted } from "vue";
+import { useToast } from "primevue/usetoast";
+import { API } from "@/ApiRoute";
+import { Toast } from "primevue";
+import { useConfirm } from "primevue/useconfirm";
+import { useRoute } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
-const authStore = useAuthStore();
 import type { User } from "@/ApiRoute";
 import type { Initial_Consultation } from "@/ApiRoute";
 import type { Evidence } from "@/ApiRoute";
@@ -23,22 +27,12 @@ import Paginator from "primevue/paginator";
 import Dialog from "primevue/dialog";
 import Knob from "primevue/knob";
 import Editor from "primevue/editor";
-import ConfirmDialog from 'primevue/confirmdialog';
-import ProgressSpinner from 'primevue/progressspinner';
-
-
-
-import Tag from "primevue/tag";
+import ConfirmDialog from "primevue/confirmdialog";
+import ProgressSpinner from "primevue/progressspinner";
 import axios from "axios";
-import { useToast } from "primevue/usetoast";
-import { API } from "@/ApiRoute";
-import { Toast } from "primevue";
-import { useConfirm } from "primevue/useconfirm";
-import { useRoute } from "vue-router";
 
 const route = useRoute();
-
-
+const authStore = useAuthStore();
 
 onMounted(async () => {
   if (route.query.userID) {
@@ -48,7 +42,9 @@ onMounted(async () => {
     // Si se mandó caseID, ubicar su índice
     if (route.query.caseID) {
       const caseID = route.query.caseID as string;
-      const index = consultations.value.findIndex(c => c.Init_Code === caseID);
+      const index = consultations.value.findIndex(
+        (c) => c.Init_Code === caseID
+      );
       if (index >= 0) {
         first.value = index; // Establecer el índice del paginador
         // Si ya tienes lógica para actualizar la ficha actual, ejecútala aquí
@@ -77,7 +73,6 @@ const userRequestNewEvidenceDocument = ref(false); //Revisa si el usuario quiere
 const fileUploadEvidence = ref<any>(null);
 const isEvidenceLoading = ref(false);
 
-
 const toastCounter = ref(0);
 
 const confirm = useConfirm();
@@ -104,8 +99,7 @@ const deleteDocument = () => {
           life: 3000,
         });
         fetchUser(); // Actualiza la información del usuario después de eliminar el documento
-      }
-      catch (error: any) {
+      } catch (error: any) {
         toast.add({
           severity: "error",
           summary: "Error",
@@ -142,8 +136,7 @@ const deleteEvidenceDocument = () => {
         fetchConsultations(); // Actualiza la información de la consulta después de eliminar el documento
         fetchEvidence(initCode.value); // Actualiza la información de la evidencia después de eliminar el documento
         userRequestNewEvidenceDocument.value = true;
-      }
-      catch (error: any) {
+      } catch (error: any) {
         toast.add({
           severity: "error",
           summary: "Error",
@@ -172,13 +165,15 @@ const uploadNewEvidenceDocument = () => {
         // Crear FormData y agregar el archivo y el nombre personalizado
         const formData = new FormData();
         if (evidenceFile.value) {
-            formData.append("evidenceFile", evidenceFile.value);
-          
+          formData.append("evidenceFile", evidenceFile.value);
+
           // Agregar el nombre del archivo recibido en la variable
           if (evidenceFileName.value) {
             formData.append("Evidence_Name", evidenceFileName.value);
           } else {
-            console.warn("No se proporcionó nombre para el archivo. Se usará el original.");
+            console.warn(
+              "No se proporcionó nombre para el archivo. Se usará el original."
+            );
           }
           userRequestNewEvidenceDocument.value = false; // Reiniciamos el estado del boton de subir nuevo documento
         } else {
@@ -191,12 +186,16 @@ const uploadNewEvidenceDocument = () => {
           return;
         }
         // Realizar el PUT
-        await axios.put(`${API}/evidence/new/document/${evidenceID.value}`, formData, {
-          headers: {
-            "Content-Type": "multipart/form-data",
-            "internal-id": internalID,
-          },
-        });
+        await axios.put(
+          `${API}/evidence/new/document/${evidenceID.value}`,
+          formData,
+          {
+            headers: {
+              "Content-Type": "multipart/form-data",
+              "internal-id": internalID,
+            },
+          }
+        );
         fetchConsultations();
         restartEvidence(); // Reiniciamos el estado del FileUpload
         fetchEvidence(initCode.value); // Actualizamos la información del usuario después de subir el documento
@@ -211,7 +210,8 @@ const uploadNewEvidenceDocument = () => {
         toast.add({
           severity: "error",
           summary: "Error",
-          detail: error.response?.data?.message || "Error al subir el documento",
+          detail:
+            error.response?.data?.message || "Error al subir el documento",
           life: 3000,
         });
       }
@@ -219,28 +219,7 @@ const uploadNewEvidenceDocument = () => {
   });
 };
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-const uploadNewDocument = () => { 
+const uploadNewDocument = () => {
   confirm.require({
     message: "¿Estás seguro que deseas subir un nuevo documento?",
     header: "Confirmación",
@@ -254,12 +233,17 @@ const uploadNewDocument = () => {
         const formData = new FormData();
         if (userHealthDocuments.value) {
           formData.append("healthDocuments", userHealthDocuments.value);
-          
+
           // Agregar el nombre del archivo recibido en la variable
           if (userHealthDocumentsName.value) {
-            formData.append("User_HealthDocumentsName", userHealthDocumentsName.value);
+            formData.append(
+              "User_HealthDocumentsName",
+              userHealthDocumentsName.value
+            );
           } else {
-            console.warn("No se proporcionó nombre para el archivo. Se usará el original.");
+            console.warn(
+              "No se proporcionó nombre para el archivo. Se usará el original."
+            );
           }
         } else {
           toast.add({
@@ -271,7 +255,10 @@ const uploadNewDocument = () => {
           return;
         }
         // Realizar el PUT
-        console.log("NOMBRE DEL DOCUMENTO ANTES DE SUBIR:", userHealthDocumentsName.value);
+        console.log(
+          "NOMBRE DEL DOCUMENTO ANTES DE SUBIR:",
+          userHealthDocumentsName.value
+        );
         await axios.put(`${API}/user/document/${userID.value}`, formData, {
           headers: {
             "Content-Type": "multipart/form-data",
@@ -292,16 +279,14 @@ const uploadNewDocument = () => {
         toast.add({
           severity: "error",
           summary: "Error",
-          detail: error.response?.data?.message || "Error al subir el documento",
+          detail:
+            error.response?.data?.message || "Error al subir el documento",
           life: 3000,
         });
       }
     },
   });
 };
-
-
-
 
 //-------------------------------------------------------------------------------------------------------------//
 
@@ -328,13 +313,12 @@ function onSelectedFiles(event: { files: File[] }) {
       });
       userHealthDocuments.value = null; // Limpiar el archivo pendiente
       return;
-    }
-    else if (file.size <= maxSize) {
+    } else if (file.size <= maxSize) {
       userHealthDocuments.value = event.files[0]; // Guardar el archivo
       userHealthDocumentsName.value = event.files[0].name; // Guardar el nombre del archivo
       console.log("Archivo cargado:", userHealthDocuments.value);
       console.log("Nombre del archivo:", userHealthDocumentsName.value);
-      userRequestNewDocument.value = true; 
+      userRequestNewDocument.value = true;
     }
   }
 }
@@ -356,7 +340,7 @@ function removeUploadedFile() {
 // Cierra el diálogo sin guardar (opcionalmente se puede limpiar el archivo pendiente)
 function cancelUpload() {
   healthDocumentDialog.value = false;
-  if(doesUserExist.value && selectedUser.value.User_HealthDocuments === null) {
+  if (doesUserExist.value && selectedUser.value.User_HealthDocuments === null) {
     userHealthDocuments.value = null; // Limpiar el archivo pendiente
   }
 }
@@ -434,7 +418,6 @@ function onSelectedFilesEvidence(event: { files: File[] }) {
   }
 }
 
-
 function onRemoveTemplatingFileEvidence(
   file: File,
   removeFileCallback: Function,
@@ -489,9 +472,12 @@ const loadUserEvidenceDocument = async (evidenceID: number) => {
 
 const loadUserAttentionSheet = async (initCode: string) => {
   try {
-    const response = await axios.get(`${API}/initial-consultations/attention/${initCode}`, {
-      responseType: "blob",
-    });
+    const response = await axios.get(
+      `${API}/initial-consultations/attention/${initCode}`,
+      {
+        responseType: "blob",
+      }
+    );
 
     if (response.status === 200) {
       const contentType = response.headers["content-type"] || "application/pdf";
@@ -499,7 +485,9 @@ const loadUserAttentionSheet = async (initCode: string) => {
       urlDocument.value = URL.createObjectURL(blob);
       watchDocumentDialog.value = true;
     } else {
-      throw new Error(`Error al obtener la hoja de atención: ${response.statusText}`);
+      throw new Error(
+        `Error al obtener la hoja de atención: ${response.statusText}`
+      );
     }
   } catch (error) {
     toast.add({
@@ -511,12 +499,6 @@ const loadUserAttentionSheet = async (initCode: string) => {
     console.error("Error al cargar la hoja de atención:", error);
   }
 };
-
-
-
-
-
-
 
 //--------------------------------------------------------------------------------------------------------------//
 
@@ -558,179 +540,294 @@ const userGender = ref<{ name: string; value: string } | null>(null);
 const userGenderOptions = ref<{ name: string; value: string }[]>([]);
 
 axios.get(`${API}/sexes`).then((response) => {
-    userGenderOptions.value = response.data.map((item: any) => ({
-        name: item.Sex_Name,
-        value: item.Sex_ID.toString(), // o item.Sex_ID según convenga
-    }));
+  userGenderOptions.value = response.data.map((item: any) => ({
+    name: item.Sex_Name,
+    value: item.Sex_Name
+  }));
 });
 
 const userBirthDate = ref<Date | null>(null);
 
-const userNationality = ref<{ name: string; code: string } | null>(null);
-const countriesList = ref([
-  // América del Sur
-  { name: "Ecuador", code: "EC" },
-  { name: "Colombia", code: "CO" },
-  { name: "Venezuela", code: "VE" },
-  { name: "Perú", code: "PE" },
-  { name: "Argentina", code: "AR" },
-  { name: "Bolivia", code: "BO" },
-  { name: "Brasil", code: "BR" },
-  { name: "Chile", code: "CL" },
-  { name: "Guyana", code: "GY" },
-  { name: "Paraguay", code: "PY" },
-  { name: "Surinam", code: "SR" },
-  { name: "Uruguay", code: "UY" },
+const userNationality = ref<{ name: string; value: string } | null>(null);
+const countriesList = ref<{ name: string; value: string }[]>([]);
+const originalCountries = ref([
+  // África
+  { name: "Argelia", code: "DZ" },
+  { name: "Angola", code: "AO" },
+  { name: "Benín", code: "BJ" },
+  { name: "Botsuana", code: "BW" },
+  { name: "Burkina Faso", code: "BF" },
+  { name: "Burundi", code: "BI" },
+  { name: "Cabo Verde", code: "CV" },
+  { name: "Camerún", code: "CM" },
+  { name: "República Centroafricana", code: "CF" },
+  { name: "Chad", code: "TD" },
+  { name: "Comoras", code: "KM" },
+  { name: "República del Congo", code: "CG" },
+  { name: "República Democrática del Congo", code: "CD" },
+  { name: "Yibuti", code: "DJ" },
+  { name: "Egipto", code: "EG" },
+  { name: "Guinea Ecuatorial", code: "GQ" },
+  { name: "Eritrea", code: "ER" },
+  { name: "Esuatini", code: "SZ" },
+  { name: "Etiopía", code: "ET" },
+  { name: "Gabón", code: "GA" },
+  { name: "Gambia", code: "GM" },
+  { name: "Ghana", code: "GH" },
+  { name: "Guinea", code: "GN" },
+  { name: "Guinea-Bisáu", code: "GW" },
+  { name: "Costa de Marfil", code: "CI" },
+  { name: "Kenia", code: "KE" },
+  { name: "Lesoto", code: "LS" },
+  { name: "Liberia", code: "LR" },
+  { name: "Libia", code: "LY" },
+  { name: "Madagascar", code: "MG" },
+  { name: "Malaui", code: "MW" },
+  { name: "Malí", code: "ML" },
+  { name: "Mauritania", code: "MR" },
+  { name: "Mauricio", code: "MU" },
+  { name: "Marruecos", code: "MA" },
+  { name: "Mozambique", code: "MZ" },
+  { name: "Namibia", code: "NA" },
+  { name: "Níger", code: "NE" },
+  { name: "Nigeria", code: "NG" },
+  { name: "Ruanda", code: "RW" },
+  { name: "Santo Tomé y Príncipe", code: "ST" },
+  { name: "Senegal", code: "SN" },
+  { name: "Seychelles", code: "SC" },
+  { name: "Sierra Leona", code: "SL" },
+  { name: "Somalia", code: "SO" },
+  { name: "Sudáfrica", code: "ZA" },
+  { name: "Sudán del Sur", code: "SS" },
+  { name: "Sudán", code: "SD" },
+  { name: "Tanzania", code: "TZ" },
+  { name: "Togo", code: "TG" },
+  { name: "Túnez", code: "TN" },
+  { name: "Uganda", code: "UG" },
+  { name: "Zambia", code: "ZM" },
+  { name: "Zimbabue", code: "ZW" },
+
+  // Asia
+  { name: "Afganistán", code: "AF" },
+  { name: "Arabia Saudita", code: "SA" },
+  { name: "Armenia", code: "AM" },
+  { name: "Azerbaiyán", code: "AZ" },
+  { name: "Baréin", code: "BH" },
+  { name: "Bangladesh", code: "BD" },
+  { name: "Bután", code: "BT" },
+  { name: "Birmania", code: "MM" },
+  { name: "Brunéi", code: "BN" },
+  { name: "Camboya", code: "KH" },
+  { name: "China", code: "CN" },
+  { name: "Chipre", code: "CY" },
+  { name: "Corea del Norte", code: "KP" },
+  { name: "Corea del Sur", code: "KR" },
+  { name: "Emiratos Árabes Unidos", code: "AE" },
+  { name: "Filipinas", code: "PH" },
+  { name: "Georgia", code: "GE" },
+  { name: "India", code: "IN" },
+  { name: "Indonesia", code: "ID" },
+  { name: "Irak", code: "IQ" },
+  { name: "Irán", code: "IR" },
+  { name: "Israel", code: "IL" },
+  { name: "Japón", code: "JP" },
+  { name: "Jordania", code: "JO" },
+  { name: "Kazajistán", code: "KZ" },
+  { name: "Kirguistán", code: "KG" },
+  { name: "Kuwait", code: "KW" },
+  { name: "Laos", code: "LA" },
+  { name: "Líbano", code: "LB" },
+  { name: "Malasia", code: "MY" },
+  { name: "Maldivas", code: "MV" },
+  { name: "Mongolia", code: "MN" },
+  { name: "Nepal", code: "NP" },
+  { name: "Omán", code: "OM" },
+  { name: "Pakistán", code: "PK" },
+  { name: "Palestina", code: "PS" },
+  { name: "Qatar", code: "QA" },
+  { name: "Singapur", code: "SG" },
+  { name: "Siria", code: "SY" },
+  { name: "Sri Lanka", code: "LK" },
+  { name: "Tayikistán", code: "TJ" },
+  { name: "Timor Oriental", code: "TL" },
+  { name: "Turkmenistán", code: "TM" },
+  { name: "Turquía", code: "TR" },
+  { name: "Uzbekistán", code: "UZ" },
+
+  // Europa
+  { name: "Albania", code: "AL" },
+  { name: "Alemania", code: "DE" },
+  { name: "Andorra", code: "AD" },
+  { name: "Austria", code: "AT" },
+  { name: "Bélgica", code: "BE" },
+  { name: "Bielorrusia", code: "BY" },
+  { name: "Bosnia y Herzegovina", code: "BA" },
+  { name: "Bulgaria", code: "BG" },
+  { name: "Chipre", code: "CY" },
+  { name: "Croacia", code: "HR" },
+  { name: "Dinamarca", code: "DK" },
+  { name: "Eslovaquia", code: "SK" },
+  { name: "Eslovenia", code: "SI" },
+  { name: "España", code: "ES" },
+  { name: "Estonia", code: "EE" },
+  { name: "Finlandia", code: "FI" },
+  { name: "Francia", code: "FR" },
+  { name: "Grecia", code: "GR" },
+  { name: "Hungría", code: "HU" },
+  { name: "Irlanda", code: "IE" },
+  { name: "Islandia", code: "IS" },
+  { name: "Italia", code: "IT" },
+  { name: "Kosovo", code: "XK" },
+  { name: "Letonia", code: "LV" },
+  { name: "Liechtenstein", code: "LI" },
+  { name: "Lituania", code: "LT" },
+  { name: "Luxemburgo", code: "LU" },
+  { name: "Macedonia del Norte", code: "MK" },
+  { name: "Malta", code: "MT" },
+  { name: "Moldavia", code: "MD" },
+  { name: "Mónaco", code: "MC" },
+  { name: "Montenegro", code: "ME" },
+  { name: "Noruega", code: "NO" },
+  { name: "Países Bajos", code: "NL" },
+  { name: "Polonia", code: "PL" },
+  { name: "Portugal", code: "PT" },
+  { name: "Reino Unido", code: "GB" },
+  { name: "República Checa", code: "CZ" },
+  { name: "Rumania", code: "RO" },
+  { name: "Rusia", code: "RU" },
+  { name: "San Marino", code: "SM" },
+  { name: "Serbia", code: "RS" },
+  { name: "Suecia", code: "SE" },
+  { name: "Suiza", code: "CH" },
+  { name: "Ucrania", code: "UA" },
+  { name: "Vaticano", code: "VA" },
+
+  // América
   // América del Norte
-  { name: "Estados Unidos", code: "US" },
   { name: "Canadá", code: "CA" },
+  { name: "Estados Unidos", code: "US" },
   { name: "México", code: "MX" },
   // América Central
   { name: "Belice", code: "BZ" },
   { name: "Costa Rica", code: "CR" },
   { name: "El Salvador", code: "SV" },
-  { name: "GuainitTopicla", code: "GT" },
+  { name: "Guatemala", code: "GT" },
   { name: "Honduras", code: "HN" },
   { name: "Nicaragua", code: "NI" },
   { name: "Panamá", code: "PA" },
-  // Caribe
-  { name: "Antigua y Barbuda", code: "AG" },
-  { name: "Bahamas", code: "BS" },
-  { name: "Barbados", code: "BB" },
-  { name: "Cuba", code: "CU" },
-  { name: "Dominica", code: "DM" },
-  { name: "República Dominicana", code: "DO" },
-  { name: "Granada", code: "GD" },
-  { name: "Haití", code: "HT" },
-  { name: "Jamaica", code: "JM" },
-  { name: "San Kitts y Nevis", code: "KN" },
-  { name: "Santa Lucía", code: "LC" },
-  { name: "San Vicente y las Granadinas", code: "VC" },
-  { name: "Trinidad y Tobago", code: "TT" },
-  // Europa (países clave)
-  { name: "Reino Unido", code: "GB" },
-  { name: "Alemania", code: "DE" },
-  { name: "Francia", code: "FR" },
-  { name: "Italia", code: "IT" },
-  { name: "España", code: "ES" },
-  { name: "Países Bajos", code: "NL" },
-  // Asia (países clave)
-  { name: "China", code: "CN" },
-  { name: "India", code: "IN" },
-  { name: "Japón", code: "JP" },
-  { name: "Corea del Sur", code: "KR" },
-  { name: "Indonesia", code: "ID" },
-  { name: "Arabia Saudita", code: "SA" },
-  // África (países clave)
-  { name: "Egipto", code: "EG" },
-  { name: "Nigeria", code: "NG" },
-  { name: "Sudáfrica", code: "ZA" },
+  // América del Sur
+  { name: "Argentina", code: "AR" },
+  { name: "Bolivia", code: "BO" },
+  { name: "Brasil", code: "BR" },
+  { name: "Chile", code: "CL" },
+  { name: "Colombia", code: "CO" },
+  { name: "Ecuador", code: "EC" },
+  { name: "Guyana", code: "GY" },
+  { name: "Paraguay", code: "PY" },
+  { name: "Perú", code: "PE" },
+  { name: "Surinam", code: "SR" },
+  { name: "Uruguay", code: "UY" },
+  { name: "Venezuela", code: "VE" },
+
   // Oceanía
   { name: "Australia", code: "AU" },
+  { name: "Fiyi", code: "FJ" },
+  { name: "Islas Marshall", code: "MH" },
+  { name: "Micronesia", code: "FM" },
+  { name: "Nauru", code: "NR" },
   { name: "Nueva Zelanda", code: "NZ" },
+  { name: "Palaos", code: "PW" },
+  { name: "Papúa Nueva Guinea", code: "PG" },
+  { name: "Samoa", code: "WS" },
+  { name: "Islas Salomón", code: "SB" },
+  { name: "Tonga", code: "TO" },
+  { name: "Tuvalu", code: "TV" },
+  // Territorios de Oceanía
+  { name: "Nueva Caledonia", code: "NC" },
+  { name: "Polinesia Francesa", code: "PF" },
+  { name: "Guam", code: "GU" },
+  { name: "Islas Cook", code: "CK" },
+  { name: "Niue", code: "NU" },
+  { name: "Wallis y Futuna", code: "WF" },
+
+  // Otros territorios / regiones
+  { name: "Groenlandia", code: "GL" },
+  { name: "Antártida", code: "AQ" },
+  { name: "Islas Turcas y Caicos", code: "TC" },
+  { name: "Islas Caimán", code: "KY" },
+  { name: "Bermudas", code: "BM" },
+  { name: "Gibraltar", code: "GI" },
+  { name: "Isla de Man", code: "IM" },
+  { name: "Islas Vírgenes Británicas", code: "VG" },
+  { name: "Islas Vírgenes de los Estados Unidos", code: "VI" },
+  { name: "Puerto Rico", code: "PR" },
 ]);
 axios.get(`${API}/countries`).then((response) => {
-  countriesList.value = response.data.map((item: any) => ({
-    name: item.Country_Name,
-    code: item.Country_ID.toString(), // o item.Country_ID según convenga
-  }));
+  countriesList.value = response.data.map((item: any) => {
+    // item.Country_Name' contiene el nombre del país devuelto por la API
+    const countryName = item.Country_Name;
+    // Buscamos en la lista original el país que coincida (ignorando mayúsculas/minúsculas)
+    const matchedCountry = originalCountries.value.find(
+      (country: { name: string }) =>
+        country.name.toLowerCase() === countryName.toLowerCase()
+    );
+    return {
+      name: countryName,
+      code: matchedCountry ? matchedCountry.code : "", // Si no se encuentra, asigna un string vacío
+    };
+  });
 });
-
 
 const userEthnicity = ref<{ name: string; value: string } | null>(null);
 const userEthnicityOptions = ref<{ name: string; value: string }[]>([]);
 axios.get(`${API}/ethnicities`).then((response) => {
-    userEthnicityOptions.value = response.data.map((item: any) => ({
-        name: item.Ethnicity_Name,
-        value: item.Ethnicity_ID.toString(), // o item.Sex_ID según convenga
-    }));
+  userEthnicityOptions.value = response.data.map((item: any) => ({
+    name: item.Ethnicity_Name,
+    value: item.Ethnicity_Name
+  }));
 });
 
-const userProvince = ref<{ name: string; code: string } | null>(null);
-const userProvinceOptions = ref([
-  { name: "Azuay", code: "Azuay" },
-  { name: "Bolívar", code: "Bolívar" },
-  { name: "Cañar", code: "Cañar" },
-  { name: "Carchi", code: "Carchi" },
-  { name: "Chimborazo", code: "Chimborazo" },
-  { name: "Cotopaxi", code: "Cotopaxi" },
-  { name: "El Oro", code: "El Oro" },
-  { name: "Esmeraldas", code: "Esmeraldas" },
-  { name: "Galápagos", code: "Galápagos" },
-  { name: "Guayas", code: "Guayas" },
-  { name: "Imbabura", code: "Imbabura" },
-  { name: "Loja", code: "Loja" },
-  { name: "Los Ríos", code: "Los Ríos" },
-  { name: "Manabí", code: "Manabí" },
-  { name: "Morona Santiago", code: "Morona Santiago" },
-  { name: "Napo", code: "Napo" },
-  { name: "Orellana", code: "Orellana" },
-  { name: "Pastaza", code: "Pastaza" },
-  { name: "Pichincha", code: "Pichincha" },
-  { name: "Santa Elena", code: "Santa Elena" },
-  {
-    name: "Santo Domingo de los Tsáchilas",
-    code: "Santo Domingo de los Tsáchilas",
-  },
-  { name: "Sucumbíos", code: "Sucumbíos" },
-  { name: "Tungurahua", code: "Tungurahua" },
-  { name: "Zamora Chinchipe", code: "Zamora Chinchipe" },
-]);
+const userProvince = ref<{ name: string; value: string } | null>(null);
+const userProvinceOptions = ref<{ name: string; value: string }[]>([]);
+axios.get(`${API}/provinces`).then((response) => {
+  userProvinceOptions.value = response.data.map((item: any) => ({
+    name: item.Province_Name,
+    value: item.Province_Name
+  }));
+});
 
-const userCity = ref<{ name: string; code: string } | null>(null);
-const userCityOptions = ref([
-  { name: "Quito", code: "Quito" },
-  { name: "Guayaquil", code: "Guayaquil" },
-  { name: "Cuenca", code: "Cuenca" },
-  { name: "Machala", code: "Machala" },
-  { name: "Loja", code: "Loja" },
-  { name: "Ambato", code: "Ambato" },
-  { name: "Esmeraldas", code: "Esmeraldas" },
-  { name: "Manta", code: "Manta" },
-  { name: "Portoviejo", code: "Portoviejo" },
-  { name: "Ibarra", code: "Ibarra" },
-  { name: "Santo Domingo", code: "Santo Domingo" },
-  { name: "Latacunga", code: "Latacunga" },
-  { name: "Tulcán", code: "Tulcán" },
-  { name: "Riobamba", code: "Riobamba" },
-  { name: "Babahoyo", code: "Babahoyo" },
-  { name: "Milagro", code: "Milagro" },
-  { name: "Quevedo", code: "Quevedo" },
-  { name: "Salinas", code: "Salinas" },
-  { name: "Santa Elena", code: "Santa Elena" },
-  { name: "Zamora", code: "Zamora" },
-  { name: "Macas", code: "Macas" },
-  { name: "Puyo", code: "Puyo" },
-  { name: "Tena", code: "Tena" },
-  { name: "Guaranda", code: "Guaranda" },
-  { name: "Azogues", code: "Azogues" },
-  { name: "Cayambe", code: "Cayambe" },
-  { name: "La Concordia", code: "La Concordia" },
-  { name: "La Libertad", code: "La Libertad" },
-  { name: "Lago Agrio", code: "Lago Agrio" },
-  { name: "Nueva Loja", code: "Nueva Loja" },
-  { name: "Puerto Baquerizo Moreno", code: "Puerto Baquerizo Moreno" },
-  {
-    name: "Puerto Francisco de Orellana",
-    code: "Puerto Francisco de Orellana",
-  },
-  { name: "Puerto Villamil", code: "Puerto Villamil" },
-  { name: "San Cristóbal", code: "San Cristóbal" },
-  { name: "Santa Cruz", code: "Santa Cruz" },
-  { name: "Tulcán", code: "Tulcán" },
-]);
+
+const userCity = ref<{ name: string; value: string } | null>(null);
+const userCityOptions = ref<{ name: string; value: string }[]>([]);
+axios.get(`${API}/cities`).then((response) => {
+  userCityOptions.value = response.data.map((item: any) => ({
+    name: item.City_Name,
+    value: item.City_Names
+  }));
+})
+
 
 //DATOS DE CONTACTO Y CONTACTO DE REFERENCIA
 const userPhone = ref("");
 const userEmail = ref("");
 const userAddress = ref("");
-const userSector = ref("");
+const userSector = ref<{ name: string; value: string } | null>(null);
+const userSectorOptions = ref<{ name: string; value: string }[]>([]);
+axios.get(`${API}/sectors`).then((response) => {
+  userSectorOptions.value = response.data.map((item: any) => ({
+    name: item.Sector_Name,
+    value: item.Sector_Name
+  }));
+});
 
-const userZone = ref<{ name: string; code: string } | null>(null);
-const userZoneOptions = ref([
-  { name: "Urbana", code: "Urbana" },
-  { name: "Rural", code: "Rural" },
-]);
+const userZone = ref<{ name: string; value: string } | null>(null);
+const userZoneOptions = ref<{ name: string; value: string }[]>([]);
+axios.get(`${API}/zone`).then((response) => {
+  userZoneOptions.value = response.data.map((item: any) => ({
+    name: item.Zone_Name,
+    value: item.Zone_Name
+  }));
+});
 
 const userReferenceRelationship = ref("");
 const userReferenceName = ref("");
@@ -740,158 +837,149 @@ const userReferencePhone = ref("");
 
 const userSocialBenefit = ref(false);
 const userEconomicDependece = ref(false);
-
-const userAcademicInstruction = ref<{ name: string; code: string } | null>(
+const userAcademicInstruction = ref<{ name: string; value: string } | null>(
   null
 );
-const userAcademicInstructionOptions = ref([
-  { name: "Primaria", code: "Primaria" },
-  { name: "Secundaria", code: "Secundaria" },
-  { name: "Superior", code: "Superior" },
-]);
+const userAcademicInstructionOptions = ref<{ name: string; value: string }[]>([]);
+axios.get(`${API}/academic-instructions`).then((response) => {
+  userAcademicInstructionOptions.value = response.data.map((item: any) => ({
+    name: item.Academic_Instruction_Name,
+    value: item.Academic_Instruction_Name
+  }));
+});
 
-const userProfession = ref<{ name: string; code: string } | null>(null);
-const userProfessionOptions = ref([
-  { name: "Empleado", code: "Empleado" },
-  { name: "Desempleado", code: "Desempleado" },
-  { name: "Estudiante", code: "Estudiante" },
-  { name: "Otro", code: "Otro" },
-]);
+const userProfession = ref<{ name: string; value: string } | null>(null);
+const userProfessionOptions = ref<{ name: string; value: string }[]>([]);
+axios.get(`${API}/occupations`).then((response) => {
+  userProfessionOptions.value = response.data.map((item: any) => ({
+    name: item.Occupation_Name,
+    value: item.Occupation_Name
+  }));
+});
 
-const userMaritalStatus = ref<{ name: string; code: string } | null>(null);
-const userMaritalStatusOptions = ref([
-  { name: "Soltero/a", code: "Soltero/a" },
-  { name: "Casado/a", code: "Casado/a" },
-  { name: "Divorciado/a", code: "Divorciado/a" },
-  { name: "Viudo/a", code: "Viudo/a" },
-]);
+const userMaritalStatus = ref<{ name: string; value: string } | null>(null);
+const userMaritalStatusOptions = ref<{ name: string; value: string }[]>([]);
+axios.get(`${API}/civil-statuses`).then((response) => {
+  userMaritalStatusOptions.value = response.data.map((item: any) => ({
+    name: item.Civil_Status_Name,
+    value: item.Civil_Status_Name
+  }));
+});
+
 
 const userDependents = ref<number | null>(null);
 
-const userIncomeLevel = ref<{ name: string; code: string } | null>(null);
-const userIncomeLevelOptions = ref([
-  { name: "1 SBU", code: "1 SBU" },
-  { name: "2 SBU", code: "2 SBU" },
-  { name: "3 SBU", code: "3 SBU" },
-]);
+const userIncomeLevel = ref<{ name: string; value: string } | null>(null);
+const userIncomeLevelOptions = ref<{ name: string; value: string }[]>([]);
+axios.get(`${API}/income-level`).then((response) => {
+  userIncomeLevelOptions.value = response.data.map((item: any) => ({
+    name: item.Income_Level_Name,
+    value: item.Income_Level_Name
+  }));
+});
 
-const userFamilyIncome = ref<{ name: string; code: string } | null>(null);
-const userFamilyIncomeOptions = ref([
-  { name: "1 SBU", code: "1 SBU" },
-  { name: "2 SBU", code: "2 SBU" },
-  { name: "3 SBU", code: "3 SBU" },
-]);
+const userFamilyIncome = ref<{ name: string; value: string } | null>(null);
+const userFamilyIncomeOptions = ref<{ name: string; value: string }[]>([]);
+axios.get(`${API}/family-income`).then((response) => {
+  userFamilyIncomeOptions.value = response.data.map((item: any) => ({
+    name: item.Family_Income_Name,
+    value: item.Family_Income_Name
+  }));
+});
 
-const userFamilyGroup = ref<{ name: string; code: string }[]>([]);
-const userFamilyGroupOptions = ref([
-  { name: "Grupo 1", code: "Grupo1" },
-  { name: "Grupo 2", code: "Grupo2" },
-  { name: "Grupo 3", code: "Grupo3" },
-]);
+const userFamilyGroup = ref<{ name: string; value: string }[]>([]);
+const userFamilyGroupOptions = ref<{ name: string; value: string }[]>([]);
+axios.get(`${API}/family-group`).then((response) => {
+  userFamilyGroupOptions.value = response.data.map((item: any) => ({
+    name: item.Family_Group_Name,
+    value: item.Family_Group_Name
+  }));
+});
 
 const userEconomicActivePeople = ref<number | null>(null);
 
 //DATOS SOCIOECONÓMICOS Y DE SALUD
 
-const userOwnAssets = ref<{ name: string; code: string }[]>([]);
-const userOwnAssetsOptions = ref([
-  { name: "Vivienda", code: "Vivienda" },
-  { name: "Vehículo", code: "Vehículo" },
-  { name: "Negocio", code: "Negocio" },
-  { name: "Otro", code: "Otro" },
-]);
+const userOwnAssets = ref<{ name: string; value: string }[]>([]);
+const userOwnAssetsOptions = ref<{ name: string; value: string }[]>([]);
+axios.get(`${API}/own-assets`).then((response) => {
+  userOwnAssetsOptions.value = response.data.map((item: any) => ({
+    name: item.Own_Assets_Name,
+    value: item.Own_Assets_Name
+  }));
+});
 
-const userHousingType = ref<{ name: string; code: string } | null>(null);
-const userHousingTypeOptions = ref([
-  { name: "Propia", code: "Propia" },
-  { name: "Alquilada", code: "Alquilada" },
-  { name: "Prestada", code: "Prestada" },
-  { name: "Otra", code: "Otra" },
-]);
+const userHousingType = ref<{ name: string; value: string } | null>(null);
+const userHousingTypeOptions = ref<{ name: string; value: string }[]>([]);
+axios.get(`${API}/type-of-housing`).then((response) => {
+  userHousingTypeOptions.value = response.data.map((item: any) => ({
+    name: item.Type_Of_Housing_Name,
+    value: item.Type_Of_Housing_Name
+  }));
+});
 
-const userPensioner = ref<{ name: string; code: string } | null>(null);
-const userPensionerOptions = ref([
-  { name: "IESS", code: "IESS" },
-  { name: "No", code: "No" },
-]);
+const userPensioner = ref<{ name: string; value: string } | null>(null);
+const userPensionerOptions = ref<{ name: string; value: string }[]>([]);
+axios.get(`${API}/pensioner`).then((response) => {
+  userPensionerOptions.value = response.data.map((item: any) => ({
+    name: item.Pensioner_Name,
+    value: item.Pensioner_Name
+  }));
+});
 
-const userHealthInsurance = ref<{ name: string; code: string } | null>(null);
-const userHealthInsuranceOptions = ref([
-  { name: "IESS", code: "IESS" },
-  { name: "ISSFA", code: "ISSFA" },
-  { name: "ISSPOL", code: "ISSPOL" },
-  { name: "Seguro Privado", code: "Seguro Privado" },
-  { name: "Ninguno", code: "Ninguno" },
-]);
 
-const userVulnerableSituation = ref<{ name: string; code: string } | null>(
+const userHealthInsurance = ref<{ name: string; value: string } | null>(null);
+const userHealthInsuranceOptions = ref<{ name: string; value: string }[]>([]);
+axios.get(`${API}/health-insurance`).then((response) => {
+  userHealthInsuranceOptions.value = response.data.map((item: any) => ({
+    name: item.Health_Insurance_Name,
+    value: item.Health_Insurance_Name
+  }));
+});
+
+const userVulnerableSituation = ref<{ name: string; value: string } | null>(
   null
 );
-const userVulnerableSituationOptions = ref([
-  { name: "Desempleo", code: "Desempleo" },
-  { name: "Discapacidad", code: "Discapacidad" },
-  { name: "Enfermedad", code: "Enfermedad" },
-  { name: "Violencia", code: "Violencia" },
-  { name: "Otro", code: "Otro" },
-]);
+const userVulnerableSituationOptions = ref<{ name: string; value: string }[]>([]);
+axios.get(`${API}/vulnerable-situation`).then((response) => {
+  userVulnerableSituationOptions.value = response.data.map((item: any) => ({
+    name: item.Vulnerable_Situation_Name,
+    value: item.Vulnerable_Situation_Name
+  }));
+});
 
-const userSupportingDocuments = ref<{ name: string; code: string } | null>(
+const userSupportingDocuments = ref<{ name: string; value: string } | null>(
   null
 );
-const userSupportingDocumentsOptions = ref([
-  { name: "Cédula", code: "Cédula" },
-  { name: "Pasaporte", code: "Pasaporte" },
-  { name: "Visa", code: "Visa" },
-  { name: "Carné de Refugiado", code: "Carné de Refugiado" },
-  { name: "Carné de Discapacidad", code: "Carné de Discapacidad" },
-  { name: "Carné de Conadis", code: "Carné de Conadis" },
-  { name: "Carné de Salud", code: "Carné de Salud" },
-  { name: "Carné de Vacunación", code: "Carné de Vacunación" },
-  { name: "Carné de Seguro Social", code: "Carné de Seguro Social" },
-  { name: "Carné de Seguro Privado", code: "Carné de Seguro Privado" },
-  { name: "Carné de Seguro de Vida", code: "Carné de Seguro de Vida" },
-  { name: "Carné de Seguro de Salud", code: "Carné de Seguro de Salud" },
-  {
-    name: "Carné de Seguro de Accidentes",
-    code: "Carné de Seguro de Accidentes",
-  },
-  {
-    name: "Carné de Seguro de Desempleo",
-    code: "Carné de Seguro de Desempleo",
-  },
-  {
-    name: "Carné de Seguro de Enfermedad",
-    code: "Carné de Seguro de Enfermedad",
-  },
-  {
-    name: "Carné de Seguro de Violencia",
-    code: "Carné de Seguro de Violencia",
-  },
-  { name: "Carné de Seguro de Otro", code: "Carné de Seguro de Otro" },
-]);
+const userSupportingDocumentsOptions = ref<{ name: string; value: string }[]>([]);
+axios.get(`${API}/documentation-backups`).then((response) => {
+  userSupportingDocumentsOptions.value = response.data.map((item: any) => ({
+    name: item.Documentation_Backup_Name,
+    value: item.Documentation_Backup_Name
+  }));
+});
 
-const userDisability = ref<{ name: string; code: string } | null>(null);
-const userDisabilityOptions = ref([
-  { name: "Física", code: "Física" },
-  { name: "Visual", code: "Visual" },
-  { name: "Auditiva", code: "Auditiva" },
-  { name: "Intelectual", code: "Intelectual" },
-  { name: "Mental", code: "Mental" },
-  { name: "No", code: "No" },
-]);
+const userDisability = ref<{ name: string; value: string } | null>(null);
+const userDisabilityOptions = ref<{ name: string; value: string }[]>([]);
+axios.get(`${API}/disability`).then((response) => {
+  userDisabilityOptions.value = response.data.map((item: any) => ({
+    name: item.Disability_Name,
+    value: item.Disability_Name
+  }));
+});
+
 const userDisabilityPercentage = ref<number>(0);
 
-const userCatastrophicIllness = ref<{ name: string; code: string } | null>(
+const userCatastrophicIllness = ref<{ name: string; value: string } | null>(
   null
 );
-const userCatastrophicIllnessOptions = ref([
-  { name: "Cáncer", code: "Cáncer" },
-  { name: "Diabetes", code: "Diabetes" },
-  { name: "Hipertensión", code: "Hipertensión" },
-  { name: "VIH/SIDA", code: "VIH/SIDA" },
-  { name: "Otro", code: "Otro" },
-  { name: "No", code: "No" },
-]);
+const userCatastrophicIllnessOptions = ref<{ name: string; value: string }[]>([]);
+axios.get(`${API}/illness`).then((response) => {
+  userCatastrophicIllnessOptions.value = response.data.map((item: any) => ({
+    name: item.Catastrophic_Illness_Name,
+    value: item.Catastrophic_Illness_Name
+  }));
+});
 
 const userHealthDocuments = ref<File | null>(null);
 const userHealthDocumentsName = ref("");
@@ -901,90 +989,112 @@ const userHealthDocumentsName = ref("");
 
 const initCode = ref("");
 const internalID = authStore.user?.id;
+const initSocialWork = ref<boolean>(false);
 
-const initStatusOptions = ref([
-  { name: "Activo", code: "Activo" },
-  { name: "Archivado", code: "Archivado" },
-  { name: "Finalizado", code: "Finalizado" },
-]);
-const initStatus = ref<{ name: string; code: string } | null>(
-  initStatusOptions.value[0]
-); // "Activo" por defecto
+
+const initStatusOptions = ref<{ name: string; value: string }[]>([]);
+const initStatus = ref<{ name: string; value: string } | null>(null);
+
+axios.get(`${API}/case-status`).then((response) => {
+  initStatusOptions.value = response.data.map((item: any) => ({
+    name: item.Case_Status_Name,
+    value: item.Case_Status_Name
+  }));
+
+  // Seleccionar "Activo" si existe en la lista, si no, tomar la primera opción
+  initStatus.value =
+    initStatusOptions.value.find((option) => option.value === "Activo") ||
+    initStatusOptions.value[0] ||
+    null;
+});
+
 
 const initOffice = ref('Consultorio Jurídico "PUCE", Sede Quito');
 
 const initDate = ref(new Date(date));
 const initEndDate = ref<Date | null>(null);
 
-const initClientType = ref<{ name: string; code: string } | null>(null);
-const initClientTypeOptions = ref([
-  { name: "Interno", code: "Interno" },
-  { name: "Externo", code: "Externo" },
-]);
+const initClientType = ref<{ name: string; value: string } | null>(null);
+const initClientTypeOptions = ref<{ name: string; value: string }[]>([]);
+axios.get(`${API}/client-types`).then((response) => {
+  initClientTypeOptions.value = response.data.map((item: any) => ({
+    name: item.Client_Type_Name,
+    value: item.Client_Type_Name
+  }));
+});
 
-const initSubject = ref<{ name: string; code: string } | null>(null);
-const initSubjectOptions = ref([
-  { name: "Civil", code: "Civil" },
-  { name: "Penal", code: "Penal" },
-  {
-    name: "Familia, Niñez y Adolescencia",
-    code: "Familia, Niñez y Adolescencia",
-  },
-  { name: "Movilidad Humana", code: "Movilidad Humana" },
-  { name: "Trabajo Social", code: "Trabajo Social" },
-]);
+const initSubject = ref<{ name: string; value: string } | null>(null);
+const initSubjectOptions = ref<{ name: string; value: string }[]>([]);
+axios.get(`${API}/subjects`).then((response) => {
+  initSubjectOptions.value = response.data.map((item: any) => ({
+    name: item.Subject_Name,
+    value: item.Subject_Name
+  }));
+});
 
-const initTopic = ref<{ name: string; code: string } | null>(null);
-const initTopicOptions = ref([
-  { name: "Tema 1", code: "Tema 1" },
-  { name: "Tema 2", code: "Tema 2" },
-]);
+const initTopic = ref<{ name: string; value: string } | null>(null);
+const initTopicOptions = ref<{ name: string; value: string }[]>([]);
+axios.get(`${API}/topics`).then((response) => {
+  initTopicOptions.value = response.data.map((item: any) => ({
+    name: item.Topic_Name,
+    value: item.Topic_Name
+  }));
+});
 
-const initService = ref<{ name: string; code: string } | null>(null);
-const initServiceOptions = ref([
-  { name: "Asesorias", code: "Asesorias" },
-  { name: "Posible Patrocinio", code: "Posible Patrocinio" },
-  { name: "Patrocinio", code: "Patrocinio" },
-]);
+const initService = ref<{ name: string; value: string } | null>(null);
+const initServiceOptions = ref<{ name: string; value: string }[]>([]);
+axios.get(`${API}/type-of-attention`).then((response) => {
+  initServiceOptions.value = response.data.map((item: any) => ({
+    name: item.Type_Of_Attention_Name,
+    value: item.Type_Of_Attention_Name
+  }));
+});
 //si el usuario es estudiante, se le oculta el campo de Patrocinio
 const initServiceOptionsStudent = ref([
   { name: "Asesorias", code: "Asesorias" },
   { name: "Posible Patrocinio", code: "Posible Patrocinio" },
 ]);
 
-const initLawyer = ref<{ name: string; code: string } | null>(null);
-const initLawyerOptions = ref([
-  { name: "Abogado 1", code: "Abogado 1" },
-  { name: "Abogado 2", code: "Abogado 2" },
-]);
+const initComplexity = ref<{ name: string; value: string } | null>(null);
+const initComplexityOptions = ref<{ name: string; value: string }[]>([]);
+axios.get(`${API}/complexities`).then((response) => {
+  initComplexityOptions.value = response.data.map((item: any) => ({
+    name: item.Complexity_Name,
+    value: item.Complexity_Name
+  }));
+});
 
-const initReferral = ref<{ name: string; code: string } | null>(null);
-const initReferralOptions = ref([
-  { name: "Camila Cedeño", code: "Camila Cedeño" },
-  { name: "Daniela Oña", code: "Daniela Oña" },
-]);
+const initLawyer = ref<{ name: string; value: string } | null>(null);
+const initLawyerOptions = ref<{ name: string; value: string }[]>([]);
+axios.get(`${API}/internal-user/lawyers/list`).then((response) => {
+  initLawyerOptions.value = response.data.map((item: any) => ({
+    name: item.Internal_Name + " " + item.Internal_LastName,
+    value: item.Internal_Name + " " + item.Internal_LastName
+  }));
+});
+
+const initReferral = ref<{ name: string; value: string } | null>(null);
+const initReferralOptions = ref<{ name: string; value: string }[]>([]);
+axios.get(`${API}/derived-by`).then((response) => {
+  initReferralOptions.value = response.data.map((item: any) => ({
+    name: item.Derived_By_Name,
+    value: item.Derived_By_Name
+  }));
+});
 
 const initNotes = ref("");
 
-const initComplexity = ref<{ name: string; code: string } | null>(null);
-const initComplexityOptions = ref([
-  { name: "Bajo", code: "Bajo" },
-  { name: "Medio", code: "Medio" },
-  { name: "Alto", code: "Alto" },
-]);
 
-const initSocialWork = ref<boolean>(false);
+
+
 
 //-------------------------------------------------------------------------------------------------------------//
 //VARIABLES DE LA EVIDENCIA DE ASESORÍA
-const evidenceID = ref<number>(0);	
+const evidenceID = ref<number>(0);
 const evidenceFileName = ref<string>("");
 const evidenceDocumentType = ref<string>("");
 const evidenceDate = ref(new Date(date));
 const evidenceFile = ref<File | null>(null);
-
-
-
 
 //-------------------------------------------------------------------------------------------------------------//
 
@@ -1015,7 +1125,7 @@ const isResettingConsultation = ref(false);
 const dialogVisible = ref(false);
 
 watch(userHasDisability, (newHasDisability: boolean) => {
-  if (!newHasDisability || userDisability.value?.code === "No") {
+  if (!newHasDisability || userDisability.value?.value === "No") {
     userDisabilityPercentage.value = 0;
     userDisability.value = null;
   }
@@ -1069,7 +1179,7 @@ const restartUserForm = () => {
   userPhone.value = "";
   userEmail.value = "";
   userAddress.value = "";
-  userSector.value = "";
+  userSector.value = null;
   userZone.value = null;
   userReferenceRelationship.value = "";
   userReferenceName.value = "";
@@ -1210,9 +1320,14 @@ const fetchUser = async () => {
     userPhone.value = selectedUser.value.User_Phone;
     userEmail.value = selectedUser.value.User_Email;
     userAddress.value = selectedUser.value.User_Address;
-    userSector.value = selectedUser.value.User_Sector;
+    userSectorOptions.value.forEach((option) => {
+      if (option.name === selectedUser.value.User_Sector) {
+        userSector.value = option;
+      }
+    });
+
     userZoneOptions.value.forEach((option) => {
-      if (option.code === selectedUser.value.User_Zone) {
+      if (option.value === selectedUser.value.User_Zone) {
         userZone.value = option;
       }
     });
@@ -1226,34 +1341,34 @@ const fetchUser = async () => {
     userEconomicDependece.value = selectedUser.value.User_EconomicDependence;
 
     userAcademicInstructionOptions.value.forEach((option) => {
-      if (option.code === selectedUser.value.User_Academic_Instruction) {
+      if (option.value === selectedUser.value.User_AcademicInstruction) {
         userAcademicInstruction.value = option;
       }
     });
     userProfessionOptions.value.forEach((option) => {
-      if (option.code === selectedUser.value.User_Profession) {
+      if (option.value === selectedUser.value.User_Profession) {
         userProfession.value = option;
       }
     });
     userMaritalStatusOptions.value.forEach((option) => {
-      if (option.code === selectedUser.value.User_MaritalStatus) {
+      if (option.value === selectedUser.value.User_MaritalStatus) {
         userMaritalStatus.value = option;
       }
     });
     userDependents.value = selectedUser.value.User_Dependents;
     userIncomeLevelOptions.value.forEach((option) => {
-      if (option.code === selectedUser.value.User_IncomeLevel) {
+      if (option.value === selectedUser.value.User_IncomeLevel) {
         userIncomeLevel.value = option;
       }
     });
     userFamilyIncomeOptions.value.forEach((option) => {
-      if (option.code === selectedUser.value.User_FamilyIncome) {
+      if (option.value === selectedUser.value.User_FamilyIncome) {
         userFamilyIncome.value = option;
       }
     });
 
     userFamilyGroup.value = userFamilyGroupOptions.value.filter((option) =>
-      selectedUser.value.User_FamilyGroup.includes(option.code)
+      selectedUser.value.User_FamilyGroup.includes(option.value)
     );
 
     userEconomicActivePeople.value =
@@ -1261,42 +1376,42 @@ const fetchUser = async () => {
 
     //DATOS SOCIOECONÓMICOS Y DE SALUD
     userOwnAssets.value = userOwnAssetsOptions.value.filter((option) =>
-      selectedUser.value.User_OwnAssets.includes(option.code)
+      selectedUser.value.User_OwnAssets.includes(option.value)
     );
     userHousingTypeOptions.value.forEach((option) => {
-      if (option.code === selectedUser.value.User_HousingType) {
+      if (option.value === selectedUser.value.User_HousingType) {
         userHousingType.value = option;
       }
     });
     userPensionerOptions.value.forEach((option) => {
-      if (option.code === selectedUser.value.User_Pensioner) {
+      if (option.value === selectedUser.value.User_Pensioner) {
         userPensioner.value = option;
       }
     });
     userHealthInsuranceOptions.value.forEach((option) => {
-      if (option.code === selectedUser.value.User_HealthInsurance) {
+      if (option.value === selectedUser.value.User_HealthInsurance) {
         userHealthInsurance.value = option;
       }
     });
     userVulnerableSituationOptions.value.forEach((option) => {
-      if (option.code === selectedUser.value.User_VulnerableSituation) {
+      if (option.value === selectedUser.value.User_VulnerableSituation) {
         userVulnerableSituation.value = option;
       }
     });
     userSupportingDocumentsOptions.value.forEach((option) => {
-      if (option.code === selectedUser.value.User_SupportingDocuments) {
+      if (option.value === selectedUser.value.User_SupportingDocuments) {
         userSupportingDocuments.value = option;
       }
     });
     userDisabilityOptions.value.forEach((option) => {
-      if (option.code === selectedUser.value.User_Disability) {
+      if (option.value === selectedUser.value.User_Disability) {
         userDisability.value = option;
       }
     });
     userDisabilityPercentage.value =
       selectedUser.value.User_DisabilityPercentage;
     userCatastrophicIllnessOptions.value.forEach((option) => {
-      if (option.code === selectedUser.value.User_CatastrophicIllness) {
+      if (option.value === selectedUser.value.User_CatastrophicIllness) {
         userCatastrophicIllness.value = option;
       }
     });
@@ -1310,9 +1425,9 @@ const fetchUser = async () => {
     if (selectedUser.value.User_CatastrophicIllness !== "Ninguna") {
       userHasAnyIllness.value = true;
     }
-    userHealthDocuments.value = selectedUser.value.User_HealthDocuments; 
-    userHealthDocumentsName.value = selectedUser.value.User_HealthDocumentsName ?? "";
-      
+    userHealthDocuments.value = selectedUser.value.User_HealthDocuments;
+    userHealthDocumentsName.value =
+      selectedUser.value.User_HealthDocumentsName ?? "";
   } catch (error) {
     doesUserExist.value = false;
     isRestartButtonDisabled.value = false;
@@ -1329,13 +1444,15 @@ const fetchUser = async () => {
   }
 };
 
-const updateFormWithConsultation = async (data: Initial_Consultation): Promise<void> => {
+const updateFormWithConsultation = async (
+  data: Initial_Consultation
+): Promise<void> => {
   restartEvidence(); // Reiniciar la evidencia antes de cargar una nueva consulta
   if (!data) return;
   initCode.value = data.Init_Code;
   initStatus.value =
     initStatusOptions.value.find(
-      (option) => option.code === String(data.Init_Status)
+      (option) => option.value === String(data.Init_Status)
     ) || null;
   initOffice.value = data.Init_Office;
   initDate.value = new Date(data.Init_Date);
@@ -1344,42 +1461,38 @@ const updateFormWithConsultation = async (data: Initial_Consultation): Promise<v
   }
   initClientType.value =
     initClientTypeOptions.value.find(
-      (option) => option.code === data.Init_ClientType
+      (option) => option.value === data.Init_ClientType
     ) || null;
   initSubject.value =
     initSubjectOptions.value.find(
-      (option) => option.code === data.Init_Subject
+      (option) => option.value === data.Init_Subject
     ) || null;
   initTopic.value =
-    initTopicOptions.value.find((option) => option.code === data.Init_Topic) ||
+    initTopicOptions.value.find((option) => option.value === data.Init_Topic) ||
     null;
   initService.value =
     initServiceOptions.value.find(
-      (option) => option.code === data.Init_Service
+      (option) => option.value === data.Init_Service
     ) || null;
 
   initComplexity.value =
     initComplexityOptions.value.find(
-      (option) => option.code === data.Init_Complexity
+      (option) => option.value === data.Init_Complexity
     ) || null;
 
   initLawyer.value =
     initLawyerOptions.value.find(
-      (option) => option.code === data.Init_Lawyer
+      (option) => option.value === data.Init_Lawyer
     ) || null;
   initNotes.value = data.Init_Notes;
 
   initReferral.value =
     initReferralOptions.value.find(
-      (option) => option.code === data.Init_Referral
+      (option) => option.value === data.Init_Referral
     ) || null;
   initSocialWork.value = data.Init_SocialWork;
   await fetchEvidence(initCode.value); // Cargar la evidencia de la consulta
-
 };
-
-
-
 
 const isInitialLoad = ref(true);
 
@@ -1425,20 +1538,22 @@ const fetchEvidence = async (initCode: string): Promise<void> => {
       evidenceFileName.value = "";
       return;
     }
-    const response = await axios.get(`${API}/evidence/consultation/${initCode}`);
+    const response = await axios.get(
+      `${API}/evidence/consultation/${initCode}`
+    );
     // Asegúrate de que la respuesta contenga al menos un objeto
     if (response.data) {
       selectedEvidence.value = response.data; // Accede al primer elemento del arreglo
       evidenceID.value = selectedEvidence.value.Evidence_ID;
-      evidenceDocumentType.value = selectedEvidence.value.Evidence_Document_Type;
+      evidenceDocumentType.value =
+        selectedEvidence.value.Evidence_Document_Type;
       evidenceDate.value = new Date(selectedEvidence.value.Evidence_Date);
       evidenceFile.value = selectedEvidence.value.Evidence_File;
       evidenceFileName.value = selectedEvidence.value.Evidence_Name;
       doesEvidenceExist.value = true; // Si hay evidencia, actualiza el estado
-
     } else {
       evidenceFileName.value = "";
-      console.warn("No se encontró evidencia")  ;
+      console.warn("No se encontró evidencia");
       doesEvidenceExist.value = false; // Si no hay evidencia, actualiza el estado
     }
   } catch (error: any) {
@@ -1447,14 +1562,6 @@ const fetchEvidence = async (initCode: string): Promise<void> => {
     isEvidenceLoading.value = false;
   }
 };
-
-
-
-
-
-
-
-
 
 const first = ref(0); // Página actual
 
@@ -1493,10 +1600,6 @@ const createInitialConsultation = async () => {
   formData.append("User_ID", userID.value);
   formData.append("User_ID_Type", userIDType.value?.value || "");
   formData.append("User_Age", userAge.value || "");
-  formData.append(
-    "User_Academic_Instruction",
-    userAcademicInstruction.value?.code || ""
-  );
   formData.append("User_FirstName", userFirstName.value || "");
   formData.append("User_LastName", userLastName.value || "");
   formData.append("User_Gender", userGender.value?.value || "");
@@ -1504,15 +1607,15 @@ const createInitialConsultation = async () => {
     "User_BirthDate",
     userBirthDate.value ? userBirthDate.value.toISOString().split("T")[0] : ""
   );
-  formData.append("User_Nationality", userNationality.value?.name || "");
+  formData.append("User_Nationality", userNationality.value?.value || "");
   formData.append("User_Ethnicity", userEthnicity.value?.value || "");
-  formData.append("User_Province", userProvince.value?.name || "");
-  formData.append("User_City", userCity.value?.name || "");
+  formData.append("User_Province", userProvince.value?.value || "");
+  formData.append("User_City", userCity.value?.value || "");
   formData.append("User_Phone", userPhone.value.replace(/\D/g, "") || "");
   formData.append("User_Email", userEmail.value || "");
   formData.append("User_Address", userAddress.value || "");
-  formData.append("User_Sector", userSector.value || "");
-  formData.append("User_Zone", userZone.value?.code || "");
+  formData.append("User_Sector", userSector.value?.value || "");
+  formData.append("User_Zone", userZone.value?.value || "");
   formData.append(
     "User_ReferenceRelationship",
     userReferenceRelationship.value || ""
@@ -1531,20 +1634,21 @@ const createInitialConsultation = async () => {
   );
   formData.append(
     "User_AcademicInstruction",
-    userAcademicInstruction.value?.code || ""
+    userAcademicInstruction.value?.value || ""
   );
-  formData.append("User_Profession", userProfession.value?.code || "");
-  formData.append("User_MaritalStatus", userMaritalStatus.value?.code || "");
+  formData.append("User_Profession", userProfession.value?.value || "");
+  formData.append("User_MaritalStatus", userMaritalStatus.value?.value || "");
   formData.append(
     "User_Dependents",
     userDependents.value !== null ? userDependents.value.toString() : "0"
   );
-  formData.append("User_IncomeLevel", userIncomeLevel.value?.code || "");
-  formData.append("User_FamilyIncome", userFamilyIncome.value?.code || "");
+  formData.append("User_IncomeLevel", userIncomeLevel.value?.value || "");
+  formData.append("User_FamilyIncome", userFamilyIncome.value?.value || "");
+
   // Se envían los grupos familiares como un string JSON
   formData.append(
     "User_FamilyGroup",
-    JSON.stringify(userFamilyGroup.value.map((g) => g.code))
+    JSON.stringify(userFamilyGroup.value.map((g) => g.value))
   );
   formData.append(
     "User_EconomicActivePeople",
@@ -1556,53 +1660,51 @@ const createInitialConsultation = async () => {
   // Datos socioeconómicos y de salud
   formData.append(
     "User_OwnAssets",
-    JSON.stringify(userOwnAssets.value.map((a) => a.code))
+    JSON.stringify(userOwnAssets.value.map((a) => a.value))
   );
-  formData.append("User_HousingType", userHousingType.value?.code || "");
-  formData.append("User_Pensioner", userPensioner.value?.code || "");
+  formData.append("User_HousingType", userHousingType.value?.value || "");
+  formData.append("User_Pensioner", userPensioner.value?.value || "");
   formData.append(
     "User_HealthInsurance",
-    userHealthInsurance.value?.code || ""
+    userHealthInsurance.value?.value || ""
   );
   formData.append(
     "User_VulnerableSituation",
-    userVulnerableSituation.value?.code || ""
+    userVulnerableSituation.value?.value || ""
   );
   formData.append(
     "User_SupportingDocuments",
-    userSupportingDocuments.value?.code || ""
+    userSupportingDocuments.value?.value || ""
   );
-  formData.append("User_Disability", userDisability.value?.code || "Ninguna");
+  formData.append("User_Disability", userDisability.value?.value || "Ninguna");
   formData.append(
     "User_DisabilityPercentage",
     userDisabilityPercentage.value.toString()
   );
   formData.append(
     "User_CatastrophicIllness",
-    userCatastrophicIllness.value?.code || "Ninguna"
+    userCatastrophicIllness.value?.value || "Ninguna"
   );
-
 
   // Agregar el archivo de documento de salud
   if (userHealthDocuments.value) {
     formData.append("healthDocuments", userHealthDocuments.value); // Archivo
     formData.append(
       "User_HealthDocumentsName",
-       userHealthDocumentsName.value || ''
-    ); 
-  }
-  else {
+      userHealthDocumentsName.value || ""
+    );
+  } else {
     formData.append("healthDocuments", ""); // Si no hay archivo, enviar un string vacío
     formData.append(
       "User_HealthDocumentsName",
       userHealthDocumentsName.value || ""
-    ); 
+    );
   }
 
   // Datos de la consulta inicial (Initial_Consultations)
   formData.append("Internal_ID", internalID || "");
   formData.append("Init_SocialWork", initSocialWork.value.toString());
-  formData.append("Init_Status", initStatus.value?.code || "");
+  formData.append("Init_Status", initStatus.value?.value || "");
   formData.append("Init_Office", initOffice.value);
   formData.append(
     "Init_Date",
@@ -1612,18 +1714,21 @@ const createInitialConsultation = async () => {
     "Init_FinishDate",
     initEndDate.value ? initEndDate.value.toISOString().split("T")[0] : ""
   );
-  formData.append("Init_ClientType", initClientType.value?.code || "");
-  formData.append("Init_Subject", initSubject.value?.code || "");
-  formData.append("Init_Topic", initTopic.value?.code || "");
-  formData.append("Init_Service", initService.value?.code || "");
-  formData.append("Init_Complexity", initComplexity.value?.code || "");
-  formData.append("Init_Lawyer", initLawyer.value?.code || "");
-  formData.append("Init_Referral", initReferral.value?.code || "");
+  formData.append("Init_ClientType", initClientType.value?.value || "");
+  formData.append("Init_Subject", initSubject.value?.value || "");
+  formData.append("Init_Topic", initTopic.value?.value || "");
+  formData.append("Init_Service", initService.value?.value || "");
+  formData.append("Init_Complexity", initComplexity.value?.value || "");
+  formData.append("Init_Lawyer", initLawyer.value?.value || "");
+  formData.append("Init_Referral", initReferral.value?.value || "");
   formData.append("Init_Notes", initNotes.value || "");
   formData.append("Init_Type", "Por Revisar");
 
   //Datos de la evidencia de asesoría (Evidence)
-  formData.append("Evidence_Date", evidenceDate.value ? evidenceDate.value.toISOString().split("T")[0] : "");
+  formData.append(
+    "Evidence_Date",
+    evidenceDate.value ? evidenceDate.value.toISOString().split("T")[0] : ""
+  );
   formData.append("Evidence_Document_Type", evidenceDocumentType.value || "");
   if (evidenceFile.value) {
     formData.append("evidenceFile", evidenceFile.value); // Archivo
@@ -1633,6 +1738,13 @@ const createInitialConsultation = async () => {
   }
 
   console.log("Datos enviados:", formData);
+  //revisamos el json del formData
+  for (const pair of formData.entries()) {
+    console.log(`${pair[0]}: ${pair[1]}`);
+  }
+  //creamos un json para verificar que se envían los datos correctos
+  const jsonData = Object.fromEntries(formData.entries());
+  console.log("JSON de datos enviados:", JSON.stringify(jsonData, null, 2));
 
   try {
     await axios.post(`${API}/initial-consultations`, formData, {
@@ -1703,17 +1815,17 @@ const newUserConsultation = async () => {
   const consultationData = {
     //Init_Code: No se envia nada porque el backend lo genera automáticamente
     //Internal_ID: internalI tampoco se envia porque en el header ya estamos enviando el internalID
-    Init_ClientType: initClientType.value?.code,
-    Init_Subject: initSubject.value?.code,
-    Init_Lawyer: initLawyer.value?.code,
+    Init_ClientType: initClientType.value?.value,
+    Init_Subject: initSubject.value?.value,
+    Init_Lawyer: initLawyer.value?.value,
     Init_Date: initDate.value ? initDate.value.toISOString().split("T")[0] : "",
     Init_Office: initOffice.value,
-    Init_Topic: initTopic.value?.code,
-    Init_Service: initService.value?.code,
-    Init_Referral: initReferral.value?.code,
-    Init_Status: initStatus.value?.code,
+    Init_Topic: initTopic.value?.value,
+    Init_Service: initService.value?.value,
+    Init_Referral: initReferral.value?.value,
+    Init_Status: initStatus.value?.value,
     Init_Notes: initNotes.value || "",
-    Init_Complexity: initComplexity.value?.code || "",
+    Init_Complexity: initComplexity.value?.value || "",
     Init_Type: "Por Revisar",
     Init_SocialWork: initSocialWork.value,
     User_ID: userID.value,
@@ -1742,40 +1854,39 @@ const newUserConsultation = async () => {
     const lastConsultation = response.data[response.data.length - 1];
     initCode.value = lastConsultation.Init_Code; // Guardamos el código de la última consulta creada
 
+    // Procedemos a crear la evidencia si es que existe y lo enviamos como formData
+    const formData = new FormData();
 
-      // Procedemos a crear la evidencia si es que existe y lo enviamos como formData
-      const formData = new FormData();
+    // Agregar datos de la consulta inicial
+    formData.append("Internal_ID", internalID || "");
+    formData.append("Init_Code", initCode.value || "");
+    formData.append("Evidence_Name", evidenceFileName.value || "");
 
-      // Agregar datos de la consulta inicial
-      formData.append("Internal_ID", internalID || "");
-      formData.append("Init_Code", initCode.value || "");
-      formData.append("Evidence_Name", evidenceFileName.value || "");
-
-      // Agregar archivo de evidencia
-      if (evidenceFile.value) {
+    // Agregar archivo de evidencia
+    if (evidenceFile.value) {
       console.log("Archivo de evidencia:", evidenceFile.value);
       formData.append("evidenceFile", evidenceFile.value); // Archivo
     } else {
       console.log("No se adjuntó ningún archivo de evidencia.");
     }
 
-      try {
-        const response = await axios.post(`${API}/evidence`, formData, {
-          headers: {
-            "Content-Type": "multipart/form-data", // Importante para enviar archivos
-          },
-        });
+    try {
+      const response = await axios.post(`${API}/evidence`, formData, {
+        headers: {
+          "Content-Type": "multipart/form-data", // Importante para enviar archivos
+        },
+      });
 
-        console.log("Respuesta del servidor:", response.data);
-      } catch (error) {
-        console.error("Error al subir la evidencia:", error);
-        toast.add({
-          severity: "error",
-          summary: "Error",
-          detail: "No se pudo subir la evidencia.",
-          life: 4000,
-        });
-      }
+      console.log("Respuesta del servidor:", response.data);
+    } catch (error) {
+      console.error("Error al subir la evidencia:", error);
+      toast.add({
+        severity: "error",
+        summary: "Error",
+        detail: "No se pudo subir la evidencia.",
+        life: 4000,
+      });
+    }
 
     newConsultationButtonDisabled.value = true;
     doesUserRequestOp.value = false;
@@ -1855,27 +1966,27 @@ const editUserConsultation = async () => {
   const consultationData = {
     Init_Code: initCode.value,
     Internal_ID: internalID,
-    Init_ClientType: initClientType.value?.code,
-    Init_Subject: initSubject.value?.code,
-    Init_Lawyer: initLawyer.value?.code,
+    Init_ClientType: initClientType.value?.value,
+    Init_Subject: initSubject.value?.value,
+    Init_Lawyer: initLawyer.value?.value,
     Init_Date: initDate.value ? initDate.value.toISOString().split("T")[0] : "",
     Init_EndDate: initEndDate.value
       ? initEndDate.value.toISOString().split("T")[0]
       : null,
     Init_Office: initOffice.value,
-    Init_Topic: initTopic.value?.code,
-    Init_Service: initService.value?.code,
-    Init_Referral: initReferral.value?.code,
-    Init_Status: initStatus.value?.code,
+    Init_Topic: initTopic.value?.value,
+    Init_Service: initService.value?.value,
+    Init_Referral: initReferral.value?.value,
+    Init_Status: initStatus.value?.value,
     Init_Notes: initNotes.value || "",
-    Init_Complexity: initComplexity.value?.code || "",
+    Init_Complexity: initComplexity.value?.value || "",
     Init_Type: "",
     Init_SocialWork: initSocialWork.value,
     User_ID: userID.value,
   };
-  if(initService.value?.code === "Patrocinio"){
+  if (initService.value?.value === "Patrocinio") {
     consultationData.Init_Type = "Por Asignar";
-  }else if(initService.value?.code === "Asesoría"){
+  } else if (initService.value?.value === "Asesoría") {
     consultationData.Init_Type = "En espera";
   }
   console.log("Datos enviados:", JSON.stringify(consultationData, null, 2));
@@ -1906,9 +2017,9 @@ const editUserConsultation = async () => {
     isDeleteButtonDisabled.value = false;
     isExportButtonDisabled.value = false;
     doesUserRequestEditConsultation.value = false;
+    restartEvidence();
     restartConsultationForm();
     await fetchConsultations();
-    // Buscar el índice de la ficha editada y mantener el paginador en esa posición
     const index = consultations.value.findIndex(
       (consulta) => consulta.Init_Code === initCode.value
     );
@@ -2012,15 +2123,15 @@ const editUser = async () => {
     User_Nationality:
       userNationality.value?.name || originalUser.User_Nationality,
     User_Ethnicity: userEthnicity.value?.value || originalUser.User_Ethnicity,
-    User_Province: userProvince.value?.name || originalUser.User_Province,
-    User_City: userCity.value?.name || originalUser.User_City,
+    User_Province: userProvince.value?.value || originalUser.User_Province,
+    User_City: userCity.value?.value || originalUser.User_City,
 
     //DATOS DE CONTACTO Y CONTACTO DE REFERENCIA
     User_Phone: userPhone.value.replace(/\D/g, "") || originalUser.User_Phone,
     User_Email: userEmail.value || originalUser.User_Email,
     User_Address: userAddress.value || originalUser.User_Address,
-    User_Sector: userSector.value || originalUser.User_Sector,
-    User_Zone: userZone.value?.code || originalUser.User_Zone,
+    User_Sector: userSector.value?.value || originalUser.User_Sector,
+    User_Zone: userZone.value?.value || originalUser.User_Zone,
     User_ReferenceRelationship:
       userReferenceRelationship.value ||
       originalUser.User_ReferenceRelationship,
@@ -2039,44 +2150,44 @@ const editUser = async () => {
       userEconomicDependece.value !== undefined
         ? userEconomicDependece.value
         : originalUser.User_EconomicDependence,
-    User_Academic_Instruction:
-      userAcademicInstruction.value?.code ||
-      originalUser.User_Academic_Instruction,
-    User_Profession: userProfession.value?.code || originalUser.User_Profession,
+    User_AcademicInstruction:
+      userAcademicInstruction.value?.value ||
+      originalUser.User_AcademicInstruction,
+    User_Profession: userProfession.value?.value || originalUser.User_Profession,
     User_MaritalStatus:
-      userMaritalStatus.value?.code || originalUser.User_MaritalStatus,
+      userMaritalStatus.value?.value || originalUser.User_MaritalStatus,
     User_Dependents:
       userDependents.value !== null
         ? userDependents.value
         : originalUser.User_Dependents,
     User_IncomeLevel:
-      userIncomeLevel.value?.code || originalUser.User_IncomeLevel,
+      userIncomeLevel.value?.value || originalUser.User_IncomeLevel,
     User_FamilyIncome:
-      userFamilyIncome.value?.code || originalUser.User_FamilyIncome,
-    User_FamilyGroup: userFamilyGroup.value.map((option) => option.code),
+      userFamilyIncome.value?.value || originalUser.User_FamilyIncome,
+    User_FamilyGroup: userFamilyGroup.value.map((option) => option.value),
     User_EconomicActivePeople:
       userEconomicActivePeople.value !== null
         ? userEconomicActivePeople.value
         : originalUser.User_EconomicActivePeople,
 
     //DATOS SOCIOECONÓMICOS Y DE SALUD
-    User_OwnAssets: userOwnAssets.value.map((option) => option.code),
+    User_OwnAssets: userOwnAssets.value.map((option) => option.value),
     User_HousingType:
-      userHousingType.value?.code || originalUser.User_HousingType,
-    User_Pensioner: userPensioner.value?.code || originalUser.User_Pensioner,
+      userHousingType.value?.value || originalUser.User_HousingType,
+    User_Pensioner: userPensioner.value?.value || originalUser.User_Pensioner,
     User_HealthInsurance:
-      userHealthInsurance.value?.code || originalUser.User_HealthInsurance,
+      userHealthInsurance.value?.value || originalUser.User_HealthInsurance,
     User_VulnerableSituation:
-      userVulnerableSituation.value?.code ||
+      userVulnerableSituation.value?.value ||
       originalUser.User_VulnerableSituation,
     User_SupportingDocuments:
-      userSupportingDocuments.value?.code ||
+      userSupportingDocuments.value?.value ||
       originalUser.User_SupportingDocuments,
-    User_Disability: userDisability.value?.code || originalUser.User_Disability,
+    User_Disability: userDisability.value?.value || originalUser.User_Disability,
     User_DisabilityPercentage:
       userDisabilityPercentage.value || originalUser.User_DisabilityPercentage,
     User_CatastrophicIllness:
-      userCatastrophicIllness.value?.code ||
+      userCatastrophicIllness.value?.value ||
       originalUser.User_CatastrophicIllness,
   };
   //Si se modifica el check a desactivado en discapacidad y enfermedad, se limpian los campos de discapacidad y enfermedad
@@ -2131,16 +2242,11 @@ const editUser = async () => {
   }
 };
 
-
 const limitText = () => {
   if (initNotes.value.length > 500) {
     initNotes.value = initNotes.value.substring(0, 500);
   }
 };
-
-
-
-
 
 //gaurdamos el documento en la variable User_HealthDocuments
 
@@ -2241,9 +2347,6 @@ const checkIdSize = (shouldShowToast: boolean = true): boolean => {
   }
   return bandera.value;
 };
-
-
-
 </script>
 
 <template>
@@ -2413,20 +2516,20 @@ const checkIdSize = (shouldShowToast: boolean = true): boolean => {
               class="w-full"
               :disabled="areInputsDisabled"
             >
-              <template #value="slotProps">
-                <div v-if="slotProps.value" class="flex items-center">
-                  <img
-                    :alt="slotProps.value.label"
-                    src="https://primefaces.org/cdn/primevue/images/flag/flag_placeholder.png"
-                    :class="`mr-2 flag flag-${slotProps.value.code.toLowerCase()}`"
-                    style="width: 18px"
-                  />
-                  <div>{{ slotProps.value.name }}</div>
-                </div>
-                <span v-else>
-                  {{ slotProps.placeholder }}
-                </span>
-              </template>
+            <template #value="slotProps">
+              <div v-if="slotProps.value" class="flex items-center">
+                <img
+                  :alt="slotProps.value.label || slotProps.value.name"
+                  src="https://primefaces.org/cdn/primevue/images/flag/flag_placeholder.png"
+                  :class="`mr-2 flag flag-${slotProps.value.code ? slotProps.value.code.toLowerCase() : ''}`"
+                  style="width: 18px"
+                />
+                <div>{{ slotProps.value.name }}</div>
+              </div>
+              <span v-else>
+                {{ slotProps.placeholder }}
+              </span>
+            </template>
               <template #option="slotProps">
                 <div class="flex items-center">
                   <img
@@ -2527,10 +2630,12 @@ const checkIdSize = (shouldShowToast: boolean = true): boolean => {
           <!-- Grid para Sector y Zona con ligero margin-right -->
           <div class="grid grid-cols-2" style="max-width: 400px">
             <FloatLabel variant="on" class="w-full">
-              <InputText
-                id="userSector"
+              <Select
                 v-model="userSector"
+                inputId="userSector"
+                :options="userSectorOptions"
                 size="large"
+                optionLabel="name"
                 class="w-full md:w-48"
                 :disabled="areInputsDisabled"
               />
@@ -2723,8 +2828,8 @@ const checkIdSize = (shouldShowToast: boolean = true): boolean => {
           <FloatLabel variant="on" class="w-full">
             <Select
               v-model="userFamilyIncome"
-              inputId="userIncomeLevel"
-              :options="userIncomeLevelOptions"
+              inputId="userFamilyIncome"
+              :options="userFamilyIncomeOptions"
               size="large"
               optionLabel="name"
               class="w-full"
@@ -3036,7 +3141,10 @@ const checkIdSize = (shouldShowToast: boolean = true): boolean => {
                       />
                     </div>
                     <!-- Usuario no existe, pero ya se había cargado un archivo -->
-                    <div v-else-if="userHealthDocuments && !doesUserExist" class="flex flex-col items-center">
+                    <div
+                      v-else-if="userHealthDocuments && !doesUserExist"
+                      class="flex flex-col items-center"
+                    >
                       <div
                         class="w-24 h-24 flex items-center justify-center border border-dashed border-gray-300 rounded"
                       >
@@ -3048,18 +3156,17 @@ const checkIdSize = (shouldShowToast: boolean = true): boolean => {
                         {{ userHealthDocumentsName }}
                       </span>
                       <div class="flex gap-2 mt-2">
-                          <Button
+                        <Button
                           icon="pi pi-times"
                           label="Reemplazar"
                           class="p-button-danger mt-2"
                           @click="removeUploadedFile"
                           outlined
                           rounded
-                          />
+                        />
                       </div>
-                      
                     </div>
-                    
+
                     <!-- Usuario ya existe, se carga el archivo -->
                     <div
                       v-else-if="userHealthDocuments && doesUserExist"
@@ -3076,7 +3183,7 @@ const checkIdSize = (shouldShowToast: boolean = true): boolean => {
                         {{ selectedUser.User_HealthDocumentsName }}
                       </span>
                       <div class="flex gap-2 mt-2">
-                          <Button
+                        <Button
                           icon="pi pi-times"
                           label="Reemplazar"
                           class="p-button-danger mt-2"
@@ -3084,8 +3191,12 @@ const checkIdSize = (shouldShowToast: boolean = true): boolean => {
                           outlined
                           rounded
                         />
-                        <div v-if="doesUserExist && userHealthDocumentsName != null">
-                            <Button 
+                        <div
+                          v-if="
+                            doesUserExist && userHealthDocumentsName != null
+                          "
+                        >
+                          <Button
                             icon="pi pi-eye"
                             label="Ver"
                             class="p-button-info mt-2"
@@ -3100,7 +3211,10 @@ const checkIdSize = (shouldShowToast: boolean = true): boolean => {
                 </template>
                 <!-- Dos opciones para que salga el templete. El usuario no existe y no tiene archivos. El usuario existe pero no tiene documentos -->
                 <template #empty>
-                  <div v-if="!userHealthDocuments && !doesUserExist"  class="flex items-center justify-center flex-col">
+                  <div
+                    v-if="!userHealthDocuments && !doesUserExist"
+                    class="flex items-center justify-center flex-col"
+                  >
                     <i
                       class="pi pi-cloud-upload !border-2 !rounded-full !p-8 !text-4xl !text-muted-color"
                     />
@@ -3108,7 +3222,10 @@ const checkIdSize = (shouldShowToast: boolean = true): boolean => {
                       Arrastra y suelta el archivo PDF aquí.
                     </p>
                   </div>
-                  <div v-else-if="!userHealthDocuments && doesUserExist" class="flex items-center justify-center flex-col">
+                  <div
+                    v-else-if="!userHealthDocuments && doesUserExist"
+                    class="flex items-center justify-center flex-col"
+                  >
                     <i
                       class="pi pi-cloud-upload !border-2 !rounded-full !p-8 !text-4xl !text-muted-color"
                     />
@@ -3129,8 +3246,14 @@ const checkIdSize = (shouldShowToast: boolean = true): boolean => {
                 class="mr-3"
                 @click="cancelUpload()"
               />
-              <div v-if="userHealthDocuments && !doesUserExist && userRequestNewDocument">
-                  <Button
+              <div
+                v-if="
+                  userHealthDocuments &&
+                  !doesUserExist &&
+                  userRequestNewDocument
+                "
+              >
+                <Button
                   type="button"
                   icon="pi pi-save"
                   label="Guardar"
@@ -3138,15 +3261,19 @@ const checkIdSize = (shouldShowToast: boolean = true): boolean => {
                   @click="onSaveDocument()"
                 />
               </div>
-              <div v-if="userHealthDocuments && doesUserExist && userRequestNewDocument">
-                  <Button
+              <div
+                v-if="
+                  userHealthDocuments && doesUserExist && userRequestNewDocument
+                "
+              >
+                <Button
                   type="button"
                   icon="pi pi-save"
                   label="Guardar"
                   class="bg-blue-600 hover:bg-blue-700 text-white"
                   @click="uploadNewDocument()"
                 />
-              </div>            
+              </div>
             </div>
           </Dialog>
 
@@ -3404,7 +3531,13 @@ const checkIdSize = (shouldShowToast: boolean = true): boolean => {
                   <FloatLabel variant="on" class="w-full">
                     <Select
                       v-model="initService"
-                      :options="authStore.user?.type === 'Estudiante' ? initServiceOptions.filter((option) => option.name !== 'Patrocinio') : initServiceOptions"
+                      :options="
+                        authStore.user?.type === 'Estudiante'
+                          ? initServiceOptions.filter(
+                              (option) => option.name !== 'Patrocinio'
+                            )
+                          : initServiceOptions
+                      "
                       optionLabel="name"
                       class="w-full"
                       :class="
@@ -3491,7 +3624,7 @@ const checkIdSize = (shouldShowToast: boolean = true): boolean => {
                   editorStyle="height: 239px"
                   @input="limitText"
                   :class="[
-                     doesUserExist && !doesUserRequestOp
+                    doesUserExist && !doesUserRequestOp
                       ? 'mouse pointer-events-none'
                       : '',
                     areInputsDisabled ? 'select-none opacity-50' : '',
@@ -3521,141 +3654,158 @@ const checkIdSize = (shouldShowToast: boolean = true): boolean => {
               <div class="flex flex-col">
                 <label for="archivo" class="mb-2">Evidencias</label>
                 <FileUpload
-                ref="fileUploadEvidence"
-                name="file"
-                accept=".pdf"
-                :multiple="false"
-                @select="onSelectedFilesEvidence"
-                :autoClear="false"
-                class="w-full md:w-100"
-              >
-                <!-- Header: solo se muestra el botón para elegir archivo -->
-                <template #header="{ chooseCallback, files }">
-                  <div
-                    class="flex flex-wrap justify-between items-center gap-4"
-                  >
-                    <Button
-                      @click="chooseCallback()"
-                      icon="pi pi-images"
-                      rounded
-                      v-tooltip="'Seleccionar archivo'"
-                      outlined
-                      severity="secondary"
-                      :disabled="!!evidenceFile && !!doesUserExist"
-                    />
-                    <div v-if="doesUserExist && userRequestNewEvidenceDocument" class="flex gap-2"> 
-                      <Button 
-                      @click="uploadNewEvidenceDocument()"
-                      icon="pi pi-upload"
-                      rounded
-                      v-tooltip="'Subir archivo'"
-                      outlined
-                      severity="success"
-                      :disabled="!evidenceFile && !!doesUserExist"
-                      />
-                    </div>
-
-                  </div>
-                </template>
-                <!-- Content: muestra la vista previa del archivo pendiente o ya guardado -->
-                <template #content="{ files, removeFileCallback }">
-                  <div class="flex flex-col gap-8 pt-4">
-                    <!-- Si hay archivo pendiente en FileUpload -->
+                  ref="fileUploadEvidence"
+                  name="file"
+                  accept=".pdf"
+                  :multiple="false"
+                  @select="onSelectedFilesEvidence"
+                  :autoClear="false"
+                  class="w-full md:w-100"
+                >
+                  <!-- Header: solo se muestra el botón para elegir archivo -->
+                  <template #header="{ chooseCallback, files }">
                     <div
-                      v-if="files.length > 0"
-                      class="flex flex-col items-center"
+                      class="flex flex-wrap justify-between items-center gap-4"
                     >
-                      <div
-                        class="w-24 h-24 flex items-center justify-center border border-dashed border-gray-300 rounded"
-                      >
-                        <i class="pi pi-file-pdf text-5xl text-red-600"></i>
-                      </div>
-                      <span
-                        class="mt-2 font-semibold text-ellipsis max-w-60 whitespace-nowrap overflow-hidden"
-                      >
-                        {{ files[0].name }}
-                      </span>
                       <Button
-                        icon="pi pi-times"
-                        label="Eliminar"
-                        class="p-button-danger mt-2"
-                        @click="
-                          onRemoveTemplatingFileEvidence(
-                            files[0],
-                            removeFileCallback,
-                            0
-                          )
-                        "
-                        outlined
+                        @click="chooseCallback()"
+                        icon="pi pi-images"
                         rounded
+                        v-tooltip="'Seleccionar archivo'"
+                        outlined
+                        severity="secondary"
+                        :disabled="!!evidenceFile && !!doesUserExist"
+                      />
+                      <div
+                        v-if="doesUserExist && userRequestNewEvidenceDocument"
+                        class="flex gap-2"
+                      >
+                        <Button
+                          @click="uploadNewEvidenceDocument()"
+                          icon="pi pi-upload"
+                          rounded
+                          v-tooltip="'Subir archivo'"
+                          outlined
+                          severity="success"
+                          :disabled="!evidenceFile && !!doesUserExist"
+                        />
+                      </div>
+                    </div>
+                  </template>
+                  <!-- Content: muestra la vista previa del archivo pendiente o ya guardado -->
+                  <template #content="{ files, removeFileCallback }">
+                    <div class="flex flex-col gap-8 pt-4">
+                      <!-- Si hay archivo pendiente en FileUpload -->
+                      <div
+                        v-if="files.length > 0"
+                        class="flex flex-col items-center"
+                      >
+                        <div
+                          class="w-24 h-24 flex items-center justify-center border border-dashed border-gray-300 rounded"
+                        >
+                          <i class="pi pi-file-pdf text-5xl text-red-600"></i>
+                        </div>
+                        <span
+                          class="mt-2 font-semibold text-ellipsis max-w-60 whitespace-nowrap overflow-hidden"
+                        >
+                          {{ files[0].name }}
+                        </span>
+                        <Button
+                          icon="pi pi-times"
+                          label="Eliminar"
+                          class="p-button-danger mt-2"
+                          @click="
+                            onRemoveTemplatingFileEvidence(
+                              files[0],
+                              removeFileCallback,
+                              0
+                            )
+                          "
+                          outlined
+                          rounded
+                        />
+                      </div>
+
+                      <!-- Usuario ya existe, se carga el archivo -->
+                      <div
+                        v-else-if="evidenceFile && doesUserExist"
+                        class="flex flex-col items-center"
+                      >
+                        <div
+                          class="w-24 h-24 flex items-center justify-center border border-dashed border-gray-300 rounded"
+                        >
+                          <i class="pi pi-file-pdf text-5xl text-red-600"></i>
+                        </div>
+                        <span
+                          class="mt-2 font-semibold text-ellipsis max-w-60 whitespace-nowrap overflow-hidden"
+                        >
+                          {{ selectedEvidence.Evidence_Name }}
+                        </span>
+                        <div class="flex gap-2 mt-2">
+                          <div
+                            v-if="
+                              doesUserExist && doesUserRequestEditConsultation
+                            "
+                          >
+                            <Button
+                              icon="pi pi-times"
+                              label="Reemplazar"
+                              class="p-button-danger mt-2"
+                              @click="deleteEvidenceDocument()"
+                              outlined
+                              rounded
+                            />
+                          </div>
+                          <div v-if="doesUserExist && evidenceFile != null">
+                            <Button
+                              icon="pi pi-eye"
+                              label="Ver"
+                              class="p-button-info mt-2"
+                              @click="loadUserEvidenceDocument(evidenceID)"
+                              outlined
+                              rounded
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </template>
+                  <!-- Dos opciones para que salga el templete. El usuario no existe y no tiene archivos. El usuario existe pero no tiene documentos -->
+                  <template #empty>
+                    <div v-if="isEvidenceLoading" class="flex justify-center">
+                      <ProgressSpinner
+                        style="width: 50px; height: 50px"
+                        strokeWidth="8"
+                        fill="transparent"
+                        animationDuration=".5s"
+                        aria-label="Custom ProgressSpinner"
                       />
                     </div>
-                    
-                    <!-- Usuario ya existe, se carga el archivo -->
+
                     <div
-                      v-else-if="evidenceFile && doesUserExist"
-                      class="flex flex-col items-center"
+                      v-else-if="!evidenceFile && !doesUserExist"
+                      class="flex items-center justify-center flex-col"
                     >
-                      <div
-                        class="w-24 h-24 flex items-center justify-center border border-dashed border-gray-300 rounded"
-                      >
-                        <i class="pi pi-file-pdf text-5xl text-red-600"></i>
-                      </div>
-                      <span
-                        class="mt-2 font-semibold text-ellipsis max-w-60 whitespace-nowrap overflow-hidden"
-                      >
-                        {{ selectedEvidence.Evidence_Name }}
-                      </span>
-                      <div class="flex gap-2 mt-2">
-                        <div v-if="doesUserExist && doesUserRequestEditConsultation">
-                            <Button
-                            icon="pi pi-times"
-                            label="Reemplazar"
-                            class="p-button-danger mt-2"
-                            @click="deleteEvidenceDocument()"
-                            outlined
-                            rounded
-                            />
-                        </div>
-                        <div v-if="doesUserExist && evidenceFile != null">
-                            <Button 
-                            icon="pi pi-eye"
-                            label="Ver"
-                            class="p-button-info mt-2"
-                            @click="loadUserEvidenceDocument(evidenceID)"
-                            outlined
-                            rounded
-                          />
-                        </div>
-                      </div>
+                      <i
+                        class="pi pi-cloud-upload !border-2 !rounded-full !p-8 !text-4xl !text-muted-color"
+                      />
+                      <p class="mt-6 mb-0">
+                        Arrastra y suelta el archivo PDF aquí.
+                      </p>
                     </div>
-                  </div>
-                </template>
-                <!-- Dos opciones para que salga el templete. El usuario no existe y no tiene archivos. El usuario existe pero no tiene documentos -->
-                <template #empty>
-
-                  <div v-if="isEvidenceLoading" class="flex justify-center">
-                    <ProgressSpinner style="width:50px;height:50px" strokeWidth="8" fill="transparent" animationDuration=".5s" aria-label="Custom ProgressSpinner"/>
-                  </div>
-
-                  <div v-else-if="!evidenceFile && !doesUserExist"  class="flex items-center justify-center flex-col">
-                    <i
-                      class="pi pi-cloud-upload !border-2 !rounded-full !p-8 !text-4xl !text-muted-color"
-                    />
-                    <p class="mt-6 mb-0">
-                      Arrastra y suelta el archivo PDF aquí.
-                    </p>
-                  </div>
-                  <div v-else-if="!evidenceFile && doesUserExist" class="flex items-center justify-center flex-col">
-                    <i
-                      class="pi pi-cloud-upload !border-2 !rounded-full !p-8 !text-4xl !text-muted-color"
-                    />
-                    <p class="mt-6 mb-0">
-                      Arrastra y suelta el archivo PDF aquí.
-                    </p>
-                  </div>
-                </template>
-              </FileUpload>
+                    <div
+                      v-else-if="!evidenceFile && doesUserExist"
+                      class="flex items-center justify-center flex-col"
+                    >
+                      <i
+                        class="pi pi-cloud-upload !border-2 !rounded-full !p-8 !text-4xl !text-muted-color"
+                      />
+                      <p class="mt-6 mb-0">
+                        Arrastra y suelta el archivo PDF aquí.
+                      </p>
+                    </div>
+                  </template>
+                </FileUpload>
               </div>
             </div>
           </div>
@@ -3725,12 +3875,13 @@ const checkIdSize = (shouldShowToast: boolean = true): boolean => {
 }
 .p-fileupload-advanced {
   height: 280px !important;
-
 }
-.fade-enter-active, .fade-leave-active {
+.fade-enter-active,
+.fade-leave-active {
   transition: opacity 1s;
 }
-.fade-enter-from, .fade-leave-to {
+.fade-enter-from,
+.fade-leave-to {
   opacity: 0;
 }
 </style>
