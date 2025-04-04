@@ -119,23 +119,6 @@ const clearFilter = () => {
   filters.value = { ...filters.value };
 };
 
-const getSeverity = (status: string) => {
-  switch (status) {
-    case "Activo": return "success";
-    case "Inactivo": return "danger";
-    default: return "secondary";
-  }
-};
-
-const openViewDialog = (data: Initial_Consultation) => {
-  selectedConsultation.value = data;
-  viewDialogVisible.value = true;
-};
-
-const openEditDialog = (data: Initial_Consultation) => {
-  selectedConsultation.value = data;
-  editDialogVisible.value = true;
-};
 
 const redirectToConsultation = (data: Initial_Consultation) => {
     router.push({ name: "NewCase", query: { userID: data.User_ID, caseID: data.Init_Code } });
@@ -192,7 +175,7 @@ onMounted(() => {
       filterDisplay="menu"
       size="large"
       removableSort
-      :globalFilterFields="['Init_Code','Internal_ID','User_ID','Init_Subject','Init_Service','Init_Status']"
+      :globalFilterFields="['Init_Code','Internal_ID','User_ID','Init_Subject','Init_Service','Init_Status','Init_AlertNote']"
     >
       <template #header>
         <div class="flex justify-between">
@@ -233,14 +216,14 @@ onMounted(() => {
         </template>
       </Column>
       
-      <Column field="User_ID" header="Usuario" sortable style="min-width: 14rem">
+      <!-- <Column field="User_ID" header="Usuario" sortable style="min-width: 14rem">
         <template #body="{ data }">
           {{ resolveUserName(data.User_ID) }}
         </template>
         <template #filter="{ filterModel }">
           <InputText v-model="filterModel.value" type="text" placeholder="Buscar por usuario" />
         </template>
-      </Column>
+      </Column> -->
       
       <Column field="Init_Subject" header="Tema" sortable style="min-width: 14rem">
         <template #body="{ data }">
@@ -259,6 +242,19 @@ onMounted(() => {
           <InputText v-model="filterModel.value" type="text" placeholder="Buscar por servicio" />
         </template>
       </Column>
+
+
+      <Column field = "Init_AlertNote" header = "Nota de Alerta" sortable style = "min-width: 14rem">
+        <template #body="{ data }">
+          <Tag v-if="data.Init_AlertNote" severity="danger" value="Alerta" class="w-full md:w-20 text-center"></Tag>
+          <Tag v-else severity="success" value="Sin Alerta" class="w-full md:w-20  text-center"></Tag>
+        </template>
+        <template #filter="{ filterModel }">
+          <Dropdown v-model="filterModel.value" :options="statuses" placeholder="Seleccionar estado" />
+        </template>
+      </Column>
+
+      
       
       <Column header="Acciones" headerStyle="width: 5rem; text-align: center" bodyStyle="text-align: center; overflow: visible">
         <template #body="{ data }">

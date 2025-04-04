@@ -73,6 +73,8 @@ const userRequestNewEvidenceDocument = ref(false); //Revisa si el usuario quiere
 const fileUploadEvidence = ref<any>(null);
 const isEvidenceLoading = ref(false);
 
+const watchAlertDialog = ref(false);
+
 const toastCounter = ref(0);
 
 const confirm = useConfirm();
@@ -802,7 +804,7 @@ const userCityOptions = ref<{ name: string; value: string }[]>([]);
 axios.get(`${API}/cities`).then((response) => {
   userCityOptions.value = response.data.map((item: any) => ({
     name: item.City_Name,
-    value: item.City_Names
+    value: item.City_Name
   }));
 })
 
@@ -1083,7 +1085,7 @@ axios.get(`${API}/derived-by`).then((response) => {
 });
 
 const initNotes = ref("");
-
+const initAlertNote = ref<string>("");
 
 
 
@@ -1241,6 +1243,7 @@ const restartConsultationForm = () => {
   initLawyer.value = null;
   initReferral.value = null;
   initNotes.value = "";
+  initAlertNote.value = "";
 };
 
 const searchIDButton = () => {
@@ -1491,6 +1494,7 @@ const updateFormWithConsultation = async (
       (option) => option.value === data.Init_Referral
     ) || null;
   initSocialWork.value = data.Init_SocialWork;
+  initAlertNote.value = data.Init_AlertNote;
   await fetchEvidence(initCode.value); // Cargar la evidencia de la consulta
 };
 
@@ -1880,13 +1884,17 @@ const newUserConsultation = async () => {
       console.log("Respuesta del servidor:", response.data);
     } catch (error) {
       console.error("Error al subir la evidencia:", error);
-      toast.add({
-        severity: "error",
-        summary: "Error",
-        detail: "No se pudo subir la evidencia.",
-        life: 4000,
-      });
+      if(evidenceFile.value) {
+        toast.add({
+          severity: "error",
+          summary: "Error",
+          detail: "No se pudo subir la evidencia.",
+          life: 4000,
+        });
+      } 
     }
+
+    // Reiniciar los estados y el formulario
 
     newConsultationButtonDisabled.value = true;
     doesUserRequestOp.value = false;
@@ -2347,6 +2355,19 @@ const checkIdSize = (shouldShowToast: boolean = true): boolean => {
   }
   return bandera.value;
 };
+
+
+
+
+
+
+
+
+
+
+
+
+
 </script>
 
 <template>
@@ -3325,6 +3346,7 @@ const checkIdSize = (shouldShowToast: boolean = true): boolean => {
         <Tab value="1" v-if="authStore.user?.type == 'Administrador'"
           >Patrocinios</Tab
         >
+
         <div
           class="flex justify-between items-center w-full"
           :class="authStore.user?.type == 'Estudiante' ? 'ml-266' : 'ml-0'"
@@ -3349,6 +3371,17 @@ const checkIdSize = (shouldShowToast: boolean = true): boolean => {
 
           <!-- Botones alineados al final -->
           <div class="flex items-center gap-2 mr-10">
+            <div v-if="authStore.user?.type == 'Administrador' && doesUserExist && initAlertNote != ''"> 
+              <Button
+                severity="warn"
+                class="bg-yellow-400"
+                icon="pi pi-exclamation-triangle"
+                @click="watchAlertDialog = true"
+                v-tooltip.bottom="'Advertencia'"
+                rounded
+                size="large"
+              />
+            </div>
             <Button
               icon="pi pi-file-plus"
               @click="requestNewConsultation()"
@@ -3863,6 +3896,29 @@ const checkIdSize = (shouldShowToast: boolean = true): boolean => {
       />
     </div>
   </div>
+
+  <Dialog                 
+    v-model:visible="watchAlertDialog"
+    modal
+    icon="pi pi-exclamation-triangle"
+    header="⚠️ Alerta de Viabilidad"
+    :style="{ width: '50vw' }"
+    class="p-6 rounded-lg shadow-lg bg-white">
+    <div class="flex flex-col gap-4">
+      <p class="text-gray-700 text-lg">
+        El caso tiene una o más alertas de viabilidad. Por favor, revisa la información
+        antes de continuar.
+      </p>
+      <p class="text-gray-700 text-lg">
+      <strong>Observación:</strong>
+      </p>
+      <div class="alertNoteCase text-lg" v-html="initAlertNote"></div>
+
+      <p class="text-gray-700 text-lg">
+        <strong>Fecha de la alerta:</strong> {{ initDate.toLocaleDateString() }}
+      </p>
+    </div>
+  </Dialog>
 </template>
 
 <style scoped>
@@ -3883,5 +3939,8 @@ const checkIdSize = (shouldShowToast: boolean = true): boolean => {
 .fade-enter-from,
 .fade-leave-to {
   opacity: 0;
+}
+.alertNoteCase {
+  white-space: pre-line;
 }
 </style>
