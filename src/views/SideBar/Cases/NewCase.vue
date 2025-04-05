@@ -31,6 +31,7 @@ import ConfirmDialog from "primevue/confirmdialog";
 import ProgressSpinner from "primevue/progressspinner";
 import axios from "axios";
 
+
 const route = useRoute();
 const authStore = useAuthStore();
 
@@ -408,9 +409,14 @@ function onSelectedFilesEvidence(event: { files: File[] }) {
         detail: "El archivo excede el tamaño máximo de 2MB.",
         life: 5000,
       });
-      evidenceFile.value = null;
+      restartEvidence(); // Reinicia el estado del FileUpload
       return;
     } else {
+      if(doesUserExist) {
+        userRequestNewEvidenceDocument.value = true; // Reiniciamos el estado del boton de subir nuevo documento
+      } else {
+        userRequestNewEvidenceDocument.value = false; // Reiniciamos el estado del boton de subir nuevo documento
+      }
       evidenceFile.value = file;
       evidenceFileName.value = file.name;
       console.log("Archivo cargado:", evidenceFile.value);
@@ -427,6 +433,9 @@ function onRemoveTemplatingFileEvidence(
 ) {
   removeFileCallback(index);
   evidenceFile.value = null;
+  if(doesUserExist) {
+    userRequestNewEvidenceDocument.value = false; // Reiniciamos el estado del boton de subir nuevo documento
+  }
 }
 
 function onSaveDocumentEvidence() {
@@ -510,6 +519,7 @@ const restartDocument = () => {
   totalSize.value = 0;
   totalSizePercent.value = 0;
   userRequestNewDocument.value = false; //Reiniciamos el estado del boton de subir nuevo documento
+  userRequestNewEvidenceDocument.value = false; //Reiniciamos el estado del boton de subir nuevo documento
 };
 
 const restartEvidence = () => {
@@ -544,7 +554,7 @@ const userGenderOptions = ref<{ name: string; value: string }[]>([]);
 axios.get(`${API}/sexes`).then((response) => {
   userGenderOptions.value = response.data.map((item: any) => ({
     name: item.Sex_Name,
-    value: item.Sex_Name
+    value: item.Sex_Name,
   }));
 });
 
@@ -785,7 +795,7 @@ const userEthnicityOptions = ref<{ name: string; value: string }[]>([]);
 axios.get(`${API}/ethnicities`).then((response) => {
   userEthnicityOptions.value = response.data.map((item: any) => ({
     name: item.Ethnicity_Name,
-    value: item.Ethnicity_Name
+    value: item.Ethnicity_Name,
   }));
 });
 
@@ -794,20 +804,18 @@ const userProvinceOptions = ref<{ name: string; value: string }[]>([]);
 axios.get(`${API}/provinces`).then((response) => {
   userProvinceOptions.value = response.data.map((item: any) => ({
     name: item.Province_Name,
-    value: item.Province_Name
+    value: item.Province_Name,
   }));
 });
-
 
 const userCity = ref<{ name: string; value: string } | null>(null);
 const userCityOptions = ref<{ name: string; value: string }[]>([]);
 axios.get(`${API}/cities`).then((response) => {
   userCityOptions.value = response.data.map((item: any) => ({
     name: item.City_Name,
-    value: item.City_Name
+    value: item.City_Name,
   }));
-})
-
+});
 
 //DATOS DE CONTACTO Y CONTACTO DE REFERENCIA
 const userPhone = ref("");
@@ -818,7 +826,7 @@ const userSectorOptions = ref<{ name: string; value: string }[]>([]);
 axios.get(`${API}/sectors`).then((response) => {
   userSectorOptions.value = response.data.map((item: any) => ({
     name: item.Sector_Name,
-    value: item.Sector_Name
+    value: item.Sector_Name,
   }));
 });
 
@@ -827,7 +835,7 @@ const userZoneOptions = ref<{ name: string; value: string }[]>([]);
 axios.get(`${API}/zone`).then((response) => {
   userZoneOptions.value = response.data.map((item: any) => ({
     name: item.Zone_Name,
-    value: item.Zone_Name
+    value: item.Zone_Name,
   }));
 });
 
@@ -842,11 +850,13 @@ const userEconomicDependece = ref(false);
 const userAcademicInstruction = ref<{ name: string; value: string } | null>(
   null
 );
-const userAcademicInstructionOptions = ref<{ name: string; value: string }[]>([]);
+const userAcademicInstructionOptions = ref<{ name: string; value: string }[]>(
+  []
+);
 axios.get(`${API}/academic-instructions`).then((response) => {
   userAcademicInstructionOptions.value = response.data.map((item: any) => ({
     name: item.Academic_Instruction_Name,
-    value: item.Academic_Instruction_Name
+    value: item.Academic_Instruction_Name,
   }));
 });
 
@@ -855,7 +865,7 @@ const userProfessionOptions = ref<{ name: string; value: string }[]>([]);
 axios.get(`${API}/occupations`).then((response) => {
   userProfessionOptions.value = response.data.map((item: any) => ({
     name: item.Occupation_Name,
-    value: item.Occupation_Name
+    value: item.Occupation_Name,
   }));
 });
 
@@ -864,10 +874,9 @@ const userMaritalStatusOptions = ref<{ name: string; value: string }[]>([]);
 axios.get(`${API}/civil-statuses`).then((response) => {
   userMaritalStatusOptions.value = response.data.map((item: any) => ({
     name: item.Civil_Status_Name,
-    value: item.Civil_Status_Name
+    value: item.Civil_Status_Name,
   }));
 });
-
 
 const userDependents = ref<number | null>(null);
 
@@ -876,7 +885,7 @@ const userIncomeLevelOptions = ref<{ name: string; value: string }[]>([]);
 axios.get(`${API}/income-level`).then((response) => {
   userIncomeLevelOptions.value = response.data.map((item: any) => ({
     name: item.Income_Level_Name,
-    value: item.Income_Level_Name
+    value: item.Income_Level_Name,
   }));
 });
 
@@ -885,7 +894,7 @@ const userFamilyIncomeOptions = ref<{ name: string; value: string }[]>([]);
 axios.get(`${API}/family-income`).then((response) => {
   userFamilyIncomeOptions.value = response.data.map((item: any) => ({
     name: item.Family_Income_Name,
-    value: item.Family_Income_Name
+    value: item.Family_Income_Name,
   }));
 });
 
@@ -894,7 +903,7 @@ const userFamilyGroupOptions = ref<{ name: string; value: string }[]>([]);
 axios.get(`${API}/family-group`).then((response) => {
   userFamilyGroupOptions.value = response.data.map((item: any) => ({
     name: item.Family_Group_Name,
-    value: item.Family_Group_Name
+    value: item.Family_Group_Name,
   }));
 });
 
@@ -907,7 +916,7 @@ const userOwnAssetsOptions = ref<{ name: string; value: string }[]>([]);
 axios.get(`${API}/own-assets`).then((response) => {
   userOwnAssetsOptions.value = response.data.map((item: any) => ({
     name: item.Own_Assets_Name,
-    value: item.Own_Assets_Name
+    value: item.Own_Assets_Name,
   }));
 });
 
@@ -916,7 +925,7 @@ const userHousingTypeOptions = ref<{ name: string; value: string }[]>([]);
 axios.get(`${API}/type-of-housing`).then((response) => {
   userHousingTypeOptions.value = response.data.map((item: any) => ({
     name: item.Type_Of_Housing_Name,
-    value: item.Type_Of_Housing_Name
+    value: item.Type_Of_Housing_Name,
   }));
 });
 
@@ -925,39 +934,42 @@ const userPensionerOptions = ref<{ name: string; value: string }[]>([]);
 axios.get(`${API}/pensioner`).then((response) => {
   userPensionerOptions.value = response.data.map((item: any) => ({
     name: item.Pensioner_Name,
-    value: item.Pensioner_Name
+    value: item.Pensioner_Name,
   }));
 });
-
 
 const userHealthInsurance = ref<{ name: string; value: string } | null>(null);
 const userHealthInsuranceOptions = ref<{ name: string; value: string }[]>([]);
 axios.get(`${API}/health-insurance`).then((response) => {
   userHealthInsuranceOptions.value = response.data.map((item: any) => ({
     name: item.Health_Insurance_Name,
-    value: item.Health_Insurance_Name
+    value: item.Health_Insurance_Name,
   }));
 });
 
 const userVulnerableSituation = ref<{ name: string; value: string } | null>(
   null
 );
-const userVulnerableSituationOptions = ref<{ name: string; value: string }[]>([]);
+const userVulnerableSituationOptions = ref<{ name: string; value: string }[]>(
+  []
+);
 axios.get(`${API}/vulnerable-situation`).then((response) => {
   userVulnerableSituationOptions.value = response.data.map((item: any) => ({
     name: item.Vulnerable_Situation_Name,
-    value: item.Vulnerable_Situation_Name
+    value: item.Vulnerable_Situation_Name,
   }));
 });
 
 const userSupportingDocuments = ref<{ name: string; value: string } | null>(
   null
 );
-const userSupportingDocumentsOptions = ref<{ name: string; value: string }[]>([]);
+const userSupportingDocumentsOptions = ref<{ name: string; value: string }[]>(
+  []
+);
 axios.get(`${API}/documentation-backups`).then((response) => {
   userSupportingDocumentsOptions.value = response.data.map((item: any) => ({
     name: item.Documentation_Backup_Name,
-    value: item.Documentation_Backup_Name
+    value: item.Documentation_Backup_Name,
   }));
 });
 
@@ -966,7 +978,7 @@ const userDisabilityOptions = ref<{ name: string; value: string }[]>([]);
 axios.get(`${API}/disability`).then((response) => {
   userDisabilityOptions.value = response.data.map((item: any) => ({
     name: item.Disability_Name,
-    value: item.Disability_Name
+    value: item.Disability_Name,
   }));
 });
 
@@ -975,11 +987,13 @@ const userDisabilityPercentage = ref<number>(0);
 const userCatastrophicIllness = ref<{ name: string; value: string } | null>(
   null
 );
-const userCatastrophicIllnessOptions = ref<{ name: string; value: string }[]>([]);
+const userCatastrophicIllnessOptions = ref<{ name: string; value: string }[]>(
+  []
+);
 axios.get(`${API}/illness`).then((response) => {
   userCatastrophicIllnessOptions.value = response.data.map((item: any) => ({
     name: item.Catastrophic_Illness_Name,
-    value: item.Catastrophic_Illness_Name
+    value: item.Catastrophic_Illness_Name,
   }));
 });
 
@@ -993,14 +1007,13 @@ const initCode = ref("");
 const internalID = authStore.user?.id;
 const initSocialWork = ref<boolean>(false);
 
-
 const initStatusOptions = ref<{ name: string; value: string }[]>([]);
 const initStatus = ref<{ name: string; value: string } | null>(null);
 
 axios.get(`${API}/case-status`).then((response) => {
   initStatusOptions.value = response.data.map((item: any) => ({
     name: item.Case_Status_Name,
-    value: item.Case_Status_Name
+    value: item.Case_Status_Name,
   }));
 
   // Seleccionar "Activo" si existe en la lista, si no, tomar la primera opción
@@ -1009,7 +1022,6 @@ axios.get(`${API}/case-status`).then((response) => {
     initStatusOptions.value[0] ||
     null;
 });
-
 
 const initOffice = ref('Consultorio Jurídico "PUCE", Sede Quito');
 
@@ -1021,7 +1033,7 @@ const initClientTypeOptions = ref<{ name: string; value: string }[]>([]);
 axios.get(`${API}/client-types`).then((response) => {
   initClientTypeOptions.value = response.data.map((item: any) => ({
     name: item.Client_Type_Name,
-    value: item.Client_Type_Name
+    value: item.Client_Type_Name,
   }));
 });
 
@@ -1030,7 +1042,7 @@ const initSubjectOptions = ref<{ name: string; value: string }[]>([]);
 axios.get(`${API}/subjects`).then((response) => {
   initSubjectOptions.value = response.data.map((item: any) => ({
     name: item.Subject_Name,
-    value: item.Subject_Name
+    value: item.Subject_Name,
   }));
 });
 
@@ -1039,7 +1051,7 @@ const initTopicOptions = ref<{ name: string; value: string }[]>([]);
 axios.get(`${API}/topics`).then((response) => {
   initTopicOptions.value = response.data.map((item: any) => ({
     name: item.Topic_Name,
-    value: item.Topic_Name
+    value: item.Topic_Name,
   }));
 });
 
@@ -1048,7 +1060,7 @@ const initServiceOptions = ref<{ name: string; value: string }[]>([]);
 axios.get(`${API}/type-of-attention`).then((response) => {
   initServiceOptions.value = response.data.map((item: any) => ({
     name: item.Type_Of_Attention_Name,
-    value: item.Type_Of_Attention_Name
+    value: item.Type_Of_Attention_Name,
   }));
 });
 //si el usuario es estudiante, se le oculta el campo de Patrocinio
@@ -1062,7 +1074,7 @@ const initComplexityOptions = ref<{ name: string; value: string }[]>([]);
 axios.get(`${API}/complexities`).then((response) => {
   initComplexityOptions.value = response.data.map((item: any) => ({
     name: item.Complexity_Name,
-    value: item.Complexity_Name
+    value: item.Complexity_Name,
   }));
 });
 
@@ -1071,7 +1083,7 @@ const initLawyerOptions = ref<{ name: string; value: string }[]>([]);
 axios.get(`${API}/internal-user/lawyers/list`).then((response) => {
   initLawyerOptions.value = response.data.map((item: any) => ({
     name: item.Internal_Name + " " + item.Internal_LastName,
-    value: item.Internal_Name + " " + item.Internal_LastName
+    value: item.Internal_Name + " " + item.Internal_LastName,
   }));
 });
 
@@ -1080,15 +1092,12 @@ const initReferralOptions = ref<{ name: string; value: string }[]>([]);
 axios.get(`${API}/derived-by`).then((response) => {
   initReferralOptions.value = response.data.map((item: any) => ({
     name: item.Derived_By_Name,
-    value: item.Derived_By_Name
+    value: item.Derived_By_Name,
   }));
 });
 
 const initNotes = ref("");
 const initAlertNote = ref<string>("");
-
-
-
 
 //-------------------------------------------------------------------------------------------------------------//
 //VARIABLES DE LA EVIDENCIA DE ASESORÍA
@@ -1884,14 +1893,14 @@ const newUserConsultation = async () => {
       console.log("Respuesta del servidor:", response.data);
     } catch (error) {
       console.error("Error al subir la evidencia:", error);
-      if(evidenceFile.value) {
+      if (evidenceFile.value) {
         toast.add({
           severity: "error",
           summary: "Error",
           detail: "No se pudo subir la evidencia.",
           life: 4000,
         });
-      } 
+      }
     }
 
     // Reiniciar los estados y el formulario
@@ -1920,7 +1929,6 @@ const newUserConsultation = async () => {
 const requestEditConsultation = async () => {
   doesUserRequestOp.value = true;
   doesUserRequestEditConsultation.value = true;
-  userRequestNewEvidenceDocument.value = true;
   editConsultationButtonDisabled.value = false;
   isInitStatusDisabled.value = false;
   isInitEndDateDisabled.value = false;
@@ -2161,7 +2169,8 @@ const editUser = async () => {
     User_AcademicInstruction:
       userAcademicInstruction.value?.value ||
       originalUser.User_AcademicInstruction,
-    User_Profession: userProfession.value?.value || originalUser.User_Profession,
+    User_Profession:
+      userProfession.value?.value || originalUser.User_Profession,
     User_MaritalStatus:
       userMaritalStatus.value?.value || originalUser.User_MaritalStatus,
     User_Dependents:
@@ -2191,7 +2200,8 @@ const editUser = async () => {
     User_SupportingDocuments:
       userSupportingDocuments.value?.value ||
       originalUser.User_SupportingDocuments,
-    User_Disability: userDisability.value?.value || originalUser.User_Disability,
+    User_Disability:
+      userDisability.value?.value || originalUser.User_Disability,
     User_DisabilityPercentage:
       userDisabilityPercentage.value || originalUser.User_DisabilityPercentage,
     User_CatastrophicIllness:
@@ -2250,11 +2260,7 @@ const editUser = async () => {
   }
 };
 
-const limitText = () => {
-  if (initNotes.value.length > 500) {
-    initNotes.value = initNotes.value.substring(0, 500);
-  }
-};
+
 
 //gaurdamos el documento en la variable User_HealthDocuments
 
@@ -2356,15 +2362,76 @@ const checkIdSize = (shouldShowToast: boolean = true): boolean => {
   return bandera.value;
 };
 
+const incrementInterval = ref<number | null>(null);
+const decrementInterval = ref<number | null>(null);
+
+function startIncrement() {
+  if (incrementInterval.value) clearInterval(incrementInterval.value);
+  incrementInterval.value = window.setInterval(() => {
+    if (userDisabilityPercentage.value < 100) {
+      userDisabilityPercentage.value++;
+    } else {
+      stopIncrement();
+    }
+  }, 50); // Ajusta la velocidad (ms) según lo necesario
+}
+
+function stopIncrement() {
+  if (incrementInterval.value) {
+    clearInterval(incrementInterval.value);
+    incrementInterval.value = null;
+  }
+}
+
+function startDecrement() {
+  if (decrementInterval.value) clearInterval(decrementInterval.value);
+  decrementInterval.value = window.setInterval(() => {
+    if (userDisabilityPercentage.value > 0) {
+      userDisabilityPercentage.value--;
+    } else {
+      stopDecrement();
+    }
+  }, 50);
+}
+
+function stopDecrement() {
+  if (decrementInterval.value) {
+    clearInterval(decrementInterval.value);
+    decrementInterval.value = null;
+  }
+}
 
 
+const isRejectLoading = ref(false);
 
-
-
-
-
-
-
+const rejectCase = async () => {
+  isRejectLoading.value = true; // Inicia la carga
+  try {
+    const response = await axios.post(
+      `${API}/initial-consultations/reject`,
+      { id: initCode.value },
+      { headers: { "internal-id": authStore.user?.id } }
+    );
+    console.log(response);
+    watchAlertDialog.value = false; // Cerrar el diálogo
+    await fetchConsultations(); // Actualizar la lista de consultas
+    toast.add({
+      severity: "info",
+      summary: "Correo electrónico enviado",
+      detail: "Se ha informado al usuario sobre el rechazo de su consulta inicial.",
+      life: 4000,
+    });
+  } catch (error) {
+    toast.add({
+      severity: "error",
+      summary: "Error",
+      detail: "No se pudo rechazar la consulta inicial.",
+      life: 4000,
+    });
+  } finally {
+    isRejectLoading.value = false;
+  }
+};
 
 
 
@@ -2537,20 +2604,24 @@ const checkIdSize = (shouldShowToast: boolean = true): boolean => {
               class="w-full"
               :disabled="areInputsDisabled"
             >
-            <template #value="slotProps">
-              <div v-if="slotProps.value" class="flex items-center">
-                <img
-                  :alt="slotProps.value.label || slotProps.value.name"
-                  src="https://primefaces.org/cdn/primevue/images/flag/flag_placeholder.png"
-                  :class="`mr-2 flag flag-${slotProps.value.code ? slotProps.value.code.toLowerCase() : ''}`"
-                  style="width: 18px"
-                />
-                <div>{{ slotProps.value.name }}</div>
-              </div>
-              <span v-else>
-                {{ slotProps.placeholder }}
-              </span>
-            </template>
+              <template #value="slotProps">
+                <div v-if="slotProps.value" class="flex items-center">
+                  <img
+                    :alt="slotProps.value.label || slotProps.value.name"
+                    src="https://primefaces.org/cdn/primevue/images/flag/flag_placeholder.png"
+                    :class="`mr-2 flag flag-${
+                      slotProps.value.code
+                        ? slotProps.value.code.toLowerCase()
+                        : ''
+                    }`"
+                    style="width: 18px"
+                  />
+                  <div>{{ slotProps.value.name }}</div>
+                </div>
+                <span v-else>
+                  {{ slotProps.placeholder }}
+                </span>
+              </template>
               <template #option="slotProps">
                 <div class="flex items-center">
                   <img
@@ -2917,9 +2988,7 @@ const checkIdSize = (shouldShowToast: boolean = true): boolean => {
 
           <!-- Contenedor fijo para mantener el espacio -->
 
-          <div
-            class="flex items-center gap-2 justify-end min-h-[60px] -mt-8 mr-6"
-          >
+          <div class="min-h-[60px] -mt-16 mr-6 flex flex-col items-end gap-2">
             <Knob
               v-model="userDisabilityPercentage"
               :step="5"
@@ -2936,20 +3005,56 @@ const checkIdSize = (shouldShowToast: boolean = true): boolean => {
                   'opacity 0.5s ease-out, transform 0.5s ease-out, visibility 0.5s',
               }"
             />
-            <!-- <div class="flex gap-1">
+            <div class="flex gap-1 mr-3.5">
               <Button
+                class="knobBtn"
                 icon="pi pi-plus"
+                size="small"
+                raised
+                :severity="
+                  userDisabilityPercentage >= 100 ? 'secondary' : 'contrast'
+                "
                 @click="userDisabilityPercentage++"
+                @mousedown="startIncrement"
+                @mouseup="stopIncrement"
+                @mouseleave="stopIncrement"
                 :disabled="userDisabilityPercentage >= 100"
-                style="width: 24px; height: 24px; font-size: 12px;"
+                :style="{
+                  visibility: userHasDisability ? 'visible' : 'hidden',
+                  opacity: userHasDisability ? 1 : 0,
+                  transform: userHasDisability
+                    ? 'translateY(0)'
+                    : 'translateY(-8px)',
+                  transition:
+                    'opacity 0.5s ease-out, transform 0.5s ease-out, visibility 0.5s',
+                }"
               />
+
+              <!-- Botón de decremento -->
               <Button
+                class="knobBtn"
                 icon="pi pi-minus"
+                size="small"
+                raised
+                :severity="
+                  userDisabilityPercentage <= 0 ? 'secondary' : 'contrast'
+                "
                 @click="userDisabilityPercentage--"
+                @mousedown="startDecrement"
+                @mouseup="stopDecrement"
+                @mouseleave="stopDecrement"
                 :disabled="userDisabilityPercentage <= 0"
-                style="width: 24px; height: 24px; font-size: 12px;"
+                :style="{
+                  visibility: userHasDisability ? 'visible' : 'hidden',
+                  opacity: userHasDisability ? 1 : 0,
+                  transform: userHasDisability
+                    ? 'translateY(0)'
+                    : 'translateY(-8px)',
+                  transition:
+                    'opacity 0.5s ease-out, transform 0.5s ease-out, visibility 0.5s',
+                }"
               />
-            </div> -->
+            </div>
           </div>
         </div>
 
@@ -3371,7 +3476,13 @@ const checkIdSize = (shouldShowToast: boolean = true): boolean => {
 
           <!-- Botones alineados al final -->
           <div class="flex items-center gap-2 mr-10">
-            <div v-if="authStore.user?.type == 'Administrador' && doesUserExist && initAlertNote != ''"> 
+            <div
+              v-if="
+                authStore.user?.type == 'Administrador' &&
+                doesUserExist &&
+                initAlertNote != ''
+              "
+            >
               <Button
                 severity="warn"
                 class="bg-yellow-400"
@@ -3379,7 +3490,6 @@ const checkIdSize = (shouldShowToast: boolean = true): boolean => {
                 @click="watchAlertDialog = true"
                 v-tooltip.bottom="'Advertencia'"
                 rounded
-                size="large"
               />
             </div>
             <Button
@@ -3388,7 +3498,6 @@ const checkIdSize = (shouldShowToast: boolean = true): boolean => {
               v-tooltip.bottom="'Nueva Ficha'"
               rounded
               aria-label="Nueva Ficha"
-              size="large"
               :disabled="!doesUserExist || isSaveButtonDisabled"
             />
             <div v-if="authStore.user?.type !== 'Estudiante'">
@@ -3398,7 +3507,6 @@ const checkIdSize = (shouldShowToast: boolean = true): boolean => {
                 v-tooltip.bottom="'Editar Ficha'"
                 rounded
                 aria-label="Editar Ficha"
-                size="large"
                 severity="info"
                 :disabled="!doesUserExist || isEditButtonDisabled"
               />
@@ -3408,7 +3516,6 @@ const checkIdSize = (shouldShowToast: boolean = true): boolean => {
               v-tooltip.bottom="'Exportar PDF'"
               rounded
               aria-label="Exportar PDF"
-              size="large"
               @click="loadUserAttentionSheet(initCode)"
               severity="contrast"
               :disabled="!doesUserExist || isExportButtonDisabled"
@@ -3655,7 +3762,6 @@ const checkIdSize = (shouldShowToast: boolean = true): boolean => {
                   v-model="initNotes"
                   class="w-full"
                   editorStyle="height: 239px"
-                  @input="limitText"
                   :class="[
                     doesUserExist && !doesUserRequestOp
                       ? 'mouse pointer-events-none'
@@ -3694,6 +3800,7 @@ const checkIdSize = (shouldShowToast: boolean = true): boolean => {
                   @select="onSelectedFilesEvidence"
                   :autoClear="false"
                   class="w-full md:w-100"
+                  :disabled="areInputsDisabled"
                 >
                   <!-- Header: solo se muestra el botón para elegir archivo -->
                   <template #header="{ chooseCallback, files }">
@@ -3707,10 +3814,13 @@ const checkIdSize = (shouldShowToast: boolean = true): boolean => {
                         v-tooltip="'Seleccionar archivo'"
                         outlined
                         severity="secondary"
-                        :disabled="!!evidenceFile && !!doesUserExist"
+                        :class="
+                          areInputsDisabled || evidenceFile
+                            ? 'pointer-events-none'
+                            : ''"
                       />
                       <div
-                        v-if="doesUserExist && userRequestNewEvidenceDocument"
+                        v-if="doesUserExist && userRequestNewEvidenceDocument "
                         class="flex gap-2"
                       >
                         <Button
@@ -3897,28 +4007,38 @@ const checkIdSize = (shouldShowToast: boolean = true): boolean => {
     </div>
   </div>
 
-  <Dialog                 
-    v-model:visible="watchAlertDialog"
-    modal
-    icon="pi pi-exclamation-triangle"
-    header="⚠️ Alerta de Viabilidad"
-    :style="{ width: '50vw' }"
-    class="p-6 rounded-lg shadow-lg bg-white">
-    <div class="flex flex-col gap-4">
-      <p class="text-gray-700 text-lg">
-        El caso tiene una o más alertas de viabilidad. Por favor, revisa la información
-        antes de continuar.
-      </p>
-      <p class="text-gray-700 text-lg">
+  <Dialog
+  v-model:visible="watchAlertDialog"
+  modal
+  icon="pi pi-exclamation-triangle"
+  header="⚠️ Alerta de Viabilidad"
+  :style="{ width: '50vw' }"
+  class="p-6 rounded-lg shadow-lg bg-white"
+>
+  <div v-if="isRejectLoading" class="flex justify-center items-center h-40">
+    <ProgressSpinner style="width: 50px; height: 50px" strokeWidth="8" fill="transparent" animationDuration=".5s" />
+  </div>
+  <div v-else class="flex flex-col gap-4">
+    <p class="text-gray-700 text-lg">
+      El caso tiene una o más alertas de viabilidad. Por favor, revisa la
+      información antes de continuar.
+    </p>
+    <p class="text-gray-700 text-lg">
       <strong>Observación:</strong>
-      </p>
-      <div class="alertNoteCase text-lg" v-html="initAlertNote"></div>
-
-      <p class="text-gray-700 text-lg">
-        <strong>Fecha de la alerta:</strong> {{ initDate.toLocaleDateString() }}
-      </p>
-    </div>
-  </Dialog>
+    </p>
+    <div class="alertNoteCase text-lg" v-html="initAlertNote"></div>
+    <p class="text-gray-700 text-lg">
+      <strong>Fecha de la alerta:</strong> {{ initDate.toLocaleDateString() }}
+    </p>
+    <Button
+      label="Rechazar Caso"
+      icon="pi pi-times-circle" 
+      class="mt-4 w-full md:w-40"
+      @click="rejectCase()"
+      severity="danger"
+    />
+  </div>
+</Dialog>
 </template>
 
 <style scoped>
@@ -3942,5 +4062,9 @@ const checkIdSize = (shouldShowToast: boolean = true): boolean => {
 }
 .alertNoteCase {
   white-space: pre-line;
+}
+.knobBtn {
+  width: 22px !important;
+  height: 22px;
 }
 </style>
