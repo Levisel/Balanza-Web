@@ -71,10 +71,12 @@ const bandera = ref<boolean>(false); //Revisa si la cedula tiene 10 digitos
 
 const userRequestNewDocument = ref(false); //Revisa si el usuario quiere subir un nuevo documento
 const userRequestNewEvidenceDocument = ref(false); //Revisa si el usuario quiere subir un nuevo documento de evidencia
+const doesUserRequestNewConsultation = ref(false); //Revisa si el usuario quiere subir una nueva consulta
 const fileUploadEvidence = ref<any>(null);
 const isEvidenceLoading = ref(false);
 
 const watchAlertDialog = ref(false);
+const doesConsultationHasAlert = ref(false);
 
 const toastCounter = ref(0);
 
@@ -218,6 +220,9 @@ const uploadNewEvidenceDocument = () => {
           life: 3000,
         });
       }
+    },
+    reject: () => {
+      userRequestNewEvidenceDocument.value = false; // Reiniciamos el estado del boton de subir nuevo documento
     },
   });
 };
@@ -439,14 +444,14 @@ function onRemoveTemplatingFileEvidence(
 }
 
 function onSaveDocumentEvidence() {
-  if (evidenceFile.value) {
+  if (evidenceFile.value && !doesUserExist) {
     toast.add({
       severity: "success",
       summary: "Documento guardado",
       detail: evidenceFile.value.name,
       life: 3000,
     });
-  } else {
+  } else if (!evidenceFile.value) {
     toast.add({
       severity: "warn",
       summary: "Atención",
@@ -1459,6 +1464,7 @@ const fetchUser = async () => {
 const updateFormWithConsultation = async (
   data: Initial_Consultation
 ): Promise<void> => {
+  userRequestNewEvidenceDocument.value = false;
   restartEvidence(); // Reiniciar la evidencia antes de cargar una nueva consulta
   if (!data) return;
   initCode.value = data.Init_Code;
@@ -1504,6 +1510,12 @@ const updateFormWithConsultation = async (
     ) || null;
   initSocialWork.value = data.Init_SocialWork;
   initAlertNote.value = data.Init_AlertNote;
+  if(initAlertNote.value === null){
+    doesConsultationHasAlert.value = false;
+  }
+  else{
+    doesConsultationHasAlert.value = true;
+  }
   await fetchEvidence(initCode.value); // Cargar la evidencia de la consulta
 };
 
@@ -1786,6 +1798,7 @@ const createInitialConsultation = async () => {
 
 const requestNewConsultation = async () => {
   doesUserRequestOp.value = true;
+  doesUserRequestNewConsultation.value = true;
   userRequestNewEvidenceDocument.value = false;
   restartConsultationForm();
   restartEvidence();
@@ -1853,6 +1866,7 @@ const newUserConsultation = async () => {
       },
     });
 
+
     toast.add({
       severity: "info",
       summary: "Ficha Creada",
@@ -1904,7 +1918,7 @@ const newUserConsultation = async () => {
     }
 
     // Reiniciar los estados y el formulario
-
+    doesUserRequestNewConsultation.value = false;
     newConsultationButtonDisabled.value = true;
     doesUserRequestOp.value = false;
     isSaveButtonDisabled.value = false;
@@ -2405,32 +2419,49 @@ function stopDecrement() {
 const isRejectLoading = ref(false);
 
 const rejectCase = async () => {
-  isRejectLoading.value = true; // Inicia la carga
-  try {
-    const response = await axios.post(
-      `${API}/initial-consultations/reject`,
-      { id: initCode.value },
-      { headers: { "internal-id": authStore.user?.id } }
-    );
-    console.log(response);
-    watchAlertDialog.value = false; // Cerrar el diálogo
-    await fetchConsultations(); // Actualizar la lista de consultas
-    toast.add({
-      severity: "info",
-      summary: "Correo electrónico enviado",
-      detail: "Se ha informado al usuario sobre el rechazo de su consulta inicial.",
-      life: 4000,
-    });
-  } catch (error) {
-    toast.add({
-      severity: "error",
-      summary: "Error",
-      detail: "No se pudo rechazar la consulta inicial.",
-      life: 4000,
-    });
-  } finally {
-    isRejectLoading.value = false;
-  }
+
+  //Primero hacemos un check para ver si el usuario esta seguro de rechazar la consulta
+  confirm.require({
+    message: "¿Estás seguro de enviar un correo rechazando el patrocinio del caso?",
+    header: "Advertencia",
+    icon: "pi pi-info-circle",
+    rejectLabel: "Cancelar",
+    rejectProps: { label: "Cancel", severity: "contrast", icon: "pi pi-times" },
+    acceptProps: { label: "Aceptar", severity: "info", icon: "pi pi-check-circle" },
+    accept: async () => {
+        isRejectLoading.value = true; // Inicia la carga
+            try {
+              
+          const response = await axios.post(
+            `${API}/initial-consultations/reject`,
+            { id: initCode.value },
+            { headers: { "internal-id": authStore.user?.id } }
+          );
+          console.log(response);
+          watchAlertDialog.value = false; // Cerrar el diálogo
+          await fetchConsultations(); // Actualizar la lista de consultas
+          toast.add({
+            severity: "info",
+            summary: "Correo electrónico enviado",
+            detail: "Se ha informado al usuario sobre el rechazo de su consulta inicial.",
+            life: 4000,
+          });
+        } catch (error) {
+          toast.add({
+            severity: "error",
+            summary: "Error",
+            detail: "No se pudo rechazar la consulta inicial.",
+            life: 4000,
+          });
+        } finally {
+          isRejectLoading.value = false;
+        }
+    },
+    reject: () => {
+      isRejectLoading.value = false; // Detiene la carga si se cancela
+    },
+  });
+
 };
 
 
@@ -3483,6 +3514,7 @@ const rejectCase = async () => {
                 initAlertNote != ''
               "
             >
+            <div v-if="doesConsultationHasAlert">
               <Button
                 severity="warn"
                 class="bg-yellow-400"
@@ -3491,6 +3523,8 @@ const rejectCase = async () => {
                 v-tooltip.bottom="'Advertencia'"
                 rounded
               />
+            </div>
+
             </div>
             <Button
               icon="pi pi-file-plus"
@@ -3820,7 +3854,7 @@ const rejectCase = async () => {
                             : ''"
                       />
                       <div
-                        v-if="doesUserExist && userRequestNewEvidenceDocument "
+                        v-if="doesUserExist && userRequestNewEvidenceDocument && !doesUserRequestNewConsultation"
                         class="flex gap-2"
                       >
                         <Button
@@ -4031,9 +4065,9 @@ const rejectCase = async () => {
       <strong>Fecha de la alerta:</strong> {{ initDate.toLocaleDateString() }}
     </p>
     <Button
-      label="Rechazar Caso"
-      icon="pi pi-times-circle" 
-      class="mt-4 w-full md:w-40"
+      label="Rechazar Patrocinio"
+      icon="pi pi-envelope" 
+      class="mt-4 w-full md:w-50"
       @click="rejectCase()"
       severity="danger"
     />
