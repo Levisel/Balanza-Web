@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useRoute } from "vue-router";
+import { useRouter } from "vue-router";
 import { computed, ref } from "vue";
 import { useDarkMode } from "@/components/ThemeSwitcher";
 import { useAuthStore } from "@/stores/auth";
@@ -10,6 +11,7 @@ import Badge from "primevue/badge";
 
 const { isDarkTheme, toggleDarkMode } = useDarkMode();
 const route = useRoute();
+const router = useRouter();
 const authStore = useAuthStore();
 const menu = ref();
 
@@ -21,6 +23,9 @@ const items = ref([
       {
         label: "Configuración",
         icon: "pi pi-cog",
+        command: () => {
+          router.push("/Configuracion");
+        },
       },
       {
         label: "Cerrar Sesión",
