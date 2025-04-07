@@ -102,12 +102,22 @@
         <!-- Columna de Acciones -->
         <Column header="Acciones">
           <template #body="slotProps">
-            <Button
-              icon="pi pi-info-circle"
-              class="p-button-rounded p-button-info"
-              @click="verDetalle(slotProps.data)"
-              v-tooltip.bottom="{ value: 'Ver Detalle', tooltipOptions: { position: 'top', showDelay: 300 } }"
-            />
+            <div class="flex gap-2">
+      <!-- Botón para ver detalle (ya existente) -->
+      <Button 
+        icon="pi pi-info-circle" 
+        class="p-button-rounded p-button-info" 
+        @click="verDetalle(slotProps.data)"
+        v-tooltip.bottom="{ value: 'Ver Detalle', tooltipOptions: { position: 'top', showDelay: 300 } }"
+      />
+      <!-- Nuevo botón para ir a Seguimiento Semanal -->
+      <Button 
+        icon="pi pi-arrow-right" 
+        class="p-button-rounded p-button-success" 
+         @click="irSeguimientoSemanal(slotProps.data.Resumen_ID, slotProps.data.usuarioResumen.Internal_ID)"
+        v-tooltip.bottom="{ value: 'Ver Seguimiento Semanal', tooltipOptions: { position: 'top', showDelay: 300 } }"
+      />
+    </div>
           </template>
         </Column>
       </DataTable>
@@ -237,6 +247,16 @@
       errorMensaje.value = "Error al cargar el resumen de horas.";
     }
   };
+
+
+const irSeguimientoSemanal = (resumenId: number, internalId: number) => {
+  router.push({
+    name: 'ResumenSemanal',
+    params: { resumenId, internalId }
+  });
+};
+
+
   
   onMounted(() => {
     fetchResumenes();

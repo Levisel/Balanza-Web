@@ -69,8 +69,13 @@ import AsignacionHuella from '@/views/SideBar/EntranceControl/RegistroBiometrico
 import RegistroHuella from '@/views/SideBar/EntranceControl/RegistroBiometrico/RegistroHuella.vue';
 import RegistroAsistencia from '@/views/SideBar/EntranceControl/RegistroBiometrico/RegistroAsistencia.vue';
 import RegistroPorCedula from "@/views/SideBar/EntranceControl/RegistroBiometrico/RegistroPorCedula.vue";
-import SeguimientoGeneral from "@/views/SideBar/EntranceControl/SeguimientoGeneral/SeguimientoGeneral.vue";
+import SeguimientoGeneral from "@/views/SideBar/EntranceControl/ControlAsistencia/SeguimientoGeneral.vue";
 import SeguimientoSemanal from "@/views/SideBar/EntranceControl/Cronograma/SeguimientoSemanal.vue";
+import RegistroManual from "@/views/SideBar/EntranceControl/RegistroBiometrico/RegistroManual.vue";
+import ModificacionHoras from "@/views/SideBar/EntranceControl/Horas_Extraordinarias/ModificacionHoras.vue";
+import RegistrosAbiertos from "@/views/SideBar/EntranceControl/ControlAsistencia/RegistrosAbiertos.vue";
+import RegistrosCerrados from "@/views/SideBar/EntranceControl/ControlAsistencia/RegistrosCerrados.vue";
+import ResumenSemanal from "@/views/SideBar/EntranceControl/Seguimiento/ResumenSemanal.vue";
 
 
 const routes: Array<RouteRecordRaw> = [
@@ -261,10 +266,36 @@ const routes: Array<RouteRecordRaw> = [
         component: RegistroPorCedula,
       },
       {
+        path: 'RegistroManual',
+        name: 'RegistroManual',
+        component: RegistroManual,
+      },
+      {
+        path: 'RegistrosAbiertos',
+        name: 'RegistrosAbiertos',
+        component: RegistrosAbiertos,
+      },
+      {
+        path: 'RegistrosCerrados',
+        name: 'RegistrosCerrados',
+        component: RegistrosCerrados,
+      },
+      {
+        path: 'ModificacionHoras',
+        name: 'ModificacionHoras',
+        component: ModificacionHoras,
+      },
+      {
         path: 'SeguimientoGeneral',
         name: 'SeguimientoGeneral',
         component: SeguimientoGeneral,
       },
+      {
+        path: 'ResumenSemanal/:resumenId/:internalId',
+        name: 'ResumenSemanal',
+        component: ResumenSemanal,
+      }
+      
     ],
   },
   // Auth views

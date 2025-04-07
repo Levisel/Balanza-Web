@@ -206,7 +206,7 @@ const asignarArea = async () => {
     for (const estudiante of estudiantesSeleccionados.value) {
       const payload = { Internal_Area: areaSeleccionada.value };
 
-      const res = await fetch(`${API}/usuarioInterno/${estudiante.Internal_ID}`, {
+      const res = await fetch(`${API}/internal-user/${estudiante.Internal_ID}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),

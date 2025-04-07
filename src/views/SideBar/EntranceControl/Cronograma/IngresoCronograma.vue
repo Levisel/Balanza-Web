@@ -129,9 +129,12 @@ const periodoId = route.params.id ? Number(route.params.id) : null;
 const nombrePeriodo = ref("");
 const fechaInicio = ref<Date | null>(null);
 const fechaFin = ref<Date | null>(null);
-const periodoTipo = ref<string>(""); // Tipo de período
+const periodoTipo = ref("");
 const errorMensaje = ref("");
 const cargando = ref(false);
+
+// Variable para almacenar la fecha de inicio original (para comparar en edición)
+const originalFechaInicio = ref<Date | null>(null);
 
 // Opciones para el Dropdown de tipo de período
 const opcionesPeriodoTipo = ref([
@@ -143,13 +146,11 @@ const opcionesPeriodoTipo = ref([
 const cardClass = computed(() =>
   isDarkTheme.value ? "bg-gray-800 text-white shadow-lg" : "bg-white text-gray-900 shadow-lg"
 );
-
 const inputClass = computed(() =>
   isDarkTheme.value
     ? "bg-gray-900 text-white border-gray-700 focus:border-blue-500"
     : "bg-white text-gray-900 border-gray-300 focus:border-blue-500"
 );
-
 const buttonClass = computed(() =>
   isDarkTheme.value ? "bg-orange-500 hover:bg-orange-600" : "bg-orange-400 hover:bg-orange-500"
 );
@@ -166,7 +167,9 @@ const cargarPeriodo = async () => {
     fechaInicio.value = new Date(data.Periodo_Inicio);
     fechaFin.value = new Date(data.Periodo_Fin);
     periodoTipo.value = data.PeriodoTipo;
-  } catch (error) {
+    // Guardamos la fecha de inicio original para comparar en caso de edición
+    originalFechaInicio.value = new Date(data.Periodo_Inicio);
+  } catch (error: any) {
     console.error("Error al cargar el período:", error);
     errorMensaje.value = "Error al cargar los datos del período.";
   } finally {
@@ -250,37 +253,60 @@ const validarYGuardar = async () => {
     let response;
     let nuevoPeriodo;
     if (periodoId) {
-       // Modo edición: actualizamos el período
-       response = await fetch(`${API}/periodos/${periodoId}`, {
+      // Modo edición: actualizamos el período
+      response = await fetch(`${API}/periodos/${periodoId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(periodoData),
       });
       nuevoPeriodo = await response.json();
-      // Obtener el último seguimiento registrado para este período
+      
+      // Verificar extensión al final (si fechaFin se extendió)
       const seguimientoRes = await fetch(`${API}/seguimientos/last/${periodoId}`);
       if (seguimientoRes.ok) {
         const lastSeguimiento = await seguimientoRes.json();
-        // Suponiendo que lastSeguimiento tiene el campo Semana_Fin en formato ISO
         const lastWeekEnd = new Date(lastSeguimiento.Semana_Fin);
-        // Si la nueva fechaFin es mayor que el final de la última semana
         if (fechaFin.value > lastWeekEnd) {
-          // Calculamos la fecha de inicio para las nuevas semanas: el día siguiente al último registro
           const nextDay = new Date(lastWeekEnd);
           nextDay.setDate(nextDay.getDate() + 1);
-          // Calculamos las semanas adicionales desde nextDay hasta la nueva fechaFin
           const nuevasSemanas = calcularSemanas(periodoId, nextDay, fechaFin.value);
-          // Enviamos las nuevas semanas usando el endpoint bulk
           const semanasResponse = await fetch(`${API}/seguimientos/bulk`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(nuevasSemanas),
           });
           if (!semanasResponse.ok) {
-            throw new Error("Error al guardar el seguimiento semanal adicional");
+            throw new Error("Error al guardar el seguimiento semanal adicional (extensión fin)");
           }
         }
       }
+      
+      // Si la nueva fechaInicio es anterior a la original, recalcular semanas al inicio
+      if (originalFechaInicio.value && fechaInicio.value < originalFechaInicio.value) {
+        const nuevasSemanasInicio = calcularSemanas(periodoId, fechaInicio.value, originalFechaInicio.value);
+        const semanasInicioResponse = await fetch(`${API}/seguimientos/bulk`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(nuevasSemanasInicio),
+        });
+        if (!semanasInicioResponse.ok) {
+          throw new Error("Error al guardar el seguimiento semanal adicional (extensión inicio)");
+        }
+      }
+      
+      // Reordenar todas las semanas: llamar al endpoint de reordenamiento
+      const reorderResponse = await fetch(`${API}/seguimientos/reorder/${periodoId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          nuevaFechaInicio: fechaInicio.value.toISOString(),
+          fechaFin: fechaFin.value.toISOString()
+        }),
+      });
+      if (!reorderResponse.ok) {
+        throw new Error("Error al reordenar las semanas del seguimiento");
+      }
+      
     } else {
       // Creación de un nuevo período
       response = await fetch(`${API}/periodos`, {
@@ -289,13 +315,11 @@ const validarYGuardar = async () => {
         body: JSON.stringify(periodoData),
       });
       nuevoPeriodo = await response.json();
-      // Suponemos que el objeto nuevoPeriodo contiene el Periodo_ID y las fechas ya en formato ISO
       const semanas = calcularSemanas(
         nuevoPeriodo.Periodo_ID,
         new Date(nuevoPeriodo.Periodo_Inicio),
         new Date(nuevoPeriodo.Periodo_Fin)
       );
-      // Enviar el arreglo de semanas a través de un POST
       const semanasResponse = await fetch(`${API}/seguimientos/bulk`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -315,7 +339,7 @@ const validarYGuardar = async () => {
       life: 3000,
     });
     router.push("/Cronograma");
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error guardando el período:", error);
     errorMensaje.value = "Ocurrió un error al guardar.";
   } finally {
@@ -323,7 +347,6 @@ const validarYGuardar = async () => {
   }
 };
 
-// Función para volver al listado de períodos
 const volverListado = () => {
   router.push("/Cronograma");
 };

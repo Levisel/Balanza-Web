@@ -251,26 +251,52 @@ const fetchPeriodos = async () => {
   }
 };
 
-// Función para obtener la relación usuario-período (todos los estudiantes)
-// Se usa el endpoint: GET /usuarioxPeriodo/all
+
+// Función para obtener la relación usuario-período
 const fetchUsuariosXPeriodo = async () => {
   try {
-    const res = await fetch(`${API}/usuarioxPeriodo/all`);
-    if (!res.ok) throw new Error("Error al obtener usuarios con períodos");
-    const data = await res.json();
-    // Convertir la estructura a la interfaz UsuarioXPeriodoDVM
-    usuariosXPeriodoDVM.value = data.map((rel: any) => ({
-      Internal_ID: rel.usuario.Internal_ID,
-      Internal_Name: rel.usuario.Internal_Name,
-      Internal_LastName: rel.usuario.Internal_LastName,
-      Internal_Email: rel.usuario.Internal_Email,
-      Internal_Area: rel.usuario.Internal_Area || "N/A",
-      Internal_Huella: rel.usuario.Internal_Huella || null, // Verificamos si tiene huella
-      Periodo_ID: rel.periodo.Periodo_ID,
-      PeriodoNombre: rel.periodo.PeriodoNombre,
-    }));
+    // Primero, obtenemos la lista base de estudiantes
+    const resEst = await fetch(`${API}/usuariointerno/estudiantes`);
+    if (!resEst.ok) throw new Error("Error al obtener estudiantes");
+    const dataEst = await resEst.json();
+
+    // Luego, obtenemos la relación usuario-período
+    const resRel = await fetch(`${API}/usuarioxPeriodo/all`);
+    if (!resRel.ok) throw new Error("Error al obtener usuarioxPeriodo");
+    const dataRel = await resRel.json();
+
+    // Creamos un mapa (por Internal_ID) con la información de período
+    const periodMap = new Map();
+    dataRel.forEach((rel: any) => {
+      periodMap.set(rel.usuario.Internal_ID, {
+        Periodo_ID: rel.periodo.Periodo_ID,
+        PeriodoNombre: rel.periodo.PeriodoNombre
+      });
+    });
+
+    // Fusionamos: para cada estudiante de dataEst agregamos la info de período (si existe)
+    const merged = dataEst.map((student: any) => {
+      const periodData = periodMap.get(student.Internal_ID) || { Periodo_ID: null, PeriodoNombre: null };
+      return {
+        ...student,
+        ...periodData
+      };
+    });
+
+    // Además, si hay estudiantes en la relación (dataRel) que no están en dataEst, se agregan
+    dataRel.forEach((rel: any) => {
+      if (!merged.find((s: any) => s.Internal_ID === rel.usuario.Internal_ID)) {
+        merged.push({
+          ...rel.usuario,
+          Periodo_ID: rel.periodo.Periodo_ID,
+          PeriodoNombre: rel.periodo.PeriodoNombre
+        });
+      }
+    });
+
+    usuariosXPeriodoDVM.value = merged;
   } catch (error) {
-    console.error("Error cargando la relación usuario-período:", error);
+    console.error("Error cargando Estudiantes:", error);
     errorMensaje.value = "Error al cargar la relación usuario-período.";
   }
 };
@@ -292,7 +318,7 @@ const borrarHuella = async () => {
   if (!estudianteSeleccionado.value) return;
   try {
     const cedula = estudianteSeleccionado.value.Internal_ID;
-    const response = await fetch(`${API}/usuarios/${cedula}`, {
+    const response = await fetch(`${API}/internal-user/${cedula}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({

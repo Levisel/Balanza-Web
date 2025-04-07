@@ -7,7 +7,7 @@ export interface Internal_User {
     Internal_Name: string;
     Internal_LastName: string;
     Internal_Email: string;
-    Internal_Password: string;
+    Internal_Password?: string;
     Internal_Type: string;
     Internal_Area: string;
     Internal_Phone: string;
@@ -141,6 +141,9 @@ export interface UsuarioXPeriodoDVM {
     Internal_Name: string;
     Internal_LastName: string;
     Internal_Email: string;
+    Internal_Phone: string | null;
+    Internal_Type: string | null;
+    Internal_Status: string | null;
     Internal_Huella: Blob;
     Internal_Area: string;
     Periodo_ID: number;

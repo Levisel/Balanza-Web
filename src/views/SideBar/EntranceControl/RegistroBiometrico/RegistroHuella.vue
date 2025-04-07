@@ -157,7 +157,7 @@ const cargarEstudiante = async () => {
   }
   cargando.value = true;
   try {
-    const response = await fetch(`${API}/usuariointerno/${estudianteId.value}`);
+    const response = await fetch(`${API}/internal-user/${estudianteId.value}`);
     if (!response.ok) throw new Error("Error al obtener el estudiante");
     const data: Usuario = await response.json();
     cedula.value = data.Internal_ID;

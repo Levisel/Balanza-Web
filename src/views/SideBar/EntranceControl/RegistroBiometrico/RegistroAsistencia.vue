@@ -211,7 +211,7 @@ const cargarEstudiante = async () => {
   }
   cargando.value = true;
   try {
-    const response = await fetch(`${API}/usuariointerno/${estudianteCedula.value}`);
+    const response = await fetch(`${API}/internal-user/${estudianteCedula.value}`);
     if (!response.ok) throw new Error("Error al obtener el estudiante");
     const data: Usuario = await response.json();
     cedula.value = data.Internal_ID;
@@ -350,7 +350,7 @@ const cancelarCaptura = () => {
   capturando.value = false;
 };
 
-// Función para guardar la asistencia (POST para entrada, PUT para salida)
+// Si hay registro abierto, se actualiza la salida mediante PUT; de lo contrario, se crea un registro (entrada).
 const guardarHuella = async () => {
   if (!huellaBase64.value || !cedula.value) {
     toast.add({
@@ -371,7 +371,7 @@ const guardarHuella = async () => {
     return;
   }
   try {
-    // Comparar huellas mediante /SGIMatchScore
+    // Comparar huellas
     const params = new URLSearchParams();
     params.append("Template1", huellaGuardada.value);
     params.append("Template2", huellaBase64.value);
@@ -396,7 +396,7 @@ const guardarHuella = async () => {
         toast.add({
           severity: "error",
           summary: "Huella no coincide",
-          detail: `La huella no coincide con un puntaje de = ${score}/200. Por favor, intente de nuevo.`,
+          detail: `La huella no coincide (score: ${score}/200). Intente de nuevo.`,
           life: 3000,
         });
         huellaCapturada.value = false;
@@ -410,71 +410,48 @@ const guardarHuella = async () => {
           life: 3000,
         });
         console.log("Huella válida, score:", score);
-        if (tipoRegistro.value === "entrada") {
-          // Crear nuevo registro de asistencia (POST) usando usuarioXPeriodoId
-          try {
-            const registroData = {
-              UsuarioXPeriodo_ID: usuarioXPeriodoId.value,
-              Registro_Entrada: new Date('2025-03-24T17:15:00Z'), // Hora simulada para pruebas
-              Registro_Salida: null,
-              Registro_Tipo: "Presencial",
-              Registro_Observaciones: null,
-              Registro_fecha: new Date(),
-              Registro_IsDeleted: false
-            };
-            const response = await fetch(`${API}/registros`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify(registroData)
-            });
-            if (!response.ok) throw new Error("No se pudo crear el registro de asistencia.");
-            console.log("Registro de entrada creado correctamente.");
-          } catch (error) {
-            console.error("Error creando registro de entrada:", error);
+
+        if (registroAbierto.value) {
+          // Actualizar registro de salida (PUT) usando el endpoint especializado
+          const registroId = registroAbierto.value.Registro_ID;
+          if (!registroId) {
             toast.add({
               severity: "error",
               summary: "Error",
-              detail: "No se pudo registrar la entrada en la base de datos.",
+              detail: "No se encontró el registro de entrada para actualizar la salida.",
               life: 5000,
             });
             return;
           }
+          // Simular la hora de salida (en producción, se usaría la hora actual)
+          const salidaSimulada = new Date();
+          const response = await fetch(`${API}/registros/${registroId}/salida`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ Registro_Salida: salidaSimulada })
+          });
+          if (!response.ok) throw new Error("No se pudo actualizar el registro de asistencia.");
+          console.log("Registro de salida actualizado correctamente.");
         } else {
-          // Actualizar registro existente para marcar salida (PUT)
-          try {
-            const registroId = registroAbierto.value?.Registro_ID;
-            if (!registroId) {
-              toast.add({
-                severity: "error",
-                summary: "Error",
-                detail: "No se encontró el registro de entrada para actualizar la salida.",
-                life: 5000,
-              });
-              return;
-            }
-            // Para pruebas, simula la hora de salida como 23:15 hora local (equivalente a 04:15Z del día siguiente si Ecuador es UTC-5)
-            const salidaSimulada = new Date('2025-03-24T22:15:00Z');
-            const response = await fetch(`${API}/registros/${registroId}`, {
-              method: "PUT",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ Registro_Salida: salidaSimulada })
-            });
-            if (!response.ok) throw new Error("No se pudo actualizar el registro de asistencia.");
-            console.log("Registro de salida actualizado correctamente.");
-            // Llamar a la función para guardar resumen de horas
-            await guardarResumenHoras(registroAbierto.value.Registro_Entrada, salidaSimulada);
-          } catch (error) {
-            console.error("Error actualizando registro de salida:", error);
-            toast.add({
-              severity: "error",
-              summary: "Error",
-              detail: "No se pudo registrar la salida en la base de datos.",
-              life: 5000,
-            });
-            return;
-          }
+          // Crear un registro nuevo (entrada)
+          const registroData = {
+            UsuarioXPeriodo_ID: usuarioXPeriodoId.value,
+            Registro_Entrada: new Date(),
+            Registro_Salida: null,
+            Registro_Tipo: "Presencial",
+            Registro_Observaciones: null,
+            Registro_fecha: new Date(),
+            Registro_IsDeleted: false
+          };
+          const response = await fetch(`${API}/registros`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(registroData)
+          });
+          if (!response.ok) throw new Error("No se pudo crear el registro de asistencia.");
+          console.log("Registro de entrada creado correctamente.");
         }
-        // Mostrar toast de éxito y redirigir después de 3 segundos
+        // Redirigir después de 3 segundos
         setTimeout(() => {
           router.push("/AsignacionHuella");
         }, 3000);
@@ -498,63 +475,7 @@ const guardarHuella = async () => {
   }
 };
 
-// Función para guardar el resumen de horas de asistencia
-const guardarResumenHoras = async (entrada, salida) => {
-  try {
-    // Calcular la diferencia en horas sin redondear
-    const diffMs = new Date(salida) - new Date(entrada);
-    const horasActuales = diffMs / (1000 * 60 * 60);
 
-    // Consultar si ya existe un resumen para el usuario
-    const resGet = await fetch(`${API}/resumenHoras/user/${cedula.value}`);
-    let resumenExistente = null;
-    if (resGet.ok) {
-      resumenExistente = await resGet.json();
-      console.log("Resumen existente:", resumenExistente);
-    }
-
-    let resumenData = {};
-    if (resumenExistente && resumenExistente.Resumen_ID) {
-      // Si ya existe un resumen, sumar las horas acumuladas con las actuales
-      const totalAcumulado = Number(resumenExistente.Resumen_Horas_Totales) + horasActuales;
-      resumenData = {
-        // Se mantiene la fecha de inicio original
-        Resumen_Horas_Totales: totalAcumulado
-        // No se modifica Resumen_Inicio ni Resumen_Fin (se ignora Resumen_Fin por ahora)
-      };
-      const resPut = await fetch(`${API}/resumenHoras/${resumenExistente.Resumen_ID}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(resumenData)
-      });
-      if (!resPut.ok) throw new Error("Error al actualizar el resumen de horas.");
-      console.log("Resumen de horas actualizado correctamente.");
-    } else {
-      // Si no existe, se crea el resumen usando la hora de entrada del primer registro y las horas actuales
-      resumenData = {
-        Internal_ID: cedula.value,
-        Resumen_Inicio: entrada,  // Fecha de inicio del primer registro
-        Resumen_Horas_Totales: horasActuales
-        // Resumen_Fin se ignora por el momento
-      };
-      const resPost = await fetch(`${API}/resumenHoras`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(resumenData)
-      });
-      if (!resPost.ok) throw new Error("Error al crear el resumen de horas.");
-      console.log("Resumen de horas creado correctamente.");
-    }
-  } catch (error) {
-    console.error("Error en guardar resumen de horas:", error);
-    toast.add({
-      severity: "error",
-      summary: "Error",
-      detail: "No se pudo guardar el resumen de horas.",
-      life: 5000,
-    });
-  }
-};
 
 
 // Función para volver a la vista de AsignacionHuella
