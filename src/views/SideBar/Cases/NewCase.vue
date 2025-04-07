@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { nextTick, ref, watch, onMounted } from "vue";
+import { nextTick, ref, watch, onMounted, computed } from "vue";
 import { useToast } from "primevue/usetoast";
 import { API } from "@/ApiRoute";
 import { Toast } from "primevue";
@@ -9,6 +9,7 @@ import { useAuthStore } from "@/stores/auth";
 import type { User } from "@/ApiRoute";
 import type { Initial_Consultation } from "@/ApiRoute";
 import type { Evidence } from "@/ApiRoute";
+import type { Activity } from "@/ApiRoute";
 import InputNumber from "primevue/inputnumber";
 import InputMask from "primevue/inputmask";
 import InputText from "primevue/inputtext";
@@ -31,7 +32,6 @@ import ConfirmDialog from "primevue/confirmdialog";
 import ProgressSpinner from "primevue/progressspinner";
 import axios from "axios";
 
-
 const route = useRoute();
 const authStore = useAuthStore();
 
@@ -40,7 +40,6 @@ onMounted(async () => {
     searchIDInput.value = route.query.userID as string;
     // Cargar las consultas del usuario
     await fetchConsultations();
-    // Si se mandó caseID, ubicar su índice
     if (route.query.caseID) {
       const caseID = route.query.caseID as string;
       const index = consultations.value.findIndex(
@@ -64,6 +63,7 @@ const date = currentDateTime.toDateString();
 const searchIDInput = ref<string>("");
 const selectedUser = ref<User>({} as User);
 const selectedEvidence = ref<Evidence>({} as Evidence);
+const selectedActivity = ref<Activity[]>([]);
 
 const referenceDialog = ref(false);
 const healthDocumentDialog = ref(false);
@@ -417,7 +417,7 @@ function onSelectedFilesEvidence(event: { files: File[] }) {
       restartEvidence(); // Reinicia el estado del FileUpload
       return;
     } else {
-      if(doesUserExist) {
+      if (doesUserExist) {
         userRequestNewEvidenceDocument.value = true; // Reiniciamos el estado del boton de subir nuevo documento
       } else {
         userRequestNewEvidenceDocument.value = false; // Reiniciamos el estado del boton de subir nuevo documento
@@ -438,7 +438,7 @@ function onRemoveTemplatingFileEvidence(
 ) {
   removeFileCallback(index);
   evidenceFile.value = null;
-  if(doesUserExist) {
+  if (doesUserExist) {
     userRequestNewEvidenceDocument.value = false; // Reiniciamos el estado del boton de subir nuevo documento
   }
 }
@@ -515,6 +515,41 @@ const loadUserAttentionSheet = async (initCode: string) => {
     console.error("Error al cargar la hoja de atención:", error);
   }
 };
+
+//--------------------------------------------------------------------------------------------------------------//
+const loadActivityDocument = async (activityID: number) => {
+  try {
+    const response = await axios.get(`${API}/activity/document/${activityID}`, {
+      responseType: "blob", // Asegúrate de que el backend envíe el archivo como un blob
+    });
+
+    if (response.status === 200) {
+      const contentType = response.headers["content-type"] || "application/pdf"; // Tipo de archivo
+      const blob = new Blob([response.data], { type: contentType }); // Crear un blob a partir del buffer
+      urlDocument.value = URL.createObjectURL(blob); // Crear una URL para visualizar el archivo
+      watchDocumentDialog.value = true; // Mostrar el diálogo con el documento
+    } else {
+      throw new Error(`Error al obtener el documento: ${response.statusText}`);
+    }
+  } catch (error) {
+    toast.add({
+      severity: "error",
+      summary: "Error",
+      detail: "No se pudo cargar el documento PDF.",
+      life: 3000,
+    });
+    console.error("Error al cargar el documento PDF:", error);
+  }
+};
+
+
+
+
+
+
+
+
+
 
 //--------------------------------------------------------------------------------------------------------------//
 
@@ -1114,6 +1149,23 @@ const evidenceFile = ref<File | null>(null);
 
 //-------------------------------------------------------------------------------------------------------------//
 
+//VARIABLES DE LAS ACTIVIDADES DEL CASO SI YA ES PATROCINIO
+const activityID = ref<number>(0);
+const activityName = ref<string>("");
+const activityStartDate = ref<Date | null>(null);
+const activityStartTime = ref<string>("");
+const activityLocation = ref<string>("");
+const activityDuration = ref<string>("");
+const activityCounterparty = ref<string>("");
+const activityJudged = ref<string>("");
+const activityJudgeName = ref<string>("");
+const activityReferenceFile = ref<string>("");
+const activityStatus = ref<string>("");
+const activityOnTime = ref<boolean>(false);
+const activityDocument = ref<File | null>(null);
+
+//-------------------------------------------------------------------------------------------------------------//
+
 //MANEJO DE USUARIOS EXTERNOS
 const areInputsDisabled = ref(true);
 const doesUserExist = ref(false);
@@ -1232,6 +1284,7 @@ const restartUserForm = () => {
   doesUserExist.value = false;
   doesConsultationExist.value = false;
   doesEvidenceExist.value = false;
+  doesActivityExist.value = false;
   //reiniciamos la paginación
   isInitialLoad.value = true;
   first.value = 0;
@@ -1465,6 +1518,7 @@ const updateFormWithConsultation = async (
   data: Initial_Consultation
 ): Promise<void> => {
   userRequestNewEvidenceDocument.value = false;
+  doesActivityExist.value = false;
   restartEvidence(); // Reiniciar la evidencia antes de cargar una nueva consulta
   if (!data) return;
   initCode.value = data.Init_Code;
@@ -1510,13 +1564,13 @@ const updateFormWithConsultation = async (
     ) || null;
   initSocialWork.value = data.Init_SocialWork;
   initAlertNote.value = data.Init_AlertNote;
-  if(initAlertNote.value === null){
+  if (initAlertNote.value === null) {
     doesConsultationHasAlert.value = false;
-  }
-  else{
+  } else {
     doesConsultationHasAlert.value = true;
   }
   await fetchEvidence(initCode.value); // Cargar la evidencia de la consulta
+  await fetchActivities(initCode.value); // Cargar las actividades de la consulta
 };
 
 const isInitialLoad = ref(true);
@@ -1602,6 +1656,39 @@ watch(first, (newFirst) => {
 
 const doesConsultationExist = ref<boolean>(false);
 const doesUserRequestEditConsultation = ref<boolean>(false); // Check if user wants to create a new consultation, so the pagination will be disabled
+
+const doesActivityExist = ref<boolean>(false);
+
+const selectedActivityDetails = ref<Activity | null>(null); // Detalles de la actividad seleccionada
+const activityDialogVisible = ref(false); // Controla la visibilidad del diálogo
+
+// Método para mostrar los detalles de una actividad en el diálogo
+function showActivityDetails(activity: Activity) {
+  selectedActivityDetails.value = activity;
+  activityDialogVisible.value = true;
+}
+
+// Actualización del método fetchActivities
+const fetchActivities = async (initCode: string): Promise<void> => {
+  try {
+    // Si no hay consultas, no hay actividades
+    if (consultations.value.length === 0) {
+      doesActivityExist.value = false;
+      return;
+    }
+
+    const response = await axios.get(`${API}/activity/case/${initCode}`);
+    if (response.data.length > 0) {
+      selectedActivity.value = response.data; // Asigna todas las actividades
+      doesActivityExist.value = true;
+    } else {
+      doesActivityExist.value = false;
+    }
+  } catch (error) {
+    console.error("Error al cargar actividades:", error);
+    doesActivityExist.value = false;
+  }
+};
 
 //CONSULTATION OPERATIONS
 //NEW CONSULTATION
@@ -1865,7 +1952,6 @@ const newUserConsultation = async () => {
         "internal-id": internalID || authStore.user?.id,
       },
     });
-
 
     toast.add({
       severity: "info",
@@ -2274,8 +2360,6 @@ const editUser = async () => {
   }
 };
 
-
-
 //gaurdamos el documento en la variable User_HealthDocuments
 
 //-------------------------------------------------------------------------------------------------------------//
@@ -2415,54 +2499,96 @@ function stopDecrement() {
   }
 }
 
-
 const isRejectLoading = ref(false);
 
 const rejectCase = async () => {
-
   //Primero hacemos un check para ver si el usuario esta seguro de rechazar la consulta
   confirm.require({
-    message: "¿Estás seguro de enviar un correo rechazando el patrocinio del caso?",
+    message:
+      "¿Estás seguro de enviar un correo rechazando el patrocinio del caso?",
     header: "Advertencia",
     icon: "pi pi-info-circle",
     rejectLabel: "Cancelar",
     rejectProps: { label: "Cancel", severity: "contrast", icon: "pi pi-times" },
-    acceptProps: { label: "Aceptar", severity: "info", icon: "pi pi-check-circle" },
+    acceptProps: {
+      label: "Aceptar",
+      severity: "info",
+      icon: "pi pi-check-circle",
+    },
     accept: async () => {
-        isRejectLoading.value = true; // Inicia la carga
-            try {
-              
-          const response = await axios.post(
-            `${API}/initial-consultations/reject`,
-            { id: initCode.value },
-            { headers: { "internal-id": authStore.user?.id } }
-          );
-          console.log(response);
-          watchAlertDialog.value = false; // Cerrar el diálogo
-          await fetchConsultations(); // Actualizar la lista de consultas
-          toast.add({
-            severity: "info",
-            summary: "Correo electrónico enviado",
-            detail: "Se ha informado al usuario sobre el rechazo de su consulta inicial.",
-            life: 4000,
-          });
-        } catch (error) {
-          toast.add({
-            severity: "error",
-            summary: "Error",
-            detail: "No se pudo rechazar la consulta inicial.",
-            life: 4000,
-          });
-        } finally {
-          isRejectLoading.value = false;
-        }
+      isRejectLoading.value = true; // Inicia la carga
+      try {
+        const response = await axios.post(
+          `${API}/initial-consultations/reject`,
+          { id: initCode.value },
+          { headers: { "internal-id": authStore.user?.id } }
+        );
+        console.log(response);
+        watchAlertDialog.value = false; // Cerrar el diálogo
+        await fetchConsultations(); // Actualizar la lista de consultas
+        toast.add({
+          severity: "info",
+          summary: "Correo electrónico enviado",
+          detail:
+            "Se ha informado al usuario sobre el rechazo de su consulta inicial.",
+          life: 4000,
+        });
+      } catch (error) {
+        toast.add({
+          severity: "error",
+          summary: "Error",
+          detail: "No se pudo rechazar la consulta inicial.",
+          life: 4000,
+        });
+      } finally {
+        isRejectLoading.value = false;
+      }
     },
     reject: () => {
       isRejectLoading.value = false; // Detiene la carga si se cancela
     },
   });
-
 };
+
+// Estado para la pestaña activa
+const activeTab = ref("0");
+
+// Computed para verificar si la pestaña activa es "Asesorias"
+const isAsesoriasTab = computed(() => activeTab.value === "0");
+
+
+
+// Crea un contenedor reactivo para cachear los nombres
+const internalUserNames = ref(new Map<string, string>());
+
+// Ahora, modifica getInternalUserName para que devuelva inmediato un valor
+// y lance la consulta si aún no se tiene el nombre
+function getInternalUserName(internalId: string): string {
+  if (internalUserNames.value.has(internalId)) {
+    return internalUserNames.value.get(internalId)!;
+  } else {
+    // Lanza la consulta (no se espera, se hace en background)
+    axios
+      .get(`${API}/internal-user/${internalId}`)
+      .then(({ data }) => {
+        if (data) {
+          internalUserNames.value.set(
+            internalId,
+            data.Internal_Name + " " + data.Internal_LastName
+          );
+        } else {
+          internalUserNames.value.set(internalId, internalId);
+        }
+      })
+      .catch((error) => {
+        console.error("Error al cargar el nombre del usuario interno:", error);
+        internalUserNames.value.set(internalId, internalId);
+      });
+    // Mientras tanto se muestra "Cargando..."
+    return "Cargando...";
+  }
+}
+
 
 
 
@@ -3458,7 +3584,7 @@ const rejectCase = async () => {
               <Dialog
                 v-model:visible="watchDocumentDialog"
                 modal
-                header="Evidencia"
+                header="Documento"
                 class="p-6 rounded-lg shadow-lg bg-white max-w-7xl w-full"
               >
                 <iframe
@@ -3475,15 +3601,15 @@ const rejectCase = async () => {
   </div>
 
   <!--TABS -->
-  <div class="card mr-4">
-    <Tabs value="0">
+  <div class="card mr-4 h-full md:h-200">
+    <Tabs v-model:value="activeTab">
       <TabList>
         <Tab value="0">Asesorias </Tab>
         <Tab value="1" v-if="authStore.user?.type == 'Administrador'"
           >Patrocinios</Tab
         >
-
         <div
+          v-if="isAsesoriasTab"
           class="flex justify-between items-center w-full"
           :class="authStore.user?.type == 'Estudiante' ? 'ml-266' : 'ml-0'"
         >
@@ -3514,17 +3640,16 @@ const rejectCase = async () => {
                 initAlertNote != ''
               "
             >
-            <div v-if="doesConsultationHasAlert">
-              <Button
-                severity="warn"
-                class="bg-yellow-400"
-                icon="pi pi-exclamation-triangle"
-                @click="watchAlertDialog = true"
-                v-tooltip.bottom="'Advertencia'"
-                rounded
-              />
-            </div>
-
+              <div v-if="doesConsultationHasAlert">
+                <Button
+                  severity="warn"
+                  class="bg-yellow-400"
+                  icon="pi pi-exclamation-triangle"
+                  @click="watchAlertDialog = true"
+                  v-tooltip.bottom="'Advertencia'"
+                  rounded
+                />
+              </div>
             </div>
             <Button
               icon="pi pi-file-plus"
@@ -3802,7 +3927,11 @@ const rejectCase = async () => {
                       : '',
                     areInputsDisabled ? 'select-none opacity-50' : '',
                   ]"
-                  :readonly="!doesUserExist && areInputsDisabled"
+                  :readonly="
+                    (!doesUserExist && areInputsDisabled) ||
+                    (!doesUserRequestNewConsultation &&
+                      !doesUserRequestEditConsultation)
+                  "
                 >
                   <template v-slot:toolbar>
                     <span class="ql-formats">
@@ -3851,10 +3980,15 @@ const rejectCase = async () => {
                         :class="
                           areInputsDisabled || evidenceFile
                             ? 'pointer-events-none'
-                            : ''"
+                            : ''
+                        "
                       />
                       <div
-                        v-if="doesUserExist && userRequestNewEvidenceDocument && !doesUserRequestNewConsultation"
+                        v-if="
+                          doesUserExist &&
+                          userRequestNewEvidenceDocument &&
+                          !doesUserRequestNewConsultation
+                        "
                         class="flex gap-2"
                       >
                         <Button
@@ -3997,12 +4131,105 @@ const rejectCase = async () => {
         </TabPanel>
 
         <TabPanel value="1">
-          <p class="m-0">En desarrollo... 😁</p>
+          <div class="p-6">
+            <!-- Mostrar actividades si existen -->
+            <div class="scroll-container">
+            <div
+              v-if="doesActivityExist"
+              class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
+            >
+              <Card
+                v-for="activity in selectedActivity"
+                :key="activity.Activity_ID"
+                style="width: 100%; overflow: hidden; box-shadow: 0 0 8px #ccc"
+              >
+                <template #title>{{ activity.Activity_Name }}</template>
+                <template #subtitle
+                  >Fecha:
+                  {{
+                    new Date(activity.Activity_Start_Date).toLocaleDateString()
+                  }}</template
+                >
+                <template #content>
+                  <p class="m-0">
+                    <strong>Estudiante: </strong>{{getInternalUserName(activity.Internal_ID) }}
+                    <br />
+                    <strong>Lugar: </strong>{{ activity.Activity_Location }}
+                    <br />
+                    <strong>Abogado: </strong> {{ activity.Activity_Judge_Name || "No asignado" }}
+                    <br />
+                    <strong>Estado: </strong> {{ activity.Activity_Status }}
+                  </p>
+                </template>
+                <template #footer>
+                  <div class="flex gap-4 mt-4 justify-center items-center">
+                    <Button
+                      label="Ver información"
+                      severity="info"
+                      icon="pi pi-info-circle"
+                      class="w-full md:w-50"
+                      @click="showActivityDetails(activity)"
+                    />
+                  </div>
+                </template>
+              </Card>
+            </div>
+
+            <!-- Mensaje si no hay actividades -->
+            <div
+              v-else
+              class="flex flex-row justify-center items-center h-40 font-medium text-2xl gap-2 mt-50"
+            >
+              <p>Este caso aún no tiene actividades registradas 🔎</p>
+            </div>
+            </div>
+          </div>
+
+          <!-- Diálogo para mostrar detalles de la actividad -->
+          <Dialog
+  v-model:visible="activityDialogVisible"
+  modal
+  header="📋 Detalles de la Actividad"
+  :style="{ width: '60vw', maxWidth: '800px' }"
+  class="p-6 rounded-2xl shadow-2xl bg-white"
+>
+  <div v-if="selectedActivityDetails" class="grid grid-cols-1 md:grid-cols-2 gap-4 text-lg">
+    <div>
+      <p class="mb-2"><strong>📌 Nombre:</strong> {{ selectedActivityDetails.Activity_Name }}</p>
+      <p class="mb-2"><strong>📅 Fecha:</strong> {{ new Date(selectedActivityDetails.Activity_Start_Date).toLocaleDateString() }}</p>
+      <p class="mb-2"><strong>🕒 Hora:</strong> {{ selectedActivityDetails.Activity_Start_Time }}</p>
+      <p class="mb-2"><strong>📍 Lugar:</strong> {{ selectedActivityDetails.Activity_Location }}</p>
+      <p class="mb-2"><strong>⏳ Duración:</strong> {{ selectedActivityDetails.Activity_Duration }}</p>
+      <p class="mb-2"><strong>🤝 Contraparte:</strong> {{ selectedActivityDetails.Activity_Counterparty }}</p>
+    </div>
+
+    <div>
+      <p class="mb-2"><strong>🏛️ Juzgado:</strong> {{ selectedActivityDetails.Activity_Judged }}</p>
+      <p class="mb-2"><strong>⚖️ Juez:</strong> {{ selectedActivityDetails.Activity_Judge_Name }}</p>
+      <p class="mb-2"><strong>📌 Estado:</strong> {{ selectedActivityDetails.Activity_Status }}</p>
+      <p class="mb-2"><strong>📁 Referencia:</strong> {{ selectedActivityDetails.Activity_Reference_File }}</p>
+      <p class="mb-2"><strong>⏱️ ¿A tiempo?:</strong> <span :class="selectedActivityDetails.Activity_OnTime ? 'text-green-600 font-semibold' : 'text-red-600 font-semibold'">
+        {{ selectedActivityDetails.Activity_OnTime ? "Sí" : "No" }}
+      </span></p>
+      <Button
+        label="Ver documento"
+        icon="pi pi-file-pdf"
+        class="mt-4 w-full md:w-50"
+        @click="loadActivityDocument(selectedActivityDetails.Activity_ID)"
+        severity="contrast" 
+        />
+    </div>
+  </div>
+</Dialog>
+
         </TabPanel>
       </TabPanels>
     </Tabs>
 
-    <div v-if="!doesUserExist" class="flex justify-center mr-25">
+    <div
+      v-if="!doesUserExist && isAsesoriasTab"
+      class="flex justify-center mr-25"
+    >
       <Button
         label="Crear Caso"
         icon="pi pi-folder-plus"
@@ -4042,37 +4269,42 @@ const rejectCase = async () => {
   </div>
 
   <Dialog
-  v-model:visible="watchAlertDialog"
-  modal
-  icon="pi pi-exclamation-triangle"
-  header="⚠️ Alerta de Viabilidad"
-  :style="{ width: '50vw' }"
-  class="p-6 rounded-lg shadow-lg bg-white"
->
-  <div v-if="isRejectLoading" class="flex justify-center items-center h-40">
-    <ProgressSpinner style="width: 50px; height: 50px" strokeWidth="8" fill="transparent" animationDuration=".5s" />
-  </div>
-  <div v-else class="flex flex-col gap-4">
-    <p class="text-gray-700 text-lg">
-      El caso tiene una o más alertas de viabilidad. Por favor, revisa la
-      información antes de continuar.
-    </p>
-    <p class="text-gray-700 text-lg">
-      <strong>Observación:</strong>
-    </p>
-    <div class="alertNoteCase text-lg" v-html="initAlertNote"></div>
-    <p class="text-gray-700 text-lg">
-      <strong>Fecha de la alerta:</strong> {{ initDate.toLocaleDateString() }}
-    </p>
-    <Button
-      label="Rechazar Patrocinio"
-      icon="pi pi-envelope" 
-      class="mt-4 w-full md:w-50"
-      @click="rejectCase()"
-      severity="danger"
-    />
-  </div>
-</Dialog>
+    v-model:visible="watchAlertDialog"
+    modal
+    icon="pi pi-exclamation-triangle"
+    header="⚠️ Alerta de Viabilidad"
+    :style="{ width: '50vw' }"
+    class="p-6 rounded-lg shadow-lg bg-white"
+  >
+    <div v-if="isRejectLoading" class="flex justify-center items-center h-40">
+      <ProgressSpinner
+        style="width: 50px; height: 50px"
+        strokeWidth="8"
+        fill="transparent"
+        animationDuration=".5s"
+      />
+    </div>
+    <div v-else class="flex flex-col gap-4">
+      <p class="text-gray-700 text-lg">
+        El caso tiene una o más alertas de viabilidad. Por favor, revisa la
+        información antes de continuar.
+      </p>
+      <p class="text-gray-700 text-lg">
+        <strong>Observación:</strong>
+      </p>
+      <div class="alertNoteCase text-lg" v-html="initAlertNote"></div>
+      <p class="text-gray-700 text-lg">
+        <strong>Fecha de la alerta:</strong> {{ initDate.toLocaleDateString() }}
+      </p>
+      <Button
+        label="Rechazar Patrocinio"
+        icon="pi pi-envelope"
+        class="mt-4 w-full md:w-50"
+        @click="rejectCase()"
+        severity="danger"
+      />
+    </div>
+  </Dialog>
 </template>
 
 <style scoped>
@@ -4100,5 +4332,12 @@ const rejectCase = async () => {
 .knobBtn {
   width: 22px !important;
   height: 22px;
+}
+.scroll-container {
+  max-height: 550px; /* Altura máxima para habilitar el scroll */
+  overflow-y: auto; /* Habilitar scroll vertical */
+  overflow-x: hidden; /* Evitar scroll horizontal */
+  padding: 1rem; /* Agrega espacio interno alrededor de las tarjetas */
+  box-sizing: border-box; /* Asegura que el padding no afecte el tamaño total */
 }
 </style>

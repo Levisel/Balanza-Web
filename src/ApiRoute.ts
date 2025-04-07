@@ -98,21 +98,23 @@ export interface Evidence {
 
 
 // 📌 Initial_Consultation (The activities assigned to the student)
-export interface Activity {
-    Activity_ID: string;
+export interface Activity {   
+    Activity_ID: number;
     Init_Code: string;
     Internal_ID: string;
-    Last_Activity: string;
-    Activity_Date: Date;
-    Activity_Type: string;
-    Location: string;
-    Time: string;
-    Duration: string;
-    Counterparty: string;
-    Judge_Name: string;
-    Reference_File: string;
-    Status: string;
-    Documents: Blob;
+    Internal_Name: string;
+    Activity_Name: string;
+    Activity_Start_Date: Date;
+    Activity_Start_Time: string;
+    Activity_Location: string;
+    Activity_Duration: string;
+    Activity_Counterparty: string;
+    Activity_Judged: string;
+    Activity_Judge_Name: string;
+    Activity_Reference_File: string;
+    Activity_Status: string;
+    Activity_OnTime: boolean;
+    Activity_Document: File | null;
 }
 
 //------------------------------------------------------------------------------------------------------------------//
