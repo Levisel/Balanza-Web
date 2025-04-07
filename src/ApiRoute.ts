@@ -41,7 +41,7 @@ export interface User {
     //DATOS DEMOGRÁFICOS
     User_SocialBenefit: boolean;
     User_EconomicDependence: boolean;
-    User_Academic_Instruction: string;
+    User_AcademicInstruction: string;
     User_Profession: string;
     User_MaritalStatus: string;
     User_Dependents: number;
@@ -61,6 +61,7 @@ export interface User {
     User_DisabilityPercentage: number;
     User_CatastrophicIllness: string;
     User_HealthDocuments: File | null;
+    User_HealthDocumentsName: string | null;
 }
 // 📌 Initial_Consultation (Manages all the information of the initial consultation)
 export interface Initial_Consultation {
@@ -80,24 +81,40 @@ export interface Initial_Consultation {
     Init_Notes: string;
     Init_Type: string; //Nuevo o Asignado
     Init_SocialWork: boolean;
+    Init_AlertNote: string;
     User_ID: string;
 }
+
+
+export interface Evidence {
+    Evidence_ID: number;
+    Internal_ID: string;
+    Init_Code: string;
+    Evidence_Name: string;
+    Evidence_Document_Type: string;
+    Evidence_Date: Date;
+    Evidence_File: File | null; 
+}
+
+
 // 📌 Initial_Consultation (The activities assigned to the student)
-export interface Activity {
-    Activity_ID: string;
+export interface Activity {   
+    Activity_ID: number;
     Init_Code: string;
     Internal_ID: string;
-    Last_Activity: string;
-    Activity_Date: Date;
-    Activity_Type: string;
-    Location: string;
-    Time: string;
-    Duration: string;
-    Counterparty: string;
-    Judge_Name: string;
-    Reference_File: string;
-    Status: string;
-    Documents: Blob;
+    Internal_Name: string;
+    Activity_Name: string;
+    Activity_Start_Date: Date;
+    Activity_Start_Time: string;
+    Activity_Location: string;
+    Activity_Duration: string;
+    Activity_Counterparty: string;
+    Activity_Judged: string;
+    Activity_Judge_Name: string;
+    Activity_Reference_File: string;
+    Activity_Status: string;
+    Activity_OnTime: boolean;
+    Activity_Document: File | null;
 }
 
 //------------------------------------------------------------------------------------------------------------------//
