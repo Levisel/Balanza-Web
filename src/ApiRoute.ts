@@ -81,6 +81,7 @@ export interface Initial_Consultation {
     Init_Notes: string;
     Init_Type: string; //Nuevo o Asignado
     Init_SocialWork: boolean;
+    Init_MandatorySW: boolean;
     Init_AlertNote: string;
     User_ID: string;
 }
