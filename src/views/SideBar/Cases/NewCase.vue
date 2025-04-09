@@ -542,15 +542,6 @@ const loadActivityDocument = async (activityID: number) => {
   }
 };
 
-
-
-
-
-
-
-
-
-
 //--------------------------------------------------------------------------------------------------------------//
 
 const restartDocument = () => {
@@ -603,216 +594,223 @@ const userBirthDate = ref<Date | null>(null);
 const userNationality = ref<{ name: string; value: string } | null>(null);
 const countriesList = ref<{ name: string; value: string }[]>([]);
 const originalCountries = ref([
-  // África
-  { name: "Argelia", code: "DZ" },
-  { name: "Angola", code: "AO" },
-  { name: "Benín", code: "BJ" },
-  { name: "Botsuana", code: "BW" },
-  { name: "Burkina Faso", code: "BF" },
-  { name: "Burundi", code: "BI" },
-  { name: "Cabo Verde", code: "CV" },
-  { name: "Camerún", code: "CM" },
-  { name: "República Centroafricana", code: "CF" },
-  { name: "Chad", code: "TD" },
-  { name: "Comoras", code: "KM" },
-  { name: "República del Congo", code: "CG" },
-  { name: "República Democrática del Congo", code: "CD" },
-  { name: "Yibuti", code: "DJ" },
-  { name: "Egipto", code: "EG" },
-  { name: "Guinea Ecuatorial", code: "GQ" },
-  { name: "Eritrea", code: "ER" },
-  { name: "Esuatini", code: "SZ" },
-  { name: "Etiopía", code: "ET" },
-  { name: "Gabón", code: "GA" },
-  { name: "Gambia", code: "GM" },
-  { name: "Ghana", code: "GH" },
-  { name: "Guinea", code: "GN" },
-  { name: "Guinea-Bisáu", code: "GW" },
-  { name: "Costa de Marfil", code: "CI" },
-  { name: "Kenia", code: "KE" },
-  { name: "Lesoto", code: "LS" },
-  { name: "Liberia", code: "LR" },
-  { name: "Libia", code: "LY" },
-  { name: "Madagascar", code: "MG" },
-  { name: "Malaui", code: "MW" },
-  { name: "Malí", code: "ML" },
-  { name: "Mauritania", code: "MR" },
-  { name: "Mauricio", code: "MU" },
-  { name: "Marruecos", code: "MA" },
-  { name: "Mozambique", code: "MZ" },
-  { name: "Namibia", code: "NA" },
-  { name: "Níger", code: "NE" },
-  { name: "Nigeria", code: "NG" },
-  { name: "Ruanda", code: "RW" },
-  { name: "Santo Tomé y Príncipe", code: "ST" },
-  { name: "Senegal", code: "SN" },
-  { name: "Seychelles", code: "SC" },
-  { name: "Sierra Leona", code: "SL" },
-  { name: "Somalia", code: "SO" },
-  { name: "Sudáfrica", code: "ZA" },
-  { name: "Sudán del Sur", code: "SS" },
-  { name: "Sudán", code: "SD" },
-  { name: "Tanzania", code: "TZ" },
-  { name: "Togo", code: "TG" },
-  { name: "Túnez", code: "TN" },
-  { name: "Uganda", code: "UG" },
-  { name: "Zambia", code: "ZM" },
-  { name: "Zimbabue", code: "ZW" },
+{ name: "Ecuador", code: "EC" },
+    { name: "Afganistán", code: "AF" },
+    { name: "Albania", code: "AL" },
+    { name: "Alemania", code: "DE" },
+    { name: "Andorra", code: "AD" },
+    { name: "Angola", code: "AO" },
+    { name: "Antigua y Barbuda", code: "AG" },
+    { name: "Arabia Saudita", code: "SA" },
+    { name: "Argelia", code: "DZ" },
+    { name: "Argentina", code: "AR" },
+    { name: "Armenia", code: "AM" },
+    { name: "Aruba", code: "AW" },
+    { name: "Australia", code: "AU" },
+    { name: "Austria", code: "AT" },
+    { name: "Azerbaiyán", code: "AZ" },
+  
+    { name: "Bahamas", code: "BS" },
+    { name: "Baréin", code: "BH" },
+    { name: "Bangladesh", code: "BD" },
+    { name: "Birmania", code: "MM" },
+    { name: "Barbados", code: "BB" },
+    { name: "Bielorrusia", code: "BY" },
+    { name: "Bélgica", code: "BE" },
+    { name: "Belice", code: "BZ" },
+    { name: "Bermudas", code: "BM" },
+    { name: "Bután", code: "BT" },
+    { name: "Bolivia", code: "BO" },
+    { name: "Bosnia y Herzegovina", code: "BA" },
+    { name: "Botsuana", code: "BW" },
+    { name: "Brasil", code: "BR" },
+    { name: "Brunéi", code: "BN" },
+    { name: "Bulgaria", code: "BG" },
+    { name: "Burkina Faso", code: "BF" },
+    { name: "Burundi", code: "BI" },
+  
+    { name: "Cabo Verde", code: "CV" },
+    { name: "Camboya", code: "KH" },
+    { name: "Camerún", code: "CM" },
+    { name: "Canadá", code: "CA" },
+    { name: "Catar", code: "QA" },
+    { name: "Chad", code: "TD" },
+    { name: "Chile", code: "CL" },
+    { name: "China", code: "CN" },
+    { name: "Chipre", code: "CY" },
+    { name: "Colombia", code: "CO" },
+    { name: "Comoras", code: "KM" },
+    { name: "Costa de Marfil", code: "CI" },
+    { name: "Costa Rica", code: "CR" },
+    { name: "Croacia", code: "HR" },
+    { name: "Cuba", code: "CU" },
+    { name: "Curazao", code: "CW" },
+  
+    { name: "Dinamarca", code: "DK" },
+    { name: "Dominica", code: "DM" },
+    { name: "República Dominicana", code: "DO" },
+  
 
-  // Asia
-  { name: "Afganistán", code: "AF" },
-  { name: "Arabia Saudita", code: "SA" },
-  { name: "Armenia", code: "AM" },
-  { name: "Azerbaiyán", code: "AZ" },
-  { name: "Baréin", code: "BH" },
-  { name: "Bangladesh", code: "BD" },
-  { name: "Bután", code: "BT" },
-  { name: "Birmania", code: "MM" },
-  { name: "Brunéi", code: "BN" },
-  { name: "Camboya", code: "KH" },
-  { name: "China", code: "CN" },
-  { name: "Chipre", code: "CY" },
-  { name: "Corea del Norte", code: "KP" },
-  { name: "Corea del Sur", code: "KR" },
-  { name: "Emiratos Árabes Unidos", code: "AE" },
-  { name: "Filipinas", code: "PH" },
-  { name: "Georgia", code: "GE" },
-  { name: "India", code: "IN" },
-  { name: "Indonesia", code: "ID" },
-  { name: "Irak", code: "IQ" },
-  { name: "Irán", code: "IR" },
-  { name: "Israel", code: "IL" },
-  { name: "Japón", code: "JP" },
-  { name: "Jordania", code: "JO" },
-  { name: "Kazajistán", code: "KZ" },
-  { name: "Kirguistán", code: "KG" },
-  { name: "Kuwait", code: "KW" },
-  { name: "Laos", code: "LA" },
-  { name: "Líbano", code: "LB" },
-  { name: "Malasia", code: "MY" },
-  { name: "Maldivas", code: "MV" },
-  { name: "Mongolia", code: "MN" },
-  { name: "Nepal", code: "NP" },
-  { name: "Omán", code: "OM" },
-  { name: "Pakistán", code: "PK" },
-  { name: "Palestina", code: "PS" },
-  { name: "Qatar", code: "QA" },
-  { name: "Singapur", code: "SG" },
-  { name: "Siria", code: "SY" },
-  { name: "Sri Lanka", code: "LK" },
-  { name: "Tayikistán", code: "TJ" },
-  { name: "Timor Oriental", code: "TL" },
-  { name: "Turkmenistán", code: "TM" },
-  { name: "Turquía", code: "TR" },
-  { name: "Uzbekistán", code: "UZ" },
-
-  // Europa
-  { name: "Albania", code: "AL" },
-  { name: "Alemania", code: "DE" },
-  { name: "Andorra", code: "AD" },
-  { name: "Austria", code: "AT" },
-  { name: "Bélgica", code: "BE" },
-  { name: "Bielorrusia", code: "BY" },
-  { name: "Bosnia y Herzegovina", code: "BA" },
-  { name: "Bulgaria", code: "BG" },
-  { name: "Chipre", code: "CY" },
-  { name: "Croacia", code: "HR" },
-  { name: "Dinamarca", code: "DK" },
-  { name: "Eslovaquia", code: "SK" },
-  { name: "Eslovenia", code: "SI" },
-  { name: "España", code: "ES" },
-  { name: "Estonia", code: "EE" },
-  { name: "Finlandia", code: "FI" },
-  { name: "Francia", code: "FR" },
-  { name: "Grecia", code: "GR" },
-  { name: "Hungría", code: "HU" },
-  { name: "Irlanda", code: "IE" },
-  { name: "Islandia", code: "IS" },
-  { name: "Italia", code: "IT" },
-  { name: "Kosovo", code: "XK" },
-  { name: "Letonia", code: "LV" },
-  { name: "Liechtenstein", code: "LI" },
-  { name: "Lituania", code: "LT" },
-  { name: "Luxemburgo", code: "LU" },
-  { name: "Macedonia del Norte", code: "MK" },
-  { name: "Malta", code: "MT" },
-  { name: "Moldavia", code: "MD" },
-  { name: "Mónaco", code: "MC" },
-  { name: "Montenegro", code: "ME" },
-  { name: "Noruega", code: "NO" },
-  { name: "Países Bajos", code: "NL" },
-  { name: "Polonia", code: "PL" },
-  { name: "Portugal", code: "PT" },
-  { name: "Reino Unido", code: "GB" },
-  { name: "República Checa", code: "CZ" },
-  { name: "Rumania", code: "RO" },
-  { name: "Rusia", code: "RU" },
-  { name: "San Marino", code: "SM" },
-  { name: "Serbia", code: "RS" },
-  { name: "Suecia", code: "SE" },
-  { name: "Suiza", code: "CH" },
-  { name: "Ucrania", code: "UA" },
-  { name: "Vaticano", code: "VA" },
-
-  // América
-  // América del Norte
-  { name: "Canadá", code: "CA" },
-  { name: "Estados Unidos", code: "US" },
-  { name: "México", code: "MX" },
-  // América Central
-  { name: "Belice", code: "BZ" },
-  { name: "Costa Rica", code: "CR" },
-  { name: "El Salvador", code: "SV" },
-  { name: "Guatemala", code: "GT" },
-  { name: "Honduras", code: "HN" },
-  { name: "Nicaragua", code: "NI" },
-  { name: "Panamá", code: "PA" },
-  // América del Sur
-  { name: "Argentina", code: "AR" },
-  { name: "Bolivia", code: "BO" },
-  { name: "Brasil", code: "BR" },
-  { name: "Chile", code: "CL" },
-  { name: "Colombia", code: "CO" },
-  { name: "Ecuador", code: "EC" },
-  { name: "Guyana", code: "GY" },
-  { name: "Paraguay", code: "PY" },
-  { name: "Perú", code: "PE" },
-  { name: "Surinam", code: "SR" },
-  { name: "Uruguay", code: "UY" },
-  { name: "Venezuela", code: "VE" },
-
-  // Oceanía
-  { name: "Australia", code: "AU" },
-  { name: "Fiyi", code: "FJ" },
-  { name: "Islas Marshall", code: "MH" },
-  { name: "Micronesia", code: "FM" },
-  { name: "Nauru", code: "NR" },
-  { name: "Nueva Zelanda", code: "NZ" },
-  { name: "Palaos", code: "PW" },
-  { name: "Papúa Nueva Guinea", code: "PG" },
-  { name: "Samoa", code: "WS" },
-  { name: "Islas Salomón", code: "SB" },
-  { name: "Tonga", code: "TO" },
-  { name: "Tuvalu", code: "TV" },
-  // Territorios de Oceanía
-  { name: "Nueva Caledonia", code: "NC" },
-  { name: "Polinesia Francesa", code: "PF" },
-  { name: "Guam", code: "GU" },
-  { name: "Islas Cook", code: "CK" },
-  { name: "Niue", code: "NU" },
-  { name: "Wallis y Futuna", code: "WF" },
-
-  // Otros territorios / regiones
-  { name: "Groenlandia", code: "GL" },
-  { name: "Antártida", code: "AQ" },
-  { name: "Islas Turcas y Caicos", code: "TC" },
-  { name: "Islas Caimán", code: "KY" },
-  { name: "Bermudas", code: "BM" },
-  { name: "Gibraltar", code: "GI" },
-  { name: "Isla de Man", code: "IM" },
-  { name: "Islas Vírgenes Británicas", code: "VG" },
-  { name: "Islas Vírgenes de los Estados Unidos", code: "VI" },
-  { name: "Puerto Rico", code: "PR" },
+    { name: "Egipto", code: "EG" },
+    { name: "El Salvador", code: "SV" },
+    { name: "Emiratos Árabes Unidos", code: "AE" },
+    { name: "Eritrea", code: "ER" },
+    { name: "Eslovaquia", code: "SK" },
+    { name: "Eslovenia", code: "SI" },
+    { name: "España", code: "ES" },
+    { name: "Estados Unidos", code: "US" },
+    { name: "Estonia", code: "EE" },
+    { name: "Esuatini", code: "SZ" },
+    { name: "Etiopía", code: "ET" },
+  
+    { name: "Filipinas", code: "PH" },
+    { name: "Finlandia", code: "FI" },
+    { name: "Francia", code: "FR" },
+  
+    { name: "Gabón", code: "GA" },
+    { name: "Gambia", code: "GM" },
+    { name: "Georgia", code: "GE" },
+    { name: "Ghana", code: "GH" },
+    { name: "Granada", code: "GD" },
+    { name: "Guatemala", code: "GT" },
+    { name: "Guayana", code: "GY" },
+    { name: "Guinea", code: "GN" },
+    { name: "Guinea-Bisáu", code: "GW" },
+    { name: "Guinea Ecuatorial", code: "GQ" },
+  
+    { name: "Haití", code: "HT" },
+    { name: "Honduras", code: "HN" },
+    { name: "Hungría", code: "HU" },
+  
+    { name: "India", code: "IN" },
+    { name: "Indonesia", code: "ID" },
+    { name: "Inglaterra", code: "GB" },
+    { name: "Irán", code: "IR" },
+    { name: "Irak", code: "IQ" },
+    { name: "Irlanda", code: "IE" },
+    { name: "Islandia", code: "IS" },
+    { name: "Israel", code: "IL" },
+    { name: "Italia", code: "IT" },
+  
+    { name: "Jamaica", code: "JM" },
+    { name: "Japón", code: "JP" },
+    { name: "Jordania", code: "JO" },
+  
+    { name: "Kazajistán", code: "KZ" },
+    { name: "Kenia", code: "KE" },
+    { name: "Kirguistán", code: "KG" },
+    { name: "Kiribati", code: "KI" },
+    { name: "Corea del Norte", code: "KP" },
+    { name: "Corea del Sur", code: "KR" },
+    { name: "Kuwait", code: "KW" },
+  
+    { name: "Laos", code: "LA" },
+    { name: "Letonia", code: "LV" },
+    { name: "Líbano", code: "LB" },
+    { name: "Liberia", code: "LR" },
+    { name: "Libia", code: "LY" },
+    { name: "Liechtenstein", code: "LI" },
+    { name: "Lituania", code: "LT" },
+    { name: "Luxemburgo", code: "LU" },
+  
+    { name: "Macedonia del Norte", code: "MK" },
+    { name: "Madagascar", code: "MG" },
+    { name: "Malaui", code: "MW" },
+    { name: "Malasia", code: "MY" },
+    { name: "Maldivas", code: "MV" },
+    { name: "Malí", code: "ML" },
+    { name: "Malta", code: "MT" },
+    { name: "Islas Marshall", code: "MH" },
+    { name: "Mauritania", code: "MR" },
+    { name: "Mauricio", code: "MU" },
+    { name: "México", code: "MX" },
+    { name: "Micronesia", code: "FM" },
+    { name: "Moldavia", code: "MD" },
+    { name: "Mónaco", code: "MC" },
+    { name: "Mongolia", code: "MN" },
+    { name: "Montenegro", code: "ME" },
+    { name: "Marruecos", code: "MA" },
+    { name: "Mozambique", code: "MZ" },
+  
+    { name: "Namibia", code: "NA" },
+    { name: "Nauru", code: "NR" },
+    { name: "Nepal", code: "NP" },
+    { name: "Países Bajos", code: "NL" },
+    { name: "Nueva Zelanda", code: "NZ" },
+    { name: "Nicaragua", code: "NI" },
+    { name: "Níger", code: "NE" },
+    { name: "Nigeria", code: "NG" },
+  
+    { name: "Isla de Man", code: "IM" },
+    { name: "Noruega", code: "NO" },
+  
+    { name: "Omán", code: "OM" },
+  
+    { name: "Pakistán", code: "PK" },
+    { name: "Palaos", code: "PW" },
+    { name: "Palestina", code: "PS" },
+    { name: "Panamá", code: "PA" },
+    { name: "Papúa Nueva Guinea", code: "PG" },
+    { name: "Paraguay", code: "PY" },
+    { name: "Perú", code: "PE" },
+    { name: "Polonia", code: "PL" },
+    { name: "Portugal", code: "PT" },
+  
+    { name: "Ruanda", code: "RW" },
+  
+    { name: "Rumania", code: "RO" },
+    { name: "Rusia", code: "RU" },
+  
+    { name: "San Cristóbal y Nieves", code: "KN" },
+    { name: "Santa Lucía", code: "LC" },
+    { name: "San Vicente y las Granadinas", code: "VC" },
+    { name: "San Marino", code: "SM" },
+    { name: "Santo Tomé y Príncipe", code: "ST" },
+    { name: "Senegal", code: "SN" },
+    { name: "Serbia", code: "RS" },
+    { name: "Seychelles", code: "SC" },
+    { name: "Sierra Leona", code: "SL" },
+    { name: "Singapur", code: "SG" },
+    { name: "Siria", code: "SY" },
+    { name: "Somalia", code: "SO" },
+    { name: "Sudáfrica", code: "ZA" },
+    { name: "Sudán", code: "SD" },
+    { name: "Sudán del Sur", code: "SS" },
+    { name: "Suecia", code: "SE" },
+    { name: "Suiza", code: "CH" },
+  
+    { name: "Surinam", code: "SR" },
+  
+    { name: "Tailandia", code: "TH" },
+    { name: "Tanzania", code: "TZ" },
+    { name: "Timor Oriental", code: "TL" },
+    { name: "Togo", code: "TG" },
+    { name: "Tonga", code: "TO" },
+    { name: "Trinidad y Tobago", code: "TT" },
+    { name: "Túnez", code: "TN" },
+    { name: "Turkmenistán", code: "TM" },
+    { name: "Turquía", code: "TR" },
+    { name: "Tuvalu", code: "TV" },
+  
+    { name: "Uganda", code: "UG" },
+    { name: "Ucrania", code: "UA" },
+    { name: "Uruguay", code: "UY" },
+    { name: "Uzbekistán", code: "UZ" },
+  
+    { name: "Vanuatu", code: "VU" },
+    { name: "Ciudad del Vaticano", code: "VA" },
+    { name: "Venezuela", code: "VE" },
+    { name: "Vietnam", code: "VN" },
+  
+    { name: "Islas Vírgenes Británicas", code: "VG" },
+    { name: "Islas Vírgenes de los Estados Unidos", code: "VI" },
+  
+    { name: "Wallis y Futuna", code: "WF" },
+  
+    { name: "Yemen", code: "YE" },
+  
+    { name: "Zambia", code: "ZM" },
+    { name: "Zimbabue", code: "ZW" },
 ]);
 axios.get(`${API}/countries`).then((response) => {
   countriesList.value = response.data.map((item: any) => {
@@ -2556,8 +2554,6 @@ const activeTab = ref("0");
 // Computed para verificar si la pestaña activa es "Asesorias"
 const isAsesoriasTab = computed(() => activeTab.value === "0");
 
-
-
 // Crea un contenedor reactivo para cachear los nombres
 const internalUserNames = ref(new Map<string, string>());
 
@@ -2588,10 +2584,6 @@ function getInternalUserName(internalId: string): string {
     return "Cargando...";
   }
 }
-
-
-
-
 </script>
 
 <template>
@@ -2802,6 +2794,7 @@ function getInternalUserName(internalId: string): string {
               size="large"
               optionLabel="name"
               class="w-full"
+              filter
               :disabled="areInputsDisabled"
             />
             <label for="userEthnicity">Etnia</label>
@@ -2886,6 +2879,7 @@ function getInternalUserName(internalId: string): string {
                 size="large"
                 optionLabel="name"
                 class="w-full md:w-48"
+                filter
                 :disabled="areInputsDisabled"
               />
               <label for="userSector">Sector</label>
@@ -3009,6 +3003,7 @@ function getInternalUserName(internalId: string): string {
               size="large"
               optionLabel="name"
               class="w-full"
+              filter
               :disabled="areInputsDisabled"
             />
             <label for="userAcademicInstruction">Instrucción</label>
@@ -3023,6 +3018,7 @@ function getInternalUserName(internalId: string): string {
               size="large"
               optionLabel="name"
               class="w-full"
+              filter
               :disabled="areInputsDisabled"
             />
             <label for="userProfession">Ocupación</label>
@@ -3068,6 +3064,7 @@ function getInternalUserName(internalId: string): string {
               size="large"
               optionLabel="name"
               class="w-full"
+              filter
               :disabled="areInputsDisabled"
             />
             <label for="userIncomeLevel">Nivel de ingresos</label>
@@ -3082,6 +3079,7 @@ function getInternalUserName(internalId: string): string {
               size="large"
               optionLabel="name"
               class="w-full"
+              filter
               :disabled="areInputsDisabled"
             />
             <label for="userIncomeLevel">Ingresos Familiares</label>
@@ -3346,6 +3344,7 @@ function getInternalUserName(internalId: string): string {
                   size="large"
                   optionLabel="name"
                   class="w-full"
+                  filter
                   :disabled="areInputsDisabled"
                 />
                 <label for="userCatastrophicIllness"
@@ -3795,9 +3794,10 @@ function getInternalUserName(internalId: string): string {
                       : ''
                   "
                   size="large"
+                  filter
                   :disabled="areInputsDisabled"
                 />
-                <label for="initSubject">Área</label>
+                <label for="initSubject">Área/Materia</label>
               </FloatLabel>
 
               <!-- Tema -->
@@ -3813,6 +3813,7 @@ function getInternalUserName(internalId: string): string {
                       : ''
                   "
                   size="large"
+                  filter
                   :disabled="areInputsDisabled"
                 />
                 <label for="initTopic">Tema</label>
@@ -3928,9 +3929,9 @@ function getInternalUserName(internalId: string): string {
                     areInputsDisabled ? 'select-none opacity-50' : '',
                   ]"
                   :readonly="
-                    (!doesUserExist && areInputsDisabled) ||
-                    (!doesUserRequestNewConsultation &&
-                      !doesUserRequestEditConsultation)
+                    ((!doesUserExist && areInputsDisabled) ||
+                    (!doesUserRequestNewConsultation) &&
+                      (!doesUserRequestEditConsultation && doesUserExist))
                   "
                 >
                   <template v-slot:toolbar>
@@ -4134,94 +4135,149 @@ function getInternalUserName(internalId: string): string {
           <div class="p-6">
             <!-- Mostrar actividades si existen -->
             <div class="scroll-container">
-            <div
-              v-if="doesActivityExist"
-              class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
-            >
-              <Card
-                v-for="activity in selectedActivity"
-                :key="activity.Activity_ID"
-                style="width: 100%; overflow: hidden; box-shadow: 0 0 8px #ccc"
+              <div
+                v-if="doesActivityExist"
+                class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
               >
-                <template #title>{{ activity.Activity_Name }}</template>
-                <template #subtitle
-                  >Fecha:
-                  {{
-                    new Date(activity.Activity_Start_Date).toLocaleDateString()
-                  }}</template
+                <Card
+                  v-for="activity in selectedActivity"
+                  :key="activity.Activity_ID"
+                  style="
+                    width: 100%;
+                    overflow: hidden;
+                    box-shadow: 0 0 8px #ccc;
+                  "
                 >
-                <template #content>
-                  <p class="m-0">
-                    <strong>Estudiante: </strong>{{getInternalUserName(activity.Internal_ID) }}
-                    <br />
-                    <strong>Lugar: </strong>{{ activity.Activity_Location }}
-                    <br />
-                    <strong>Abogado: </strong> {{ activity.Activity_Judge_Name || "No asignado" }}
-                    <br />
-                    <strong>Estado: </strong> {{ activity.Activity_Status }}
-                  </p>
-                </template>
-                <template #footer>
-                  <div class="flex gap-4 mt-4 justify-center items-center">
-                    <Button
-                      label="Ver información"
-                      severity="info"
-                      icon="pi pi-info-circle"
-                      class="w-full md:w-50"
-                      @click="showActivityDetails(activity)"
-                    />
-                  </div>
-                </template>
-              </Card>
-            </div>
+                  <template #title>{{ activity.Activity_Name }}</template>
+                  <template #subtitle
+                    >Fecha:
+                    {{
+                      new Date(
+                        activity.Activity_Start_Date
+                      ).toLocaleDateString()
+                    }}</template
+                  >
+                  <template #content>
+                    <p class="m-0">
+                      <strong>Estudiante: </strong
+                      >{{ getInternalUserName(activity.Internal_ID) }}
+                      <br />
+                      <strong>Lugar: </strong>{{ activity.Activity_Location }}
+                      <br />
+                      <strong>Abogado: </strong>
+                      {{ activity.Activity_Judge_Name || "No asignado" }}
+                      <br />
+                      <strong>Estado: </strong> {{ activity.Activity_Status }}
+                    </p>
+                  </template>
+                  <template #footer>
+                    <div class="flex gap-4 mt-4 justify-center items-center">
+                      <Button
+                        label="Ver información"
+                        severity="info"
+                        icon="pi pi-info-circle"
+                        class="w-full md:w-50"
+                        @click="showActivityDetails(activity)"
+                      />
+                    </div>
+                  </template>
+                </Card>
+              </div>
 
-            <!-- Mensaje si no hay actividades -->
-            <div
-              v-else
-              class="flex flex-row justify-center items-center h-40 font-medium text-2xl gap-2 mt-50"
-            >
-              <p>Este caso aún no tiene actividades registradas 🔎</p>
-            </div>
+              <!-- Mensaje si no hay actividades -->
+              <div
+                v-else
+                class="flex flex-row justify-center items-center h-40 font-medium text-2xl gap-2 mt-50"
+              >
+                <p>Este caso aún no tiene actividades registradas 🔎</p>
+              </div>
             </div>
           </div>
 
           <!-- Diálogo para mostrar detalles de la actividad -->
           <Dialog
-  v-model:visible="activityDialogVisible"
-  modal
-  header="📋 Detalles de la Actividad"
-  :style="{ width: '60vw', maxWidth: '800px' }"
-  class="p-6 rounded-2xl shadow-2xl bg-white"
->
-  <div v-if="selectedActivityDetails" class="grid grid-cols-1 md:grid-cols-2 gap-4 text-lg">
-    <div>
-      <p class="mb-2"><strong>📌 Nombre:</strong> {{ selectedActivityDetails.Activity_Name }}</p>
-      <p class="mb-2"><strong>📅 Fecha:</strong> {{ new Date(selectedActivityDetails.Activity_Start_Date).toLocaleDateString() }}</p>
-      <p class="mb-2"><strong>🕒 Hora:</strong> {{ selectedActivityDetails.Activity_Start_Time }}</p>
-      <p class="mb-2"><strong>📍 Lugar:</strong> {{ selectedActivityDetails.Activity_Location }}</p>
-      <p class="mb-2"><strong>⏳ Duración:</strong> {{ selectedActivityDetails.Activity_Duration }}</p>
-      <p class="mb-2"><strong>🤝 Contraparte:</strong> {{ selectedActivityDetails.Activity_Counterparty }}</p>
-    </div>
+            v-model:visible="activityDialogVisible"
+            modal
+            header="📋 Detalles de la Actividad"
+            :style="{ width: '60vw', maxWidth: '800px' }"
+            class="p-6 rounded-2xl shadow-2xl bg-white"
+          >
+            <div
+              v-if="selectedActivityDetails"
+              class="grid grid-cols-1 md:grid-cols-2 gap-4 text-lg"
+            >
+              <div>
+                <p class="mb-2">
+                  <strong>📌 Nombre:</strong>
+                  {{ selectedActivityDetails.Activity_Name }}
+                </p>
+                <p class="mb-2">
+                  <strong>📅 Fecha:</strong>
+                  {{
+                    new Date(
+                      selectedActivityDetails.Activity_Start_Date
+                    ).toLocaleDateString()
+                  }}
+                </p>
+                <p class="mb-2">
+                  <strong>🕒 Hora:</strong>
+                  {{ selectedActivityDetails.Activity_Start_Time }}
+                </p>
+                <p class="mb-2">
+                  <strong>📍 Lugar:</strong>
+                  {{ selectedActivityDetails.Activity_Location }}
+                </p>
+                <p class="mb-2">
+                  <strong>⏳ Duración:</strong>
+                  {{ selectedActivityDetails.Activity_Duration }}
+                </p>
+                <p class="mb-2">
+                  <strong>🤝 Contraparte:</strong>
+                  {{ selectedActivityDetails.Activity_Counterparty }}
+                </p>
+              </div>
 
-    <div>
-      <p class="mb-2"><strong>🏛️ Juzgado:</strong> {{ selectedActivityDetails.Activity_Judged }}</p>
-      <p class="mb-2"><strong>⚖️ Juez:</strong> {{ selectedActivityDetails.Activity_Judge_Name }}</p>
-      <p class="mb-2"><strong>📌 Estado:</strong> {{ selectedActivityDetails.Activity_Status }}</p>
-      <p class="mb-2"><strong>📁 Referencia:</strong> {{ selectedActivityDetails.Activity_Reference_File }}</p>
-      <p class="mb-2"><strong>⏱️ ¿A tiempo?:</strong> <span :class="selectedActivityDetails.Activity_OnTime ? 'text-green-600 font-semibold' : 'text-red-600 font-semibold'">
-        {{ selectedActivityDetails.Activity_OnTime ? "Sí" : "No" }}
-      </span></p>
-      <Button
-        label="Ver documento"
-        icon="pi pi-file-pdf"
-        class="mt-4 w-full md:w-50"
-        @click="loadActivityDocument(selectedActivityDetails.Activity_ID)"
-        severity="contrast" 
-        />
-    </div>
-  </div>
-</Dialog>
-
+              <div>
+                <p class="mb-2">
+                  <strong>🏛️ Juzgado:</strong>
+                  {{ selectedActivityDetails.Activity_Judged }}
+                </p>
+                <p class="mb-2">
+                  <strong>⚖️ Juez:</strong>
+                  {{ selectedActivityDetails.Activity_Judge_Name }}
+                </p>
+                <p class="mb-2">
+                  <strong>📌 Estado:</strong>
+                  {{ selectedActivityDetails.Activity_Status }}
+                </p>
+                <p class="mb-2">
+                  <strong>📁 Referencia:</strong>
+                  {{ selectedActivityDetails.Activity_Reference_File }}
+                </p>
+                <p class="mb-2">
+                  <strong>⏱️ ¿A tiempo?:</strong>
+                  <span
+                    :class="
+                      selectedActivityDetails.Activity_OnTime
+                        ? 'text-green-600 font-semibold'
+                        : 'text-red-600 font-semibold'
+                    "
+                  >
+                    {{ selectedActivityDetails.Activity_OnTime ? "Sí" : "No" }}
+                  </span>
+                </p>
+                <Button
+                  label="Ver documento"
+                  icon="pi pi-file-pdf"
+                  class="mt-4 w-full md:w-50"
+                  @click="
+                    loadActivityDocument(selectedActivityDetails.Activity_ID)
+                  "
+                  severity="contrast"
+                />
+              </div>
+            </div>
+          </Dialog>
         </TabPanel>
       </TabPanels>
     </Tabs>

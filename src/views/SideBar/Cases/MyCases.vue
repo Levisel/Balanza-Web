@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
-import axios from 'axios'
+import axios from 'axios';
 import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
 import Button from 'primevue/button';
@@ -16,6 +16,7 @@ import { useToast } from 'primevue/usetoast';
 import { useAuthStore } from '@/stores/auth';
 import { API } from "@/ApiRoute";
 import { useConfirm } from 'primevue/useconfirm';
+import ProgressSpinner from 'primevue/progressspinner'; // Import ProgressSpinner
 //Importamos las interfaces de los archivos, que contiene las estructuras de los datos que se van a manejar
 import type { User } from '@/ApiRoute';
 import type { Internal_User } from '@/ApiRoute';
@@ -46,6 +47,7 @@ const nuevaActividadEstadoText = ref('En progreso');
 const selectedActivityForUpload = ref(null);
 const visibleFileUploadDialog = ref(false);
 const documento = ref(null);
+const isLoadingActivities = ref<boolean>(false); // New loading state
 
 // Obtener los casos
 const casosActivos = ref([]);
@@ -301,54 +303,57 @@ const eliminarCaso = async (caso: { codigo: any; }) => {
 
 //Obtener las actividades según código del caso
 const verActividades = async (caso: { codigo: any; }) => {
-  try {
-    const codigoCaso = caso.codigo; // Init_Code que ya tienes en el objeto "caso"
-    selectedCaseCode.value = codigoCaso; // Almacenar el Init_Code del caso seleccionado
+    isLoadingActivities.value = true; // Start loading
+    try {
+        const codigoCaso = caso.codigo; // Init_Code que ya tienes en el objeto "caso"
+        selectedCaseCode.value = codigoCaso; // Almacenar el Init_Code del caso seleccionado
 
-    // Llamada directa a la API que trae actividades solo de ese caso
-    const response = await axios.get(`${API}/activity/case/${codigoCaso}`);
+        // Llamada directa a la API que trae actividades solo de ese caso
+        const response = await axios.get(`${API}/activity/case/${codigoCaso}`);
 
-    // Mapear la respuesta a los campos que muestra la tabla de actividades
-    actividades.value = response.data.map((act: any) => ({
-      id: act.Activity_ID,
-      actividad: act.Activity_Name,
-      ubicacion: act.Activity_Location,
-      fecha: act.Activity_Start_Date,
-      abogado: act.Internal_ID,
-      duracion: act.Activity_Duration,
-      referenciaExpediente: act.Activity_Reference_File,
-      contraparte: act.Activity_Counterparty,
-      juez: act.Activity_Judge_Name,
-      tiempo: act.Activity_Start_Time,
-      juzgado: act.Activity_Judged,
-      aTiempo: act.Activity_OnTime,
-      estado: act.Activity_Status,
-      documento: act.Activity_Document, // This field will be used to check if a document exists
-      hasDocument: act.Activity_Document !== null && act.Activity_Document !== undefined && act.Activity_Document !== "", // New field to check if a document exists
-    }));
+        // Mapear la respuesta a los campos que muestra la tabla de actividades
+        actividades.value = response.data.map((act: any) => ({
+            id: act.Activity_ID,
+            actividad: act.Activity_Name,
+            ubicacion: act.Activity_Location,
+            fecha: act.Activity_Start_Date,
+            abogado: act.Internal_ID,
+            duracion: act.Activity_Duration,
+            referenciaExpediente: act.Activity_Reference_File,
+            contraparte: act.Activity_Counterparty,
+            juez: act.Activity_Judge_Name,
+            tiempo: act.Activity_Start_Time,
+            juzgado: act.Activity_Judged,
+            aTiempo: act.Activity_OnTime,
+            estado: act.Activity_Status,
+            documento: act.Activity_Document, // This field will be used to check if a document exists
+            hasDocument: act.Activity_Document !== null && act.Activity_Document !== undefined && act.Activity_Document !== "",
+        }));
 
-    // Mostrar un mensaje informativo si no hay actividades
-    if (actividades.value.length === 0) {
-      toast.add({
-        severity: 'info',
-        summary: 'Sin Actividades',
-        detail: `No se encontraron actividades para el caso ${codigoCaso}`,
-        life: 3000
-      });
+        // Mostrar un mensaje informativo si no hay actividades
+        if (actividades.value.length === 0) {
+            toast.add({
+                severity: 'info',
+                summary: 'Sin Actividades',
+                detail: `No se encontraron actividades para el caso ${codigoCaso}`,
+                life: 3000
+            });
+        }
+
+        // Abre el diálogo de actividades incluso si no hay actividades
+        visibleDialog.value = true;
+
+    } catch (error) {
+        console.error('Error al obtener las actividades:', error);
+        toast.add({
+            severity: 'error',
+            summary: 'Error',
+            detail: `No se pudieron obtener las actividades del caso ${caso.codigo}`,
+            life: 3000
+        });
+    } finally {
+        isLoadingActivities.value = false; // Stop loading
     }
-
-    // Abre el diálogo de actividades incluso si no hay actividades
-    visibleDialog.value = true;
-
-  } catch (error) {
-    console.error('Error al obtener las actividades:', error);
-    toast.add({
-      severity: 'error',
-      summary: 'Error',
-      detail: `No se pudieron obtener las actividades del caso ${caso.codigo}`,
-      life: 3000
-    });
-  }
 };
 
 //Agregar nueva actividad
@@ -569,9 +574,10 @@ const abrirDialogoNuevaActividad = () => {
 <!-- Dialog de Actividades con fecha -->
 <Dialog v-model:visible="visibleDialog" modal header="Actividades del Caso" class="p-6 rounded-lg shadow-lg bg-white max-w-5xl w-full">
   <div class="flex flex-col space-y-6">
-    
-    <!-- Tabla de actividades -->
-    <DataTable :value="actividades" class="p-datatable-gridlines w-full">
+    <ProgressSpinner v-if="isLoadingActivities" class="mx-auto" />
+    <div v-else>
+      <!-- Tabla de actividades -->
+      <DataTable :value="actividades" class="p-datatable-gridlines w-full">
   <Column field="id" header="ID de Actividad" />
   <Column field="actividad" header="Actividad" />
   <Column field="ubicacion" header="Ubicación" />
@@ -592,42 +598,30 @@ const abrirDialogoNuevaActividad = () => {
   <Column field="tiempo" header="Tiempo" />
   <Column field="juzgado" header="Juzgado" />
   <Column field="estado" header="Estado" />
-    <Column field="documento" header="Documento">
-      <template #body="slotProps">
-                <template v-if="!slotProps.data.hasDocument">
-          <Button label ="Subir Documento" icon="pi pi-upload" @click="uploadDocument(slotProps.data)" />
-
-
-
-        </template>
-        <template v-else>
-          <Button 
-            label="Ver Documento" 
-            icon="pi pi-file" 
-            class="p-button-info" 
-            @click="verDocumento(slotProps.data.id)" 
-          />
-        </template>
-      </template>
-    </Column>
-
-  <Column header="Acciones">
-    <template #body="slotProps">
+  <Column field="documento" header="Documento">
+  <template #body="slotProps">
+    <template v-if="!slotProps.data.hasDocument">
+      <Button label="Subir Documento" icon="pi pi-upload" @click="uploadDocument(slotProps.data)" />
+    </template>
+    <template v-else>
       <Button 
-        icon="pi pi-check" 
-        class="p-button-success" 
-        @click="accionRealizada(slotProps.data.id)" 
+        label="Ver Documento" 
+        icon="pi pi-file" 
+        class="p-button-info" 
+        @click="verDocumento(slotProps.data.id)" 
       />
     </template>
-  </Column>
+  </template>
+</Column>
 </DataTable>
+    </div>
   </div>
 </Dialog>
 
 <!-- Dialog para visualizar el documento PDF -->
 <Dialog v-model:visible="visibleDocumentoDialog" modal header="Documento de la Actividad" class="p-6 rounded-lg shadow-lg bg-white max-w-7xl w-full">
   <iframe :src="documentoUrl" class="w-full h-250" frameborder="0"></iframe>
-</Dialog>    
+</Dialog>   
 
 <Dialog v-model:visible="visibleUsuarioDialog" modal header="Detalles del Usuario" class="p-6 rounded-lg shadow-lg bg-white max-w-3xl w-full">
   <div class="space-y-4">

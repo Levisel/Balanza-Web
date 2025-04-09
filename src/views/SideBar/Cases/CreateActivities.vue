@@ -324,6 +324,8 @@ const verActividades = async (caso: { codigo: any; }) => {
       hasDocument: act.Activity_Document !== null && act.Activity_Document !== undefined && act.Activity_Document !== "", // New field to check if a document exists
     }));
 
+    console.log("Activities:", actividades.value); // Log the entire activities array
+
     // Mostrar un mensaje informativo si no hay actividades
     if (actividades.value.length === 0) {
       toast.add({
@@ -545,6 +547,62 @@ const verDetallesActividad = async (actividadId: any) => {
   }
 };
 
+// Función para marcar la actividad como completada
+const marcarActividadComoCompletada = async (actividad: { id: any; }) => {
+  confirm.require({
+    message: `¿Estás seguro de que deseas marcar la actividad ${actividad.id} como completada?`,
+    header: 'Confirmación',
+    icon: 'pi pi-exclamation-triangle',
+    accept: async () => {
+      try {
+        const internalID = authStore.user?.id;
+
+        if (!internalID) {
+          throw new Error('No se pudo obtener el ID del usuario');
+        }
+
+        const response = await axios.put(`${API}/activity/${actividad.id}`, {
+          Activity_Status: 'Completado'
+        }, {
+          headers: {
+            'Internal-ID': internalID,
+          }
+        });
+
+        if (response.status === 200) {
+          toast.add({
+            severity: 'success',
+            summary: 'Actividad Completada',
+            detail: `La actividad ${actividad.id} ha sido marcada como completada.`,
+            life: 3000,
+          });
+
+          // Actualizar la lista de actividades
+          await verActividades({ codigo: selectedCaseCode.value }); // Recargar actividades del caso seleccionado
+        } else {
+          throw new Error(`Error al marcar la actividad como completada: ${response.statusText}`);
+        }
+      } catch (error) {
+        console.error('Error al marcar la actividad como completada:', error);
+        toast.add({
+          severity: 'error',
+          summary: 'Error',
+          detail: `No se pudo marcar la actividad ${actividad.id} como completada.`,
+          life: 3000,
+        });
+      }
+    },
+    reject: () => {
+      toast.add({
+        severity: 'info',
+        summary: 'Cancelado',
+        detail: 'Acción cancelada',
+        life: 3000,
+      });
+    }
+  });
+};
+
 // Función para ver el documento
 const verDocumento = async (actividadId: any) => {
   try {
@@ -611,20 +669,19 @@ const abrirDialogoNuevaActividad = () => {
 </script>
 
 <template>
+  <Toast />
+  <ConfirmDialog />
 
-<Toast />
-<ConfirmDialog />
-
-  <div>    
+  <div>
     <!-- Barra de Búsqueda -->
     <div class="flex items-center gap-4 mb-4">
-      <InputText 
-  v-model="searchQuery"
-  placeholder="Buscar por código, usuario o fecha" 
-  class="p-2 rounded-lg shadow-sm w-full max-w-md border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-/>
-      <Button 
-        icon="pi pi-search" 
+      <InputText
+        v-model="searchQuery"
+        placeholder="Buscar por código, usuario o fecha"
+        class="p-2 rounded-lg shadow-sm w-full max-w-md border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+      />
+      <Button
+        icon="pi pi-search"
         class="bg-blue-500 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-600 focus:outline-none"
       />
     </div>
@@ -632,143 +689,148 @@ const abrirDialogoNuevaActividad = () => {
     <!-- Pestañas con TabView -->
     <TabView>
       <TabPanel header="Casos Activos" :value="0">
-  <DataTable :value="casosActivosFiltrados" paginator :rows="8" class="w-full">
-    <Column field="nro" header="Nro." />
-    <Column field="codigo" header="Código del Caso" />
-    <Column field="fecha" header="Fecha de Inicio" />
-    <Column field="cedula" header="Cédula" />
-    <Column field="usuario" header="Usuario">
-  <template #body="slotProps">
-    <div class="flex items-center gap-2">
-      {{ slotProps.data.usuario }}
-      <Button icon="pi pi-info-circle" class="p-button-text p-0" @click="verDetallesUsuario(slotProps.data.cedula)" />
-    </div>
-  </template>
-</Column>
-    <Column field="caso" header="Caso" />
-    <Column field="oficina" header="Oficina" />
-    <Column field="tema" header="Tema" />
-    <Column field="estado" header="Estado" />
-    <Column field="tipocliente" header="Tipo de Cliente" />
-    <Column field="actividades" header="Actividades">
-      <template #body="slotProps">
-        <Button label="Ver Actividades" icon="pi pi-eye" class="p-button-info" @click="verActividades(slotProps.data)" />
-      </template>
-    </Column>
-    <Column header="Acciones">
-  <template #body="slotProps">
-    <div class="flex gap-2">
-      <Button icon="pi pi-check" class="bg-green-500 text-white px-3 py-1 rounded-lg shadow hover:bg-green-600" @click="finalizarCaso(slotProps.data)" />
-      <Button icon="pi pi-trash" class="bg-red-500 text-white px-3 py-1 rounded-lg shadow hover:bg-red-600" @click="eliminarCaso(slotProps.data)" />
-    </div>
-  </template>
-</Column>
-  </DataTable>
-</TabPanel>
+        <DataTable :value="casosActivosFiltrados" paginator :rows="8" class="w-full">
+          <Column field="nro" header="Nro." />
+          <Column field="codigo" header="Código del Caso" />
+          <Column field="fecha" header="Fecha de Inicio" />
+          <Column field="cedula" header="Cédula" />
+          <Column field="usuario" header="Usuario">
+            <template #body="slotProps">
+              <div class="flex items-center gap-2">
+                {{ slotProps.data.usuario }}
+                <Button icon="pi pi-info-circle" class="p-button-text p-0" @click="verDetallesUsuario(slotProps.data.cedula)" />
+              </div>
+            </template>
+          </Column>
+          <Column field="caso" header="Caso" />
+          <Column field="oficina" header="Oficina" />
+          <Column field="tema" header="Tema" />
+          <Column field="estado" header="Estado" />
+          <Column field="tipocliente" header="Tipo de Cliente" />
+          <Column field="actividades" header="Actividades">
+            <template #body="slotProps">
+              <Button label="Ver Actividades" icon="pi pi-eye" class="p-button-info" @click="verActividades(slotProps.data)" />
+            </template>
+          </Column>
+          <Column header="Acciones">
+            <template #body="slotProps">
+              <div class="flex gap-2">
+                <Button icon="pi pi-check" class="bg-green-500 text-white px-3 py-1 rounded-lg shadow hover:bg-green-600" @click="finalizarCaso(slotProps.data)" />
+                <Button icon="pi pi-trash" class="bg-red-500 text-white px-3 py-1 rounded-lg shadow hover:bg-red-600" @click="eliminarCaso(slotProps.data)" />
+              </div>
+            </template>
+          </Column>
+        </DataTable>
+      </TabPanel>
 
-<TabPanel header="Casos Inactivos" :value="1">
-  <DataTable :value="casosInactivosFiltrados" paginator :rows="8" class="w-full">
-    <Column field="nro" header="Nro." />
-    <Column field="codigo" header="Código del Caso" />
-    <Column field="fecha" header="Fecha de Inicio" />
-    <Column field="cedula" header="Cédula" />
-    <Column field="usuario" header="Usuario">
-  <template #body="slotProps">
-    <div class="flex items-center gap-2">
-      {{ slotProps.data.usuario }}
-      <Button icon="pi pi-info-circle" class="p-button-text p-0" @click="verDetallesUsuario(slotProps.data.cedula)" />
-    </div>
-  </template>
-</Column>
-    <Column field="caso" header="Caso" />
-    <Column field="oficina" header="Oficina" />
-    <Column field="tema" header="Tema" />
-    <Column field="estado" header="Estado" />
-    <Column field="tipocliente" header="Tipo de Cliente" />
-    <Column field="actividades" header="Actividades">
-      <template #body="slotProps">
-        <Button label="Ver Actividades" icon="pi pi-eye" class="p-button-info" @click="verActividades(slotProps.data)" />
-      </template>
-    </Column>
-    <Column header="Acciones">
-  <template #body="slotProps">
-    <div class="flex gap-2">
-      <Button icon="pi pi-refresh" class="bg-yellow-500 text-white px-3 py-1 rounded-lg shadow hover:bg-yellow-600" @click="reactivarCaso(slotProps.data)" />
-    </div>
-  </template>
-</Column>
-  </DataTable>
-</TabPanel>
-</TabView>
+      <TabPanel header="Casos Inactivos" :value="1">
+        <DataTable :value="casosInactivosFiltrados" paginator :rows="8" class="w-full">
+          <Column field="nro" header="Nro." />
+          <Column field="codigo" header="Código del Caso" />
+          <Column field="fecha" header="Fecha de Inicio" />
+          <Column field="cedula" header="Cédula" />
+          <Column field="usuario" header="Usuario">
+            <template #body="slotProps">
+              <div class="flex items-center gap-2">
+                {{ slotProps.data.usuario }}
+                <Button icon="pi pi-info-circle" class="p-button-text p-0" @click="verDetallesUsuario(slotProps.data.cedula)" />
+              </div>
+            </template>
+          </Column>
+          <Column field="caso" header="Caso" />
+          <Column field="oficina" header="Oficina" />
+          <Column field="tema" header="Tema" />
+          <Column field="estado" header="Estado" />
+          <Column field="tipocliente" header="Tipo de Cliente" />
+          <Column field="actividades" header="Actividades">
+            <template #body="slotProps">
+              <Button label="Ver Actividades" icon="pi pi-eye" class="p-button-info" @click="verActividades(slotProps.data)" />
+            </template>
+          </Column>
+          <Column header="Acciones">
+            <template #body="slotProps">
+              <div class="flex gap-2">
+                <Button icon="pi pi-refresh" class="bg-yellow-500 text-white px-3 py-1 rounded-lg shadow hover:bg-yellow-600" @click="reactivarCaso(slotProps.data)" />
+              </div>
+            </template>
+          </Column>
+        </DataTable>
+      </TabPanel>
+    </TabView>
 
-<!-- Dialog de Actividades con fecha -->
-<Dialog v-model:visible="visibleDialog" modal header="Actividades del Caso" class="p-6 rounded-lg shadow-lg bg-white max-w-5xl w-full">
-    <div class="flex flex-col space-y-6">
-      <!-- Botón para agregar nueva actividad -->
-      <Button 
-        label="Agregar Nueva Actividad" 
-        icon="pi pi-plus" 
-        class="p-button-success mb-4" 
-        @click="abrirDialogoNuevaActividad" 
-      />
-      
-      <!-- Tabla de actividades -->
-      <DataTable :value="actividades" class="p-datatable-gridlines w-full">
-        <Column field="id" header="ID de Actividad" class="text-center" headerClass="text-center" />
-        <Column field="actividad" header="Actividad" class="text-center" headerClass="text-center" />
-        <Column field="ubicacion" header="Ubicación" class="text-center" headerClass="text-center" />
-        <Column field="fecha" header="Fecha de Inicio" class="text-center" headerClass="text-center">
-          <template #body="slotProps">
-            <div class="text-center">
-              {{ new Date(slotProps.data.fecha).toLocaleDateString() }}
-            </div>
-          </template>
-        </Column>
-        <Column field="abogado" header="Abogado Asignado" class="text-center" headerClass="text-center">
-          <template #body="slotProps">
-            <div class="text-center">
-              {{ slotProps.data.abogado }}
-            </div>
-          </template>
-        </Column>
-        <Column field="duracion" header="Duración" class="text-center" headerClass="text-center" />
-        <Column field="referenciaExpediente" header="Referencia Expediente" class="text-center" headerClass="text-center" />
-        <Column field="contraparte" header="Contraparte" class="text-center" headerClass="text-center" />
-        <Column field="juez" header="Juez Asignado" class="text-center" headerClass="text-center" />
-        <Column field="tiempo" header="Tiempo" class="text-center" headerClass="text-center" />
-        <Column field="juzgado" header="Juzgado" class="text-center" headerClass="text-center" />
-        <Column field="estado" header="Estado" class="text-center" headerClass="text-center" />
-        <Column field="documento" header="Documento" class="text-center" headerClass="text-center">
-          <template #body="slotProps">
-            <div class="flex justify-center" v-if="slotProps.data.hasDocument">
-              <Button 
-                label="Ver Documento" 
-                icon="pi pi-file" 
-                class="p-button-info" 
-                @click="verDocumento(slotProps.data.id)" 
-              />
-            </div>
-            <div class="text-center" v-else>
-              --------
-            </div>
-          </template>
-        </Column>
-        <Column header="Acciones" class="text-center" headerClass="text-center">
-          <template #body="slotProps">
-            <div class="flex justify-center gap-2">
-              <Button icon="pi pi-info-circle" class="bg-blue-500 text-white px-3 py-1 rounded-lg shadow hover:bg-blue-600" @click="verDetallesActividad(slotProps.data.id)" />
-              <Button icon="pi pi-trash" class="bg-red-500 text-white px-3 py-1 rounded-lg shadow hover:bg-red-600" @click="eliminarActividad(slotProps.data)" />
-            </div>
-          </template>
-        </Column>
-      </DataTable>
-    </div>
-  </Dialog>
+    <!-- Dialog de Actividades con fecha -->
+    <Dialog v-model:visible="visibleDialog" modal header="Actividades del Caso" class="p-6 rounded-lg shadow-lg bg-white max-w-5xl w-full">
+      <div class="flex flex-col space-y-6">
+        <!-- Botón para agregar nueva actividad -->
+        <Button
+          label="Agregar Nueva Actividad"
+          icon="pi pi-plus"
+          class="p-button-success mb-4"
+          @click="abrirDialogoNuevaActividad"
+        />
 
-<!-- Dialog para visualizar el documento PDF -->
-<Dialog v-model:visible="visibleDocumentoDialog" modal header="Documento de la Actividad" class="p-6 rounded-lg shadow-lg bg-white max-w-7xl w-full">
-  <iframe :src="documentoUrl" class="w-full h-250" frameborder="0"></iframe>
-</Dialog>
+        <!-- Tabla de actividades -->
+        <DataTable :value="actividades" class="p-datatable-gridlines w-full">
+          <Column field="id" header="ID de Actividad" class="text-center" headerClass="text-center" />
+          <Column field="actividad" header="Actividad" class="text-center" headerClass="text-center" />
+          <Column field="ubicacion" header="Ubicación" class="text-center" headerClass="text-center" />
+          <Column field="fecha" header="Fecha de Inicio" class="text-center" headerClass="text-center">
+            <template #body="slotProps">
+              <div class="text-center">
+                {{ new Date(slotProps.data.fecha).toLocaleDateString() }}
+              </div>
+            </template>
+          </Column>
+          <Column field="abogado" header="Abogado Asignado" class="text-center" headerClass="text-center">
+            <template #body="slotProps">
+              <div class="text-center">
+                {{ slotProps.data.abogado }}
+              </div>
+            </template>
+          </Column>
+          <Column field="duracion" header="Duración" class="text-center" headerClass="text-center" />
+          <Column field="referenciaExpediente" header="Referencia Expediente" class="text-center" headerClass="text-center" />
+          <Column field="contraparte" header="Contraparte" class="text-center" headerClass="text-center" />
+          <Column field="juez" header="Juez Asignado" class="text-center" headerClass="text-center" />
+          <Column field="tiempo" header="Tiempo" class="text-center" headerClass="text-center" />
+          <Column field="juzgado" header="Juzgado" class="text-center" headerClass="text-center" />
+          <Column field="estado" header="Estado" class="text-center" headerClass="text-center" />
+          <Column
+            field="documento"
+            header="Documento"
+            class="text-center"
+            headerClass="text-center"
+          >
+            <template #body="slotProps">
+              <div class="flex justify-center">
+                <Button
+                  v-if="slotProps.data.hasDocument"
+                  label="Ver Documento"
+                  icon="pi pi-file"
+                  class="p-button-info"
+                  @click="verDocumento(slotProps.data.id)"
+                />
+                <span v-else>N/A</span>
+              </div>
+            </template>
+          </Column>
+          <Column header="Acciones" class="text-center" headerClass="text-center">
+            <template #body="slotProps">
+              <div class="flex justify-center gap-2">
+                <Button icon="pi pi-info-circle" class="bg-blue-500 text-white px-3 py-1 rounded-lg shadow hover:bg-blue-600" @click="verDetallesActividad(slotProps.data.id)" />
+                <Button icon="pi pi-check" class="bg-green-500 text-white px-3 py-1 rounded-lg shadow hover:bg-green-600" @click="marcarActividadComoCompletada(slotProps.data)" />
+                <Button icon="pi pi-trash" class="bg-red-500 text-white px-3 py-1 rounded-lg shadow hover:bg-red-600" @click="eliminarActividad(slotProps.data)" />
+              </div>
+            </template>
+          </Column>
+        </DataTable>
+      </div>
+    </Dialog>
+
+    <!-- Dialog para visualizar el documento PDF -->
+    <Dialog v-model:visible="visibleDocumentoDialog" modal header="Documento de la Actividad" class="p-6 rounded-lg shadow-lg bg-white max-w-7xl w-full">
+      <iframe :src="documentoUrl" class="w-full h-250" frameborder="0"></iframe>
+    </Dialog>
 
     <!-- Dialog de Nueva Actividad -->
     <Dialog v-model:visible="visibleActividadDialog" modal header="Nueva Actividad"
@@ -835,7 +897,7 @@ const abrirDialogoNuevaActividad = () => {
             mode="basic"
             @select="onUploadDocumento"
             class="w-full"
-          />    
+          />
         </div>
       </div>
 
@@ -847,249 +909,249 @@ const abrirDialogoNuevaActividad = () => {
       </div>
     </Dialog>
 
-<Dialog v-model:visible="visibleUsuarioDialog" modal header="Detalles del Usuario" class="p-6 rounded-lg shadow-lg bg-white max-w-3xl w-full">
-  <div class="space-y-4">
-    <div class="flex gap-4">
-      <div class="flex-1">
-        <label class="block text-sm font-semibold">Nombre</label>
-        <p>{{ usuarioDetalles.User_FirstName }} {{ usuarioDetalles.User_LastName }}</p>
+    <Dialog v-model:visible="visibleUsuarioDialog" modal header="Detalles del Usuario" class="p-6 rounded-lg shadow-lg bg-white max-w-3xl w-full">
+      <div class="space-y-4">
+        <div class="flex gap-4">
+          <div class="flex-1">
+            <label class="block text-sm font-semibold">Nombre</label>
+            <p>{{ usuarioDetalles.User_FirstName }} {{ usuarioDetalles.User_LastName }}</p>
+          </div>
+          <div class="flex-1">
+            <label class="block text-sm font-semibold">Cédula</label>
+            <p>{{ usuarioDetalles.User_ID }}</p>
+          </div>
+        </div>
+        <div class="flex gap-4">
+          <div class="flex-1">
+            <label class="block text-sm font-semibold">Edad</label>
+            <p>{{ usuarioDetalles.User_Age }}</p>
+          </div>
+          <div class="flex-1">
+            <label class="block text-sm font-semibold">Género</label>
+            <p>{{ usuarioDetalles.User_Gender }}</p>
+          </div>
+        </div>
+        <div class="flex gap-4">
+          <div class="flex-1">
+            <label class="block text-sm font-semibold">Fecha de Nacimiento</label>
+            <p>{{ new Date(usuarioDetalles.User_BirthDate).toLocaleDateString() }}</p>
+          </div>
+          <div class="flex-1">
+            <label class="block text-sm font-semibold">Nacionalidad</label>
+            <p>{{ usuarioDetalles.User_Nationality }}</p>
+          </div>
+        </div>
+        <div class="flex gap-4">
+          <div class="flex-1">
+            <label class="block text-sm font-semibold">Teléfono</label>
+            <p>{{ usuarioDetalles.User_Phone }}</p>
+          </div>
+          <div class="flex-1">
+            <label class="block text-sm font-semibold">Email</label>
+            <p>{{ usuarioDetalles.User_Email }}</p>
+          </div>
+        </div>
+        <div class="flex gap-4">
+          <div class="flex-1">
+            <label class="block text-sm font-semibold">Dirección</label>
+            <p>{{ usuarioDetalles.User_Address }}</p>
+          </div>
+          <div class="flex-1">
+            <label class="block text-sm font-semibold">Ciudad</label>
+            <p>{{ usuarioDetalles.User_City }}</p>
+          </div>
+        </div>
+        <div class="flex gap-4">
+          <div class="flex-1">
+            <label class="block text-sm font-semibold">Provincia</label>
+            <p>{{ usuarioDetalles.User_Province }}</p>
+          </div>
+          <div class="flex-1">
+            <label class="block text-sm font-semibold">Sector</label>
+            <p>{{ usuarioDetalles.User_Sector }}</p>
+          </div>
+        </div>
+        <div class="flex gap-4">
+          <div class="flex-1">
+            <label class="block text-sm font-semibold">Zona</label>
+            <p>{{ usuarioDetalles.User_Zone }}</p>
+          </div>
+          <div class="flex-1">
+            <label class="block text-sm font-semibold">Relación de Referencia</label>
+            <p>{{ usuarioDetalles.User_ReferenceRelationship }}</p>
+          </div>
+        </div>
+        <div class="flex gap-4">
+          <div class="flex-1">
+            <label class="block text-sm font-semibold">Nombre de Referencia</label>
+            <p>{{ usuarioDetalles.User_ReferenceName }}</p>
+          </div>
+          <div class="flex-1">
+            <label class="block text-sm font-semibold">Teléfono de Referencia</label>
+            <p>{{ usuarioDetalles.User_ReferencePhone }}</p>
+          </div>
+        </div>
+        <div class="flex gap-4">
+          <div class="flex-1">
+            <label class="block text-sm font-semibold">Beneficio Social</label>
+            <p>{{ usuarioDetalles.User_SocialBenefit ? 'Sí' : 'No' }}</p>
+          </div>
+          <div class="flex-1">
+            <label class="block text-sm font-semibold">Dependencia Económica</label>
+            <p>{{ usuarioDetalles.User_EconomicDependence ? 'Sí' : 'No' }}</p>
+          </div>
+        </div>
+        <div class="flex gap-4">
+          <div class="flex-1">
+            <label class="block text-sm font-semibold">Instrucción Académica</label>
+            <p>{{ usuarioDetalles.User_Academic_Instruction }}</p>
+          </div>
+          <div class="flex-1">
+            <label class="block text-sm font-semibold">Profesión</label>
+            <p>{{ usuarioDetalles.User_Profession }}</p>
+          </div>
+        </div>
+        <div class="flex gap-4">
+          <div class="flex-1">
+            <label class="block text-sm font-semibold">Estado Civil</label>
+            <p>{{ usuarioDetalles.User_MaritalStatus }}</p>
+          </div>
+          <div class="flex-1">
+            <label class="block text-sm font-semibold">Dependientes</label>
+            <p>{{ usuarioDetalles.User_Dependents }}</p>
+          </div>
+        </div>
+        <div class="flex gap-4">
+          <div class="flex-1">
+            <label class="block text-sm font-semibold">Nivel de Ingresos</label>
+            <p>{{ usuarioDetalles.User_IncomeLevel }}</p>
+          </div>
+          <div class="flex-1">
+            <label class="block text-sm font-semibold">Ingreso Familiar</label>
+            <p>{{ usuarioDetalles.User_FamilyIncome }}</p>
+          </div>
+        </div>
+        <div class="flex gap-4">
+          <div class="flex-1">
+            <label class="block text-sm font-semibold">Personas Económicamente Activas</label>
+            <p>{{ usuarioDetalles.User_EconomicActivePeople }}</p>
+          </div>
+          <div class="flex-1">
+            <label class="block text-sm font-semibold">Tipo de Vivienda</label>
+            <p>{{ usuarioDetalles.User_HousingType }}</p>
+          </div>
+        </div>
+        <div class="flex gap-4">
+          <div class="flex-1">
+            <label class="block text-sm font-semibold">Pensionado</label>
+            <p>{{ usuarioDetalles.User_Pensioner }}</p>
+          </div>
+          <div class="flex-1">
+            <label class="block text-sm font-semibold">Seguro de Salud</label>
+            <p>{{ usuarioDetalles.User_HealthInsurance }}</p>
+          </div>
+        </div>
+        <div class="flex gap-4">
+          <div class="flex-1">
+            <label class="block text-sm font-semibold">Situación Vulnerable</label>
+            <p>{{ usuarioDetalles.User_VulnerableSituation }}</p>
+          </div>
+          <div class="flex-1">
+            <label class="block text-sm font-semibold">Discapacidad</label>
+            <p>{{ usuarioDetalles.User_Disability }}</p>
+          </div>
+        </div>
+        <div class="flex gap-4">
+          <div class="flex-1">
+            <label class="block text-sm font-semibold">Porcentaje de Discapacidad</label>
+            <p>{{ usuarioDetalles.User_DisabilityPercentage }}%</p>
+          </div>
+          <div class="flex-1">
+            <label class="block text-sm font-semibold">Enfermedad Catastrófica</label>
+            <p>{{ usuarioDetalles.User_CatastrophicIllness }}</p>
+          </div>
+        </div>
+        <div class="flex gap-4">
+          <div class="flex-1">
+            <label class="block text-sm font-semibold">Documentos de Apoyo</label>
+            <p>{{ usuarioDetalles.User_SupportingDocuments }}</p>
+          </div>
+          <div class="flex-1">
+            <label class="block text-sm font-semibold">Documentos de Salud</label>
+            <p>{{ usuarioDetalles.User_HealthDocuments }}</p>
+          </div>
+        </div>
+        <div class="flex justify-end gap-4">
+          <Button label="Cerrar" icon="pi pi-times" class="p-button-text" @click="visibleUsuarioDialog = false" />
+        </div>
       </div>
-      <div class="flex-1">
-        <label class="block text-sm font-semibold">Cédula</label>
-        <p>{{ usuarioDetalles.User_ID }}</p>
-      </div>
-    </div>
-    <div class="flex gap-4">
-      <div class="flex-1">
-        <label class="block text-sm font-semibold">Edad</label>
-        <p>{{ usuarioDetalles.User_Age }}</p>
-      </div>
-      <div class="flex-1">
-        <label class="block text-sm font-semibold">Género</label>
-        <p>{{ usuarioDetalles.User_Gender }}</p>
-      </div>
-    </div>
-    <div class="flex gap-4">
-      <div class="flex-1">
-        <label class="block text-sm font-semibold">Fecha de Nacimiento</label>
-        <p>{{ new Date(usuarioDetalles.User_BirthDate).toLocaleDateString() }}</p>
-      </div>
-      <div class="flex-1">
-        <label class="block text-sm font-semibold">Nacionalidad</label>
-        <p>{{ usuarioDetalles.User_Nationality }}</p>
-      </div>
-    </div>
-    <div class="flex gap-4">
-      <div class="flex-1">
-        <label class="block text-sm font-semibold">Teléfono</label>
-        <p>{{ usuarioDetalles.User_Phone }}</p>
-      </div>
-      <div class="flex-1">
-        <label class="block text-sm font-semibold">Email</label>
-        <p>{{ usuarioDetalles.User_Email }}</p>
-      </div>
-    </div>
-    <div class="flex gap-4">
-      <div class="flex-1">
-        <label class="block text-sm font-semibold">Dirección</label>
-        <p>{{ usuarioDetalles.User_Address }}</p>
-      </div>
-      <div class="flex-1">
-        <label class="block text-sm font-semibold">Ciudad</label>
-        <p>{{ usuarioDetalles.User_City }}</p>
-      </div>
-    </div>
-    <div class="flex gap-4">
-      <div class="flex-1">
-        <label class="block text-sm font-semibold">Provincia</label>
-        <p>{{ usuarioDetalles.User_Province }}</p>
-      </div>
-      <div class="flex-1">
-        <label class="block text-sm font-semibold">Sector</label>
-        <p>{{ usuarioDetalles.User_Sector }}</p>
-      </div>
-    </div>
-    <div class="flex gap-4">
-      <div class="flex-1">
-        <label class="block text-sm font-semibold">Zona</label>
-        <p>{{ usuarioDetalles.User_Zone }}</p>
-      </div>
-      <div class="flex-1">
-        <label class="block text-sm font-semibold">Relación de Referencia</label>
-        <p>{{ usuarioDetalles.User_ReferenceRelationship }}</p>
-      </div>
-    </div>
-    <div class="flex gap-4">
-      <div class="flex-1">
-        <label class="block text-sm font-semibold">Nombre de Referencia</label>
-        <p>{{ usuarioDetalles.User_ReferenceName }}</p>
-      </div>
-      <div class="flex-1">
-        <label class="block text-sm font-semibold">Teléfono de Referencia</label>
-        <p>{{ usuarioDetalles.User_ReferencePhone }}</p>
-      </div>
-    </div>
-    <div class="flex gap-4">
-      <div class="flex-1">
-        <label class="block text-sm font-semibold">Beneficio Social</label>
-        <p>{{ usuarioDetalles.User_SocialBenefit ? 'Sí' : 'No' }}</p>
-      </div>
-      <div class="flex-1">
-        <label class="block text-sm font-semibold">Dependencia Económica</label>
-        <p>{{ usuarioDetalles.User_EconomicDependence ? 'Sí' : 'No' }}</p>
-      </div>
-    </div>
-    <div class="flex gap-4">
-      <div class="flex-1">
-        <label class="block text-sm font-semibold">Instrucción Académica</label>
-        <p>{{ usuarioDetalles.User_Academic_Instruction }}</p>
-      </div>
-      <div class="flex-1">
-        <label class="block text-sm font-semibold">Profesión</label>
-        <p>{{ usuarioDetalles.User_Profession }}</p>
-      </div>
-    </div>
-    <div class="flex gap-4">
-      <div class="flex-1">
-        <label class="block text-sm font-semibold">Estado Civil</label>
-        <p>{{ usuarioDetalles.User_MaritalStatus }}</p>
-      </div>
-      <div class="flex-1">
-        <label class="block text-sm font-semibold">Dependientes</label>
-        <p>{{ usuarioDetalles.User_Dependents }}</p>
-      </div>
-    </div>
-    <div class="flex gap-4">
-      <div class="flex-1">
-        <label class="block text-sm font-semibold">Nivel de Ingresos</label>
-        <p>{{ usuarioDetalles.User_IncomeLevel }}</p>
-      </div>
-      <div class="flex-1">
-        <label class="block text-sm font-semibold">Ingreso Familiar</label>
-        <p>{{ usuarioDetalles.User_FamilyIncome }}</p>
-      </div>
-    </div>
-    <div class="flex gap-4">
-      <div class="flex-1">
-        <label class="block text-sm font-semibold">Personas Económicamente Activas</label>
-        <p>{{ usuarioDetalles.User_EconomicActivePeople }}</p>
-      </div>
-      <div class="flex-1">
-        <label class="block text-sm font-semibold">Tipo de Vivienda</label>
-        <p>{{ usuarioDetalles.User_HousingType }}</p>
-      </div>
-    </div>
-    <div class="flex gap-4">
-      <div class="flex-1">
-        <label class="block text-sm font-semibold">Pensionado</label>
-        <p>{{ usuarioDetalles.User_Pensioner }}</p>
-      </div>
-      <div class="flex-1">
-        <label class="block text-sm font-semibold">Seguro de Salud</label>
-        <p>{{ usuarioDetalles.User_HealthInsurance }}</p>
-      </div>
-    </div>
-    <div class="flex gap-4">
-      <div class="flex-1">
-        <label class="block text-sm font-semibold">Situación Vulnerable</label>
-        <p>{{ usuarioDetalles.User_VulnerableSituation }}</p>
-      </div>
-      <div class="flex-1">
-        <label class="block text-sm font-semibold">Discapacidad</label>
-        <p>{{ usuarioDetalles.User_Disability }}</p>
-      </div>
-    </div>
-    <div class="flex gap-4">
-      <div class="flex-1">
-        <label class="block text-sm font-semibold">Porcentaje de Discapacidad</label>
-        <p>{{ usuarioDetalles.User_DisabilityPercentage }}%</p>
-      </div>
-      <div class="flex-1">
-        <label class="block text-sm font-semibold">Enfermedad Catastrófica</label>
-        <p>{{ usuarioDetalles.User_CatastrophicIllness }}</p>
-      </div>
-    </div>
-    <div class="flex gap-4">
-      <div class="flex-1">
-        <label class="block text-sm font-semibold">Documentos de Apoyo</label>
-        <p>{{ usuarioDetalles.User_SupportingDocuments }}</p>
-      </div>
-      <div class="flex-1">
-        <label class="block text-sm font-semibold">Documentos de Salud</label>
-        <p>{{ usuarioDetalles.User_HealthDocuments }}</p>
-      </div>
-    </div>
-    <div class="flex justify-end gap-4">
-      <Button label="Cerrar" icon="pi pi-times" class="p-button-text" @click="visibleUsuarioDialog = false" />
-    </div>
-  </div>
-</Dialog>
+    </Dialog>
 
-<!-- Dialog para ver los detalles de la actividad -->
-<Dialog v-model:visible="visibleActividadDetallesDialog" modal header="Detalles de la Actividad" class="p-6 rounded-lg shadow-lg bg-white max-w-3xl w-full">
-    <div class="space-y-4">
-      <div class="flex gap-4">
-        <div class="flex-1">
-          <label class="block text-sm font-semibold">ID de Actividad</label>
-          <p>{{ actividadDetalles.Activity_ID }}</p>
+    <!-- Dialog para ver los detalles de la actividad -->
+    <Dialog v-model:visible="visibleActividadDetallesDialog" modal header="Detalles de la Actividad" class="p-6 rounded-lg shadow-lg bg-white max-w-3xl w-full">
+      <div class="space-y-4">
+        <div class="flex gap-4">
+          <div class="flex-1">
+            <label class="block text-sm font-semibold">ID de Actividad</label>
+            <p>{{ actividadDetalles.Activity_ID }}</p>
+          </div>
+          <div class="flex-1">
+            <label class="block text-sm font-semibold">Nombre de Actividad</label>
+            <p>{{ actividadDetalles.Activity_Name }}</p>
+          </div>
         </div>
-        <div class="flex-1">
-          <label class="block text-sm font-semibold">Nombre de Actividad</label>
-          <p>{{ actividadDetalles.Activity_Name }}</p>
+        <div class="flex gap-4">
+          <div class="flex-1">
+            <label class="block text-sm font-semibold">Ubicación</label>
+            <p>{{ actividadDetalles.Activity_Location }}</p>
+          </div>
+          <div class="flex-1">
+            <label class="block text-sm font-semibold">Fecha de Inicio</label>
+            <p>{{ new Date(actividadDetalles.Activity_Start_Date).toLocaleDateString() }}</p>
+          </div>
+        </div>
+        <div class="flex gap-4">
+          <div class="flex-1">
+            <label class="block text-sm font-semibold">Hora de Inicio</label>
+            <p>{{ actividadDetalles.Activity_Start_Time }}</p>
+          </div>
+          <div class="flex-1">
+            <label class="block text-sm font-semibold">Duración</label>
+            <p>{{ actividadDetalles.Activity_Duration }}</p>
+          </div>
+        </div>
+        <div class="flex gap-4">
+          <div class="flex-1">
+            <label class="block text-sm font-semibold">Referencia de Expediente</label>
+            <p>{{ actividadDetalles.Activity_Reference_File }}</p>
+          </div>
+          <div class="flex-1">
+            <label class="block text-sm font-semibold">Contraparte</label>
+            <p>{{ actividadDetalles.Activity_Counterparty }}</p>
+          </div>
+        </div>
+        <div class="flex gap-4">
+          <div class="flex-1">
+            <label class="block text-sm font-semibold">Juez Asignado</label>
+            <p>{{ actividadDetalles.Activity_Judge_Name }}</p>
+          </div>
+          <div class="flex-1">
+            <label class="block text-sm font-semibold">Juzgado</label>
+            <p>{{ actividadDetalles.Activity_Judged }}</p>
+          </div>
+        </div>
+        <div class="flex gap-4">
+          <div class="flex-1">
+            <label class="block text-sm font-semibold">Estado</label>
+            <p>{{ actividadDetalles.Activity_Status }}</p>
+          </div>
+          <div class="flex-1">
+            <label class="block text-sm font-semibold">A Tiempo</label>
+            <p>{{ actividadDetalles.Activity_OnTime ? 'Sí' : 'No' }}</p>
+          </div>
         </div>
       </div>
-      <div class="flex gap-4">
-        <div class="flex-1">
-          <label class="block text-sm font-semibold">Ubicación</label>
-          <p>{{ actividadDetalles.Activity_Location }}</p>
-        </div>
-        <div class="flex-1">
-          <label class="block text-sm font-semibold">Fecha de Inicio</label>
-          <p>{{ new Date(actividadDetalles.Activity_Start_Date).toLocaleDateString() }}</p>
-        </div>
-      </div>
-      <div class="flex gap-4">
-        <div class="flex-1">
-          <label class="block text-sm font-semibold">Hora de Inicio</label>
-          <p>{{ actividadDetalles.Activity_Start_Time }}</p>
-        </div>
-        <div class="flex-1">
-          <label class="block text-sm font-semibold">Duración</label>
-          <p>{{ actividadDetalles.Activity_Duration }}</p>
-        </div>
-      </div>
-      <div class="flex gap-4">
-        <div class="flex-1">
-          <label class="block text-sm font-semibold">Referencia de Expediente</label>
-          <p>{{ actividadDetalles.Activity_Reference_File }}</p>
-        </div>
-        <div class="flex-1">
-          <label class="block text-sm font-semibold">Contraparte</label>
-          <p>{{ actividadDetalles.Activity_Counterparty }}</p>
-        </div>
-      </div>
-      <div class="flex gap-4">
-        <div class="flex-1">
-          <label class="block text-sm font-semibold">Juez Asignado</label>
-          <p>{{ actividadDetalles.Activity_Judge_Name }}</p>
-        </div>
-        <div class="flex-1">
-          <label class="block text-sm font-semibold">Juzgado</label>
-          <p>{{ actividadDetalles.Activity_Judged }}</p>
-        </div>
-      </div>
-      <div class="flex gap-4">
-        <div class="flex-1">
-          <label class="block text-sm font-semibold">Estado</label>
-          <p>{{ actividadDetalles.Activity_Status }}</p>
-        </div>
-        <div class="flex-1">
-          <label class="block text-sm font-semibold">A Tiempo</label>
-          <p>{{ actividadDetalles.Activity_OnTime ? 'Sí' : 'No' }}</p>
-        </div>
-      </div>
-    </div>
-  </Dialog>
+    </Dialog>
 
   </div>
 </template>
