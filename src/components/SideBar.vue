@@ -484,6 +484,12 @@ const registroAsistenciaClass = computed(() => [
                         <span class="font-medium text-lg">Registro de Asistencia</span>
                       </router-link>
                     </li>
+                    <li>
+                      <router-link to="/RegistroManual" draggable="false" v-ripple :class="registroAsistenciaClass">
+                        <i class="pi pi-check-circle mr-2"></i>
+                        <span class="font-medium text-lg">Registro Manual de Asistencia</span>
+                      </router-link>
+                    </li>
                   </ul>
                 </li>
 
@@ -499,6 +505,24 @@ const registroAsistenciaClass = computed(() => [
                       <router-link to="/SeguimientoGeneral" draggable="false" v-ripple :class="asignacionHuellaClass">
                         <i class="pi pi-plus-circle mr-2"></i>
                         <span class="font-medium text-lg">Seguimiento de Horas</span>
+                      </router-link>
+                    </li> 
+                    <li>
+                      <router-link to="/ModificacionHoras" draggable="false" v-ripple :class="asignacionHuellaClass">
+                        <i class="pi pi-plus-circle mr-2"></i>
+                        <span class="font-medium text-lg">Horas Extraordinarias</span>
+                      </router-link>
+                    </li> 
+                    <li>
+                      <router-link to="/RegistrosAbiertos" draggable="false" v-ripple :class="asignacionHuellaClass">
+                        <i class="pi pi-plus-circle mr-2"></i>
+                        <span class="font-medium text-lg">Registros Abiertos</span>
+                      </router-link>
+                    </li> 
+                    <li>
+                      <router-link to="/RegistrosCerrados" draggable="false" v-ripple :class="asignacionHuellaClass">
+                        <i class="pi pi-plus-circle mr-2"></i>
+                        <span class="font-medium text-lg">Registros Cerrados</span>
                       </router-link>
                     </li> 
   

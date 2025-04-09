@@ -44,7 +44,7 @@
     </Message>
 
     <!-- Tabla de Estudiantes -->
-   <DataTable
+    <DataTable
       :value="estudiantesFiltrados"
       paginator
       :rows="10"
@@ -77,7 +77,7 @@
         </template>
       </Column>
 
-      <!-- 📌 Botones de acciones -->
+      <!-- Botones de acciones -->
       <Column header="Acciones">
         <template #body="slotProps">
           <div class="flex gap-2">
@@ -89,19 +89,49 @@
             <Button
               icon="pi pi-trash"
               class="p-button-rounded p-button-danger"
-              @click="eliminarEstudiante(slotProps.data.Internal_ID)"
+              @click="openDeleteDialog(slotProps.data.Internal_ID)"
             />
           </div>
         </template>
       </Column>
     </DataTable>
+
+    <!-- Modal de edición -->
+    <EditStudentsModal
+      v-model:visible="m"
+      :user="selectedInternalUser"
+      @updated="handleStudentUpdated"
+    />
+
+
+    <Dialog
+  v-model:visible="deleteDialogVisible"
+  header="Confirmar eliminación"
+  modal
+  :closable="false"
+  class="w-full max-w-md"
+  style="min-width: 350px;"
+>
+  <div class="p-4">
+    <p class="text-base">¿Estás seguro de que deseas eliminar este estudiante?</p>
+  </div>
+  <template #footer>
+    <div class="flex justify-end gap-3 p-2">
+      <Button label="Cancelar" class="p-button-text" @click="cancelDelete" />
+      <Button label="Eliminar" class="p-button-danger" @click="confirmDelete" />
+    </div>
+  </template>
+</Dialog>
+
+
+
   </main>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted, computed } from "vue";
-import { useRouter } from "vue-router";
 import InputText from "primevue/inputtext";
+import {watch} from "vue";
 import DataTable from "primevue/datatable";
 import Column from "primevue/column";
 import Dropdown from "primevue/dropdown";
@@ -109,12 +139,11 @@ import Button from "primevue/button";
 import Message from "primevue/message";
 import Toast from "primevue/toast";
 import { useToast } from "primevue/usetoast";
-import { API, type UsuarioXPeriodoDVM, type Periodo } from  "@/ApiRoute";
+import EditStudentsModal from "@/components/EditStudentsModal.vue";
+import { API, type UsuarioXPeriodoDVM, type Periodo } from "@/ApiRoute";
 
-const router = useRouter();
+// Estados y Toast
 const toast = useToast();
-
-// Estados
 const usuariosXPeriodoDVM = ref<UsuarioXPeriodoDVM[]>([]);
 const periodos = ref<Periodo[]>([]);
 const periodoSeleccionado = ref<Periodo | null>(null);
@@ -131,6 +160,16 @@ const opcionesAreas = ref([
   { label: "Derecho Constitucional", value: "Derecho Constitucional" },
 ]);
 
+
+// Watcher sobre el filtro de período
+watch(periodoSeleccionado, async (newPeriod) => {
+  if (newPeriod && newPeriod.Periodo_ID) {
+    await fetchUsuariosPorPeriodo(newPeriod.Periodo_ID);
+  } else {
+    // Si no hay período seleccionado, cargamos todos los datos
+    await fetchUsuariosXPeriodo();
+  }
+});
 // Función para obtener períodos
 const fetchPeriodos = async () => {
   try {
@@ -143,75 +182,126 @@ const fetchPeriodos = async () => {
   }
 };
 
-// Función para obtener la relación usuario-período
+// Función para cargar todos los datos (fusionados) cuando no se filtra por período
 const fetchUsuariosXPeriodo = async () => {
   try {
-    const res = await fetch(`${API}/usuarioxPeriodo/all`);
-    if (!res.ok) throw new Error("Error al obtener usuarios con períodos");
-    const data = await res.json();
-    // Si no hay registros, hacemos un fallback a obtener usuarios directamente
-    if (!data || data.length === 0) {
-      const res2 = await fetch(`${API}/usuarios`);
-      if (!res2.ok) throw new Error("Error al obtener usuarios");
-      // Suponemos que la estructura de /usuarios ya coincide con la interfaz UsuarioXPeriodoDVM
-      usuariosXPeriodoDVM.value = await res2.json();
-    } else {
-      // Convertir la estructura del backend a la nueva interfaz UsuarioXPeriodoDVM
-      usuariosXPeriodoDVM.value = data.map((rel: any) => ({
-        Internal_ID: rel.usuario.Internal_ID,
-        Internal_Name: rel.usuario.Internal_Name,
-        Internal_LastName: rel.usuario.Internal_LastName,
-        Internal_Email: rel.usuario.Internal_Email,
-        Internal_Area: rel.usuario.Internal_Area || "N/A",
+    // Primero, obtenemos la lista base de estudiantes
+    const resEst = await fetch(`${API}/usuariointerno/estudiantes`);
+    if (!resEst.ok) throw new Error("Error al obtener estudiantes");
+    const dataEst = await resEst.json();
+
+    // Luego, obtenemos la relación usuario-período
+    const resRel = await fetch(`${API}/usuarioxPeriodo/all`);
+    if (!resRel.ok) throw new Error("Error al obtener usuarioxPeriodo");
+    const dataRel = await resRel.json();
+
+    // Creamos un mapa que agrupe los períodos por usuario
+    const userPeriodsMap = new Map();
+    dataRel.forEach((rel: any) => {
+      const userId = rel.usuario.Internal_ID;
+      const periodObj = {
         Periodo_ID: rel.periodo.Periodo_ID,
         PeriodoNombre: rel.periodo.PeriodoNombre,
-      }));
-    }
+      };
+      if (userPeriodsMap.has(userId)) {
+        userPeriodsMap.get(userId).push(periodObj);
+      } else {
+        userPeriodsMap.set(userId, [periodObj]);
+      }
+    });
+
+    // Fusionamos: para cada estudiante, asignamos un arreglo de períodos (vacío si no existe)
+    const merged = dataEst.map((student: any) => {
+      const periods = userPeriodsMap.get(student.Internal_ID) || [];
+      return {
+        ...student,
+        periodos: periods,
+      };
+    });
+
+    // Además, incluimos aquellos que solo están en la relación
+    dataRel.forEach((rel: any) => {
+      const userId = rel.usuario.Internal_ID;
+      if (!merged.find((s: any) => s.Internal_ID === userId)) {
+        merged.push({
+          ...rel.usuario,
+          periodos: [{
+            Periodo_ID: rel.periodo.Periodo_ID,
+            PeriodoNombre: rel.periodo.PeriodoNombre,
+          }],
+        });
+      }
+    });
+
+    usuariosXPeriodoDVM.value = merged;
   } catch (error) {
-    console.error("Error cargando UsuarioXPeriodo:", error);
+    console.error("Error cargando Estudiantes:", error);
     errorMensaje.value = "Error al cargar la relación usuario-período.";
   }
 };
 
-// Computed para filtrar estudiantes según los filtros
+// Función para cargar asignaciones para un período específico
+const fetchUsuariosPorPeriodo = async (periodoId: string) => {
+  try {
+    const res = await fetch(`${API}/usuarioxPeriodo/periodo/${periodoId}`);
+    if (!res.ok) throw new Error("Error al obtener asignaciones del período");
+    const data = await res.json();
+    // Mapear los datos para que cada registro tenga la información del usuario y un array con el período
+    usuariosXPeriodoDVM.value = data.map((rel: any) => ({
+      ...rel.usuario,
+      periodos: [{
+        Periodo_ID: rel.periodo.Periodo_ID,
+        PeriodoNombre: rel.periodo.PeriodoNombre,
+      }]
+    }));
+  } catch (error) {
+    console.error("Error al cargar asignaciones del período:", error);
+    errorMensaje.value = "Error al cargar asignaciones del período.";
+  }
+};
+
+
+
+// Computed para filtrar estudiantes según los filtros aplicados
 const estudiantesFiltrados = computed(() => {
-  // Primero, filtramos según los criterios
-  const filtrados = usuariosXPeriodoDVM.value.filter((est) => {
+  return usuariosXPeriodoDVM.value.filter((est) => {
     const nombreCompleto = `${est.Internal_Name} ${est.Internal_LastName}`.toLowerCase();
     const ced = String(est.Internal_ID).toLowerCase();
+
     const filtrarPorNombre = busquedaNombre.value.trim()
       ? nombreCompleto.includes(busquedaNombre.value.toLowerCase().trim())
       : true;
     const filtrarPorCedula = busquedaCedula.value.trim()
       ? ced.includes(busquedaCedula.value.toLowerCase().trim())
       : true;
-    const filtrarPorPeriodo = periodoSeleccionado.value
-      ? est.Periodo_ID === periodoSeleccionado.value.Periodo_ID
-      : true;
     const filtrarPorArea = areaSeleccionada.value
       ? est.Internal_Area === areaSeleccionada.value
       : true;
-    return filtrarPorNombre && filtrarPorCedula && filtrarPorPeriodo && filtrarPorArea;
-  });
 
-  // Luego, usamos un Map para agrupar por Internal_ID y quedarnos solo con el primer registro de cada estudiante
-  const mapa = new Map();
-  filtrados.forEach((est) => {
-    if (!mapa.has(est.Internal_ID)) {
-      mapa.set(est.Internal_ID, est);
-    }
+    // Si hay un período seleccionado, la lista ya está filtrada por ese período.
+    // De lo contrario, no se filtra por período.
+    return filtrarPorNombre && filtrarPorCedula && filtrarPorArea;
   });
-  return Array.from(mapa.values());
 });
 
-
-// Estados para selección de estudiantes (tabla de múltiples)
-const estudiantesSeleccionados = ref<UsuarioXPeriodoDVM[]>([]);
+// Variables reactivas para el modal de edición
+const m = ref(false); // Controla la visibilidad del modal
+const selectedInternalUser = ref<UsuarioXPeriodoDVM | null>(null);
 
 // Cargar datos al montar
 onMounted(async () => {
   await fetchPeriodos();
   await fetchUsuariosXPeriodo();
+});
+
+// Watcher sobre el filtro de período
+watch(periodoSeleccionado, async (newPeriod) => {
+  if (newPeriod && newPeriod.Periodo_ID) {
+    await fetchUsuariosPorPeriodo(newPeriod.Periodo_ID);
+  } else {
+    // Si no hay período seleccionado, cargamos todos los datos
+    await fetchUsuariosXPeriodoAll();
+  }
 });
 
 // Función para limpiar filtros
@@ -222,15 +312,12 @@ const limpiarFiltros = () => {
   busquedaCedula.value = "";
 };
 
-// 📌 Eliminar un estudiante
+// Función para eliminar un estudiante
 const eliminarEstudiante = async (cedula: string) => {
-  if (!confirm("¿Seguro que deseas eliminar este estudiante?")) return;
-
   try {
-    const response = await fetch(`${API}/usuarios/${cedula}`, {
+    const response = await fetch(`${API}/internal-user/${cedula}`, {
       method: "DELETE",
     });
-
     if (!response.ok) throw new Error("Error al eliminar estudiante");
 
     toast.add({
@@ -239,10 +326,9 @@ const eliminarEstudiante = async (cedula: string) => {
       detail: "Estudiante eliminado correctamente",
       life: 3000,
     });
-
-    await fetchUsuariosXPeriodo(); // Recargar lista
+    await fetchUsuariosXPeriodo();
   } catch (error) {
-    console.error("❌ Error al eliminar estudiante:", error);
+    console.error("Error al eliminar estudiante:", error);
     toast.add({
       severity: "error",
       summary: "Error",
@@ -252,15 +338,52 @@ const eliminarEstudiante = async (cedula: string) => {
   }
 };
 
-// 📌 Navegar a edición
+// Función para abrir el modal de edición
 const editarEstudiante = (cedula: string) => {
-  router.push(`/IngresoManualEstudiantes/${cedula}`);
+  const estudiante = usuariosXPeriodoDVM.value.find(e => e.Internal_ID === cedula);
+  if (estudiante) {
+    selectedInternalUser.value = { ...estudiante };
+    m.value = true;
+  }
 };
+
+// Función que se dispara cuando el modal notifica la actualización
+const handleStudentUpdated = async () => {
+  await fetchUsuariosXPeriodo();
+  toast.add({
+    severity: "success",
+    summary: "Actualizado",
+    detail: "Estudiante actualizado correctamente",
+    life: 3000,
+  });
+};
+
+// Variables para el diálogo de confirmación de eliminación
+const deleteDialogVisible = ref(false);
+const studentIdToDelete = ref<string>("");
+
+// Función para abrir el diálogo de eliminación
+const openDeleteDialog = (cedula: string) => {
+  studentIdToDelete.value = cedula;
+  deleteDialogVisible.value = true;
+};
+
+// Función que se llama al confirmar la eliminación
+const confirmDelete = async () => {
+  deleteDialogVisible.value = false;
+  await eliminarEstudiante(studentIdToDelete.value);
+};
+
+// Función para cancelar la eliminación
+const cancelDelete = () => {
+  deleteDialogVisible.value = false;
+};
+
 
 
 
 </script>
 
 <style scoped>
-/* Puedes ajustar los estilos según tus necesidades */
+/* Ajusta estilos según tus necesidades */
 </style>

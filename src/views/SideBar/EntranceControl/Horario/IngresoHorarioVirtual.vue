@@ -79,12 +79,14 @@
 
         <!-- Dropdown con opciones virtuales filtradas (solo turno opuesto al presencial) -->
         <Dropdown
-          v-model="horariosSeleccionados[diaObj.nombre]"
-          :options="opcionesDropdownDia(diaObj.nombre)"
-          optionLabel="label"
-          placeholder="Seleccionar horario"
-          class="w-60"
-        />
+  v-model="horariosSeleccionados[diaObj.nombre]"
+  :options="opcionesDropdownDia(diaObj.nombre)"
+  optionLabel="label"
+  placeholder="Seleccionar horario"
+  class="w-60"
+  :disabled="horarioPresencial[diaObj.nombre]?.bloqueado"
+/>
+
 
         <!-- Etiqueta informativa si existe un horario PRESENCIAL para ese día -->
         <span v-if="horarioPresencial[diaObj.nombre]" class="text-sm text-blue-700">
@@ -188,7 +190,7 @@ const diasSemana = ref([
 ])
 
 // Horario presencial (informativo y para filtrar)
-const horarioPresencial = ref<Record<string, { label: string; tipo: string }>>({})
+const horarioPresencial = ref<Record<string, { label: string; tipo: string; bloqueado?: boolean }>>({})
 
 // Modales
 const dialogoHorarioEspecialVisible = ref(false)
@@ -275,38 +277,60 @@ function limpiarHorarios() {
 // Cargar el horario PRESENCIAL asignado al estudiante (usando el endpoint sin modalidad)
 // Filtramos en front según la modalidad Presencial
 async function cargarHorarioPresencial() {
-  if (!estudianteSeleccionado.value) return
-  try {
-    const urlUXP = `${API}/usuarioXPeriodo/${periodoSeleccionado.value.Periodo_ID}/${estudianteSeleccionado.value.usuario.Internal_ID}`
-    const resUXP = await fetch(urlUXP)
-    const dataUXP = await resUXP.json()
-    usuarioXPeriodoId.value = dataUXP.UsuarioXPeriodo_ID
+  if (!estudianteSeleccionado.value) return;
 
-    // Usamos el endpoint getHorarioByUsuarioXPeriodo pero con la ruta actualizada a /horarioEstudiantes/completo
-    const urlHor = `${API}/horarioEstudiantes/completo?periodoId=${periodoSeleccionado.value.Periodo_ID}&area=${encodeURIComponent(areaSeleccionada.value)}`
-    const resHor = await fetch(urlHor)
-    const todosHorarios = resHor.ok ? await resHor.json() : []
-    // Filtrar solo los registros del estudiante usando Internal_ID
-    const horEstudiante = todosHorarios.filter((h: any) => h.Internal_ID === estudianteSeleccionado.value.usuario.Internal_ID)
-    // Separamos por modalidad (si existen dos registros, uno para cada modalidad)
-    const pres = horEstudiante.find((h: any) => h.Horario_Modalidad === 'Presencial')
-    if (pres) {
-      const dias = ['Lunes', 'Martes', 'Miercoles', 'Jueves', 'Viernes']
-      for (const dia of dias) {
-        const campoEntrada = `${dia}_Entrada`
-        const campoTipo = `${dia}_Tipo`
-        if (pres[campoEntrada] && pres[campoTipo]) {
-          horarioPresencial.value[dia] = {
-            label: `${pres[campoEntrada].slice(0,5)} - ${pres[`${dia}_Salida`].slice(0,5)}`,
-            tipo: pres[campoTipo]
-          }
+  try {
+    const urlUXP = `${API}/usuarioXPeriodo/${periodoSeleccionado.value.Periodo_ID}/${estudianteSeleccionado.value.usuario.Internal_ID}`;
+    const resUXP = await fetch(urlUXP);
+    const dataUXP = await resUXP.json();
+    usuarioXPeriodoId.value = dataUXP.UsuarioXPeriodo_ID;
+
+    const urlHor = `${API}/horarioEstudiantes/completo?periodoId=${periodoSeleccionado.value.Periodo_ID}&area=${encodeURIComponent(areaSeleccionada.value)}`;
+    const resHor = await fetch(urlHor);
+    const todosHorarios = resHor.ok ? await resHor.json() : [];
+
+    const horariosEstudiante = todosHorarios.filter(
+      (h: any) =>
+        h.Internal_ID === estudianteSeleccionado.value.usuario.Internal_ID &&
+        h.Horario_Modalidad === 'Presencial'
+    );
+
+    const dias = ['Lunes', 'Martes', 'Miercoles', 'Jueves', 'Viernes'];
+
+    for (const dia of dias) {
+      const turnos: string[] = [];
+      const rangos: string[] = [];
+
+      for (const h of horariosEstudiante) {
+        const paramId = h[`Horario_Dia_${dia}`];
+        if (!paramId) continue;
+
+        let param = allParametros.value.find(p => p.Parametro_Horario_ID === paramId);
+        if (!param) {
+          const res = await fetch(`${API}/parametroHorario/${paramId}`);
+          param = await res.json();
+          allParametros.value.push(param);
         }
+
+        turnos.push(param.Parametro_Horario_Tipo); // Temprano o Tarde
+        const entrada = param.Parametro_Horario_Hora_Entrada.slice(0, 5);
+        const salida = param.Parametro_Horario_Hora_Salida.slice(0, 5);
+        rangos.push(`${entrada} - ${salida}`);
+      }
+
+      if (turnos.length > 0) {
+        horarioPresencial.value[dia] = {
+          label: rangos.join(' / '),
+          tipo: turnos.length === 2 ? 'Ambos' : turnos[0],
+          bloqueado: turnos.includes('Temprano') && turnos.includes('Tarde')
+        };
       }
     }
   } catch (err) {
-    console.error('Error al cargar horario presencial:', err)
+    console.error('Error al cargar horario presencial:', err);
   }
 }
+
 
 // Cargar el horario VIRTUAL asignado al estudiante (si lo hay) y asignarlo a los dropdowns
 async function cargarHorarioVirtual() {
@@ -527,33 +551,66 @@ async function guardarHorario(esCambioAdministrativo: boolean) {
 }
 
 async function crearHorarioEspecial() {
-  const entradaNum = parseInt(nuevoHorarioEspecial.value.entrada.split(':')[0]) || 0;
-  const salidaNum = parseInt(nuevoHorarioEspecial.value.salida.split(':')[0]) || 0;
-  let tipoCalculado = 'Temprano';
-  if (entradaNum >= 13 || salidaNum > 13) {
-    tipoCalculado = 'Tarde';
+  const entrada = nuevoHorarioEspecial.value.entrada;
+  const salida = nuevoHorarioEspecial.value.salida;
+  if (!entrada || !salida) {
+    toast.add({
+      severity: 'error',
+      summary: 'Error',
+      detail: 'Debe ingresar la hora de entrada y salida.'
+    })
+    return
   }
+
+  const entradaNum = parseInt(entrada.replace(":", ""));
+  const salidaNum = parseInt(salida.replace(":", ""));
+
+  if (entradaNum >= salidaNum) {
+    toast.add({
+      severity: 'error',
+      summary: 'Error',
+      detail: 'La hora de entrada debe ser menor que la hora de salida.'
+    })
+    return
+  }
+
+  let tipoCalculado = '';
+  if (entradaNum >= 700 && salidaNum <= 1300) {
+    tipoCalculado = 'Temprano';
+  } else if (entradaNum >= 1301 && salidaNum <= 2100) {
+    tipoCalculado = 'Tarde';
+  } else {
+    toast.add({
+      severity: 'error',
+      summary: 'Horario Inválido',
+      detail: 'El horario debe estar completamente entre 07:00-13:00 (Temprano) o 13:01-21:00 (Tarde).'
+    });
+    return;
+  }
+
   const payload = {
-    Parametro_Horario_Hora_Entrada: nuevoHorarioEspecial.value.entrada,
-    Parametro_Horario_Hora_Salida:  nuevoHorarioEspecial.value.salida,
-    Parametro_Horario_Tipo:         tipoCalculado
+    Parametro_Horario_Hora_Entrada: entrada,
+    Parametro_Horario_Hora_Salida: salida,
+    Parametro_Horario_Tipo: tipoCalculado
   };
+
   try {
     const res = await fetch(`${API}/parametroHorario`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
     });
+
     if (res.ok) {
-      toast.add({ 
-        severity: 'success', 
-        summary: 'Horario Especial Creado', 
-        detail: 'Se registró correctamente.' 
+      toast.add({
+        severity: 'success',
+        summary: 'Horario Especial Creado',
+        detail: 'Se registró correctamente.'
       });
       dialogoHorarioEspecialVisible.value = false;
       nuevoHorarioEspecial.value.entrada = '';
       nuevoHorarioEspecial.value.salida = '';
-      await cargarHorarios();
+      await cargarParametros();
     } else {
       const errorText = await res.text();
       console.error('Error al crear horario especial:', errorText);
@@ -572,6 +629,7 @@ async function crearHorarioEspecial() {
     });
   }
 }
+
 
 // Dentro de cargarHorarios(), se ajustan las URLs de disponibilidad
 async function cargarHorarios() {
