@@ -209,6 +209,52 @@ const registroAsistenciaClass = computed(() => [
   route.path === "/RegistroAsistencia" ? "text-green-400" : "",
   isDarkTheme.value ? "hover:bg-gray-700" : "hover:bg-gray-100",
 ]);
+
+const periodoSemanalClass = computed(() => [
+  "select-none flex items-center cursor-pointer p-4 rounded text-surface-700 transition-colors",
+  route.path === "/PeriodoSemanal" ? "text-green-400" : "",
+  isDarkTheme.value ? "hover:bg-gray-700" : "hover:bg-gray-100",
+]);
+
+const registroPorCedulaClass = computed(() => [
+  "select-none flex items-center cursor-pointer p-4 rounded text-surface-700 transition-colors",
+  route.path === "/RegistroPorCedula" ? "text-green-400" : "",
+  isDarkTheme.value ? "hover:bg-gray-700" : "hover:bg-gray-100",
+]);
+
+const registroManualClass = computed(() => [
+  "select-none flex items-center cursor-pointer p-4 rounded text-surface-700 transition-colors",
+  route.path === "/RegistroManual" ? "text-green-400" : "",
+  isDarkTheme.value ? "hover:bg-gray-700" : "hover:bg-gray-100",
+]);
+
+const seguimientoGeneralClass = computed(() => [
+  "select-none flex items-center cursor-pointer p-4 rounded text-surface-700 transition-colors",
+  route.path === "/SeguimientoGeneral" ? "text-green-400" : "",
+  isDarkTheme.value ? "hover:bg-gray-700" : "hover:bg-gray-100",
+]);
+
+const modificacionHorasClass = computed(() => [
+  "select-none flex items-center cursor-pointer p-4 rounded text-surface-700 transition-colors",
+  route.path === "/ModificacionHoras" ? "text-green-400" : "",
+  isDarkTheme.value ? "hover:bg-gray-700" : "hover:bg-gray-100",
+]);
+
+const registrosAbiertosClass = computed(() => [
+  "select-none flex items-center cursor-pointer p-4 rounded text-surface-700 transition-colors",
+  route.path === "/RegistrosAbiertos" ? "text-green-400" : "",
+  isDarkTheme.value ? "hover:bg-gray-700" : "hover:bg-gray-100",
+]);
+
+const registrosCerradosClass = computed(() => [
+  "select-none flex items-center cursor-pointer p-4 rounded text-surface-700 transition-colors",
+  route.path === "/RegistrosCerrados" ? "text-green-400" : "",
+  isDarkTheme.value ? "hover:bg-gray-700" : "hover:bg-gray-100",
+]);
+
+
+
+
 </script>
 
 <template>
@@ -378,9 +424,9 @@ const registroAsistenciaClass = computed(() => [
                     </li>
                     <li>
                       <router-link to="/PeriodoSemanal" draggable="false" v-ripple :class="cronogramaClass">
-                        <i class="pi pi-graduation-cap mr-2"></i>
-                        <span class="font-medium text-lg">Periodo Semanal</span>
-                      </router-link>
+                          <i class="pi pi-calendar-times mr-2"></i>
+                          <span class="font-medium text-lg">Periodo Semanal</span>
+                        </router-link>
                     </li>
                   </ul>
                 </li>
@@ -467,7 +513,7 @@ const registroAsistenciaClass = computed(() => [
                 <li>
                   <a v-ripple v-styleclass="{ selector: '@next', toggleClass: 'closed' }"
                     class="select-none flex items-center cursor-pointer p-4 rounded text-surface-700 transition-colors">
-                    <i class="pi pi-fingerprint mr-2"></i>
+                    <i class="pi pi-bullseye mr-2"></i>
                     <span class="font-medium text-lg">Control Biométrico</span>
                     <i class="pi pi-chevron-down ml-auto"></i>
                   </a>
@@ -479,13 +525,13 @@ const registroAsistenciaClass = computed(() => [
                       </router-link>
                     </li> 
                     <li>
-                      <router-link to="/RegistroPorCedula" draggable="false" v-ripple :class="registroAsistenciaClass">
+                      <router-link to="/RegistroPorCedula" draggable="false" v-ripple :class="registroPorCedulaClass">
                         <i class="pi pi-check-circle mr-2"></i>
                         <span class="font-medium text-lg">Registro de Asistencia</span>
                       </router-link>
                     </li>
                     <li>
-                      <router-link to="/RegistroManual" draggable="false" v-ripple :class="registroAsistenciaClass">
+                      <router-link to="/RegistroManual" draggable="false" v-ripple :class="registroManualClass">
                         <i class="pi pi-check-circle mr-2"></i>
                         <span class="font-medium text-lg">Registro Manual de Asistencia</span>
                       </router-link>
@@ -502,25 +548,25 @@ const registroAsistenciaClass = computed(() => [
                   </a>
                   <ul class="submenu closed list-none p-0 m-0">
                     <li>
-                      <router-link to="/SeguimientoGeneral" draggable="false" v-ripple :class="asignacionHuellaClass">
+                      <router-link to="/SeguimientoGeneral" draggable="false" v-ripple :class="seguimientoGeneralClass">
                         <i class="pi pi-plus-circle mr-2"></i>
                         <span class="font-medium text-lg">Seguimiento de Horas</span>
                       </router-link>
                     </li> 
                     <li>
-                      <router-link to="/ModificacionHoras" draggable="false" v-ripple :class="asignacionHuellaClass">
+                      <router-link to="/ModificacionHoras" draggable="false" v-ripple :class="modificacionHorasClass">
                         <i class="pi pi-plus-circle mr-2"></i>
                         <span class="font-medium text-lg">Horas Extraordinarias</span>
                       </router-link>
                     </li> 
                     <li>
-                      <router-link to="/RegistrosAbiertos" draggable="false" v-ripple :class="asignacionHuellaClass">
+                      <router-link to="/RegistrosAbiertos" draggable="false" v-ripple :class="registrosAbiertosClass">
                         <i class="pi pi-plus-circle mr-2"></i>
                         <span class="font-medium text-lg">Registros Abiertos</span>
                       </router-link>
                     </li> 
                     <li>
-                      <router-link to="/RegistrosCerrados" draggable="false" v-ripple :class="asignacionHuellaClass">
+                      <router-link to="/RegistrosCerrados" draggable="false" v-ripple :class="registrosCerradosClass">
                         <i class="pi pi-plus-circle mr-2"></i>
                         <span class="font-medium text-lg">Registros Cerrados</span>
                       </router-link>

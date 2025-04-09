@@ -8,6 +8,10 @@ import Button from 'primevue/button';
 import axios from 'axios';
 import { API, type Internal_User } from '@/ApiRoute';
 
+import { useSubjects } from '@/useSubjects';
+const { subjects: areas } = useSubjects();
+
+
 const props = defineProps<{
   visible: boolean;
   user: Internal_User | null;
@@ -26,13 +30,7 @@ const modelVisible = computed({
 
 const editedUser = ref<Internal_User>({} as Internal_User);
 
-const areas = ref([
-  "Civil",
-  "Penal",
-  "Familia, Niñez y Adolescencia",
-  "Movilidad Humana",
-  "Trabajo Social"
-]);
+
 
 const statuses = ref([
   "Activo",
@@ -130,13 +128,16 @@ const saveChanges = async () => {
         <div>
           <label for="Internal_Area" class="block text-sm font-semibold">Área</label>
           <Dropdown
-            id="Internal_Area"
-            v-model="editedUser.Internal_Area"
-            :options="areas"
-            class="w-full rounded border-gray-300 focus:ring-blue-500 bg-gray-100"
-            size="large"
-            readonly
-          />
+  id="Internal_Area"
+  v-model="editedUser.Internal_Area"
+  :options="areas"
+  optionLabel="label"
+  optionValue="value"
+  class="w-full rounded border-gray-300 focus:ring-blue-500 bg-gray-100"
+  size="large"
+/>
+
+
         </div>
       </div>
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">

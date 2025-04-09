@@ -17,6 +17,7 @@
     "@vueuse/components": "^13.0.0",
     "@vueuse/core": "^13.0.0",
     "axios": "^1.7.9",
+    "file-saver": "^2.0.5",
     "pdfjs-dist": "^4.10.38",
     "pinia": "^2.3.1",
     "primeflex": "^3.3.1",

@@ -329,9 +329,13 @@ const validarYGuardar = async () => {
         throw new Error("Error al guardar el seguimiento semanal");
       }
     }
-    if (!response.ok) {
-      throw new Error("Error al guardar los datos");
-    }
+    if (response.status === 400) {
+  errorMensaje.value = "Ya existe un período en esas fechas.";
+  return;
+} else if (!response.ok) {
+  throw new Error("Error al guardar los datos");
+}
+
     toast.add({
       severity: "success",
       summary: "Éxito",
@@ -341,7 +345,19 @@ const validarYGuardar = async () => {
     router.push("/Cronograma");
   } catch (error: any) {
     console.error("Error guardando el período:", error);
+  // Si es un objeto Response (de fetch fallido)
+  if (error?.name === "FetchError" || error instanceof Response) {
+    try {
+      const errorData = await error.json();
+      errorMensaje.value = errorData?.error || "Ocurrió un error al guardar.";
+    } catch {
+      errorMensaje.value = "Ocurrió un error inesperado al procesar la respuesta.";
+    }
+  } else if (error instanceof Error) {
+    errorMensaje.value = error.message;
+  } else {
     errorMensaje.value = "Ocurrió un error al guardar.";
+  }
   } finally {
     cargando.value = false;
   }

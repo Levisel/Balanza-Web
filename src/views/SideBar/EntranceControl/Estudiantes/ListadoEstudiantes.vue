@@ -23,13 +23,14 @@
         class="w-72"
       />
       <Dropdown
-        v-model="areaSeleccionada"
-        :options="opcionesAreas"
-        optionLabel="label"
-        optionValue="value"
-        placeholder="Filtrar por Área"
-        class="w-72"
-      />
+  v-model="areaSeleccionada"
+  :options="subjects"
+  optionLabel="label"
+  optionValue="value"
+  placeholder="Filtrar por Área"
+  class="w-72"
+/>
+
       <Button
         label="Restablecer filtros"
         icon="pi pi-filter-slash"
@@ -141,6 +142,11 @@ import Toast from "primevue/toast";
 import { useToast } from "primevue/usetoast";
 import EditStudentsModal from "@/components/EditStudentsModal.vue";
 import { API, type UsuarioXPeriodoDVM, type Periodo } from "@/ApiRoute";
+import { useSubjects } from "@/useSubjects";
+
+const { subjects, loadingSubjects, errorSubjects } = useSubjects();
+
+
 
 // Estados y Toast
 const toast = useToast();
