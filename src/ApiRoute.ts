@@ -7,7 +7,7 @@ export interface Internal_User {
     Internal_Name: string;
     Internal_LastName: string;
     Internal_Email: string;
-    Internal_Password: string;
+    Internal_Password?: string;
     Internal_Type: string;
     Internal_Area: string;
     Internal_Phone: string;
@@ -41,7 +41,7 @@ export interface User {
     //DATOS DEMOGRÁFICOS
     User_SocialBenefit: boolean;
     User_EconomicDependence: boolean;
-    User_Academic_Instruction: string;
+    User_AcademicInstruction: string;
     User_Profession: string;
     User_MaritalStatus: string;
     User_Dependents: number;
@@ -60,7 +60,8 @@ export interface User {
     User_Disability: string;
     User_DisabilityPercentage: number;
     User_CatastrophicIllness: string;
-    User_HealthDocuments: Blob;
+    User_HealthDocuments: File | null;
+    User_HealthDocumentsName: string | null;
 }
 // 📌 Initial_Consultation (Manages all the information of the initial consultation)
 export interface Initial_Consultation {
@@ -80,24 +81,41 @@ export interface Initial_Consultation {
     Init_Notes: string;
     Init_Type: string; //Nuevo o Asignado
     Init_SocialWork: boolean;
+    Init_MandatorySW: boolean;
+    Init_AlertNote: string;
     User_ID: string;
 }
+
+
+export interface Evidence {
+    Evidence_ID: number;
+    Internal_ID: string;
+    Init_Code: string;
+    Evidence_Name: string;
+    Evidence_Document_Type: string;
+    Evidence_Date: Date;
+    Evidence_File: File | null; 
+}
+
+
 // 📌 Initial_Consultation (The activities assigned to the student)
-export interface Activity {
-    Activity_ID: string;
+export interface Activity {   
+    Activity_ID: number;
     Init_Code: string;
     Internal_ID: string;
-    Last_Activity: string;
-    Activity_Date: Date;
-    Activity_Type: string;
-    Location: string;
-    Time: string;
-    Duration: string;
-    Counterparty: string;
-    Judge_Name: string;
-    Reference_File: string;
-    Status: string;
-    Documents: Blob;
+    Internal_Name: string;
+    Activity_Name: string;
+    Activity_Start_Date: Date;
+    Activity_Start_Time: string;
+    Activity_Location: string;
+    Activity_Duration: string;
+    Activity_Counterparty: string;
+    Activity_Judged: string;
+    Activity_Judge_Name: string;
+    Activity_Reference_File: string;
+    Activity_Status: string;
+    Activity_OnTime: boolean;
+    Activity_Document: File | null;
 }
 
 //------------------------------------------------------------------------------------------------------------------//
@@ -115,16 +133,16 @@ export interface Periodo {
 
 // 📌 Interface de Usuario (sin `UsuarioXPeriodo_ID`)
 export interface Usuario {
-    Usuario_Cedula: string;
-    Usuario_Nombres: string;
-    Usuario_Apellidos: string;
-    Usuario_Area: string;
-    Usuario_Correo: string;
-    Usuario_Huella: Blob | undefined;
-    Usuario_contrasenia?: string; //campo opcional
-    Usuario_Activo: boolean;
-    Usuario_Tipo: string;
-    Usuario_IsDeleted: boolean;
+    Internal_ID: string;           // Cédula de identidad o pasaporte
+    Internal_Name: string;         // Nombres del usuario
+    Internal_LastName: string;     // Apellidos del usuario
+    Internal_Email: string;        // Correo institucional
+    Internal_Area: string;         // Área o departamento
+    Internal_Phone?: string;       // Teléfono (opcional)
+    Internal_Huella?: Blob | null; // Huella digital (opcional)
+    Internal_Password?: string;    // Contraseña (opcional)
+    Internal_Type: string;         // Tipo de usuario (Ej.: Estudiante, Coordinador, etc.)
+    Internal_Status: string;   
 }
 
 // 📌 Interface de UsuarioXPeriodo (con `UsuarioXPeriodo_ID`)
@@ -137,12 +155,15 @@ export interface UsuarioXPeriodo {
 
 // 📌 Interface de UsuarioXPeriodoDVM (Usado en la tabla para mostrar datos combinados)
 export interface UsuarioXPeriodoDVM {
-    Usuario_Cedula: string;
-    Usuario_Nombres: string;
-    Usuario_Apellidos: string;
-    Usuario_Correo: string;
-    Usuario_Huella: Blob;
-    Usuario_Area: string;
+    Internal_ID: string;
+    Internal_Name: string;
+    Internal_LastName: string;
+    Internal_Email: string;
+    Internal_Phone: string | null;
+    Internal_Type: string | null;
+    Internal_Status: string | null;
+    Internal_Huella: Blob;
+    Internal_Area: string;
     Periodo_ID: number;
     PeriodoNombre: string;
 }
@@ -167,6 +188,17 @@ export interface Parametro_Horario {
     Parametro_Horario_Hora_Salida: string;
     Parametro_Horario_Tipo: string;
     Parametro_Horario_IsDeleted: boolean;
+}
+
+export interface SeguimientoSemanal {
+    Semana_ID: number;
+    Semana_Numero: number;
+    Semana_Ini: Date;
+    Semana_Fin: Date;
+    Semana_Horas: number;
+    Semana_Feriado: number;
+    Semana_Observacion: string;
+    Periodo_ID: number;
 }
 
 //------------------------------------------------------------------------------------------------------------------//

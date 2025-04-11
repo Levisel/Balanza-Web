@@ -2,7 +2,6 @@
   <main class="flex flex-col items-center p-8 min-h-screen">
     <!-- Cabecera con flecha de regreso y título -->
     <div class="flex items-center w-full max-w-3xl mb-10">
-      <!-- Flecha de regreso con hover -->
       <span
         class="cursor-pointer mr-4 transition-colors duration-300"
         @click="volverListado"
@@ -115,7 +114,7 @@ import Button from "primevue/button";
 import Message from "primevue/message";
 import Dropdown from "primevue/dropdown";
 import { useDarkMode } from "@/components/ThemeSwitcher";
-import { API, type Periodo } from  "@/ApiRoute";
+import { API, type Periodo } from "@/ApiRoute";
 import { useToast } from "primevue/usetoast";
 
 const router = useRouter();
@@ -130,9 +129,12 @@ const periodoId = route.params.id ? Number(route.params.id) : null;
 const nombrePeriodo = ref("");
 const fechaInicio = ref<Date | null>(null);
 const fechaFin = ref<Date | null>(null);
-const periodoTipo = ref<string>(""); // Nuevo campo para el tipo de período
+const periodoTipo = ref("");
 const errorMensaje = ref("");
 const cargando = ref(false);
+
+// Variable para almacenar la fecha de inicio original (para comparar en edición)
+const originalFechaInicio = ref<Date | null>(null);
 
 // Opciones para el Dropdown de tipo de período
 const opcionesPeriodoTipo = ref([
@@ -142,21 +144,15 @@ const opcionesPeriodoTipo = ref([
 
 // Clases dinámicas para Dark Mode
 const cardClass = computed(() =>
-  isDarkTheme.value
-    ? "bg-gray-800 text-white shadow-lg"
-    : "bg-white text-gray-900 shadow-lg"
+  isDarkTheme.value ? "bg-gray-800 text-white shadow-lg" : "bg-white text-gray-900 shadow-lg"
 );
-
 const inputClass = computed(() =>
   isDarkTheme.value
     ? "bg-gray-900 text-white border-gray-700 focus:border-blue-500"
     : "bg-white text-gray-900 border-gray-300 focus:border-blue-500"
 );
-
 const buttonClass = computed(() =>
-  isDarkTheme.value
-    ? "bg-orange-500 hover:bg-orange-600"
-    : "bg-orange-400 hover:bg-orange-500"
+  isDarkTheme.value ? "bg-orange-500 hover:bg-orange-600" : "bg-orange-400 hover:bg-orange-500"
 );
 
 // Función para cargar datos del período (en edición)
@@ -171,13 +167,57 @@ const cargarPeriodo = async () => {
     fechaInicio.value = new Date(data.Periodo_Inicio);
     fechaFin.value = new Date(data.Periodo_Fin);
     periodoTipo.value = data.PeriodoTipo;
-  } catch (error) {
+    // Guardamos la fecha de inicio original para comparar en caso de edición
+    originalFechaInicio.value = new Date(data.Periodo_Inicio);
+  } catch (error: any) {
     console.error("Error al cargar el período:", error);
     errorMensaje.value = "Error al cargar los datos del período.";
   } finally {
     cargando.value = false;
   }
 };
+
+// Función para calcular el arreglo de semanas
+function calcularSemanas(periodoId: number, inicio: Date, fin: Date) {
+  const semanas: any[] = [];
+  let startDate = new Date(inicio);
+  const endDate = new Date(fin);
+  let weekNumber = 1;
+
+  // Función para obtener el próximo viernes a partir de una fecha dada
+  function getFriday(date: Date): Date {
+    const day = date.getDay(); // 0: domingo, 1: lunes, ..., 5: viernes, 6: sábado
+    let diff = 5 - day;
+    if (diff < 0) diff += 7;
+    const friday = new Date(date);
+    friday.setDate(date.getDate() + diff);
+    return friday;
+  }
+
+  while (startDate <= endDate) {
+    const weekStart = new Date(startDate);
+    let weekEnd = getFriday(weekStart);
+    if (weekEnd > endDate) {
+      weekEnd = new Date(endDate);
+    }
+    semanas.push({
+      Periodo_ID: periodoId,
+      Semana_Numero: weekNumber,
+      Semana_Ini: weekStart.toISOString(),
+      Semana_Fin: weekEnd.toISOString(),
+      Semana_Horas: 0,
+      Semana_Feriado: 0,
+      Semana_Observacion: null,
+      Semana_IsDeleted: false,
+    });
+    weekNumber++;
+    // Para la siguiente semana: el lunes siguiente al viernes actual (viernes +3 días)
+    const nextMonday = new Date(weekEnd);
+    nextMonday.setDate(nextMonday.getDate() + 3);
+    startDate = nextMonday;
+  }
+  return semanas;
+}
 
 // Función para validar y guardar (crear o editar)
 const validarYGuardar = async () => {
@@ -210,14 +250,92 @@ const validarYGuardar = async () => {
     PeriodoTipo: periodoTipo.value,
   };
   try {
-    const method = periodoId ? "PUT" : "POST";
-    const endpoint = periodoId ? `${API}/periodos/${periodoId}` : `${API}/periodos`;
-    const response = await fetch(endpoint, {
-      method,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(periodoData),
-    });
-    if (!response.ok) throw new Error("Error al guardar los datos");
+    let response;
+    let nuevoPeriodo;
+    if (periodoId) {
+      // Modo edición: actualizamos el período
+      response = await fetch(`${API}/periodos/${periodoId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(periodoData),
+      });
+      nuevoPeriodo = await response.json();
+      
+      // Verificar extensión al final (si fechaFin se extendió)
+      const seguimientoRes = await fetch(`${API}/seguimientos/last/${periodoId}`);
+      if (seguimientoRes.ok) {
+        const lastSeguimiento = await seguimientoRes.json();
+        const lastWeekEnd = new Date(lastSeguimiento.Semana_Fin);
+        if (fechaFin.value > lastWeekEnd) {
+          const nextDay = new Date(lastWeekEnd);
+          nextDay.setDate(nextDay.getDate() + 1);
+          const nuevasSemanas = calcularSemanas(periodoId, nextDay, fechaFin.value);
+          const semanasResponse = await fetch(`${API}/seguimientos/bulk`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(nuevasSemanas),
+          });
+          if (!semanasResponse.ok) {
+            throw new Error("Error al guardar el seguimiento semanal adicional (extensión fin)");
+          }
+        }
+      }
+      
+      // Si la nueva fechaInicio es anterior a la original, recalcular semanas al inicio
+      if (originalFechaInicio.value && fechaInicio.value < originalFechaInicio.value) {
+        const nuevasSemanasInicio = calcularSemanas(periodoId, fechaInicio.value, originalFechaInicio.value);
+        const semanasInicioResponse = await fetch(`${API}/seguimientos/bulk`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(nuevasSemanasInicio),
+        });
+        if (!semanasInicioResponse.ok) {
+          throw new Error("Error al guardar el seguimiento semanal adicional (extensión inicio)");
+        }
+      }
+      
+      // Reordenar todas las semanas: llamar al endpoint de reordenamiento
+      const reorderResponse = await fetch(`${API}/seguimientos/reorder/${periodoId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          nuevaFechaInicio: fechaInicio.value.toISOString(),
+          fechaFin: fechaFin.value.toISOString()
+        }),
+      });
+      if (!reorderResponse.ok) {
+        throw new Error("Error al reordenar las semanas del seguimiento");
+      }
+      
+    } else {
+      // Creación de un nuevo período
+      response = await fetch(`${API}/periodos`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(periodoData),
+      });
+      nuevoPeriodo = await response.json();
+      const semanas = calcularSemanas(
+        nuevoPeriodo.Periodo_ID,
+        new Date(nuevoPeriodo.Periodo_Inicio),
+        new Date(nuevoPeriodo.Periodo_Fin)
+      );
+      const semanasResponse = await fetch(`${API}/seguimientos/bulk`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(semanas),
+      });
+      if (!semanasResponse.ok) {
+        throw new Error("Error al guardar el seguimiento semanal");
+      }
+    }
+    if (response.status === 400) {
+  errorMensaje.value = "Ya existe un período en esas fechas.";
+  return;
+} else if (!response.ok) {
+  throw new Error("Error al guardar los datos");
+}
+
     toast.add({
       severity: "success",
       summary: "Éxito",
@@ -225,15 +343,26 @@ const validarYGuardar = async () => {
       life: 3000,
     });
     router.push("/Cronograma");
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error guardando el período:", error);
+  // Si es un objeto Response (de fetch fallido)
+  if (error?.name === "FetchError" || error instanceof Response) {
+    try {
+      const errorData = await error.json();
+      errorMensaje.value = errorData?.error || "Ocurrió un error al guardar.";
+    } catch {
+      errorMensaje.value = "Ocurrió un error inesperado al procesar la respuesta.";
+    }
+  } else if (error instanceof Error) {
+    errorMensaje.value = error.message;
+  } else {
     errorMensaje.value = "Ocurrió un error al guardar.";
+  }
   } finally {
     cargando.value = false;
   }
 };
 
-// Función para volver al listado de períodos
 const volverListado = () => {
   router.push("/Cronograma");
 };
@@ -246,7 +375,6 @@ onMounted(() => {
 </script>
 
 <style scoped>
-/* Ejemplo de estilos para la flecha con hover y dark mode */
 .cursor-pointer {
   transition: color 0.3s ease;
 }

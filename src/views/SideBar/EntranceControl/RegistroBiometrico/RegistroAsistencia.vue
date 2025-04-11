@@ -47,7 +47,14 @@
           Hora programada: <strong>{{ scheduledTimeString }}</strong>
         </p>
         <p class="text-sm text-gray-600">
-          Se permite capturar desde 15 minutos antes hasta 15 minutos después.
+          Se permite capturar siempre (pruebas sin restricción de tiempo).
+        </p>
+      </div>
+
+      <!-- Mostrar hora de entrada si ya existe -->
+      <div v-if="tipoRegistro === 'salida' && registroEntradaLocal" class="mt-4 text-center">
+        <p class="text-lg text-blue-600">
+          Ya ingresaste a las: {{ registroEntradaLocal }}
         </p>
       </div>
 
@@ -158,7 +165,7 @@ const huellaCapturada = ref(false);
 const registroAbierto = ref(null);
 const tipoRegistro = ref("entrada"); // 'entrada' o 'salida'
 
-// Nueva variable para usuarioXPeriodoId (obtenido de la consulta a /usuarioXPeriodo)
+// Variable para usuarioXPeriodoId (obtenido de la consulta a /usuarioXPeriodo)
 const usuarioXPeriodoId = ref("");
 
 // Estados UI
@@ -168,10 +175,23 @@ const dialogoActivo = ref(false);
 const capturando = ref(false);
 
 // Horario programado (quemado para pruebas)
-const scheduledTime = ref(new Date("2025-03-23T21:48:00"));
+const scheduledTime = ref(new Date("2025-03-24T21:03:00")); // Para pruebas
 const scheduledTimeString = computed(() =>
   scheduledTime.value.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
 );
+
+// Propiedad computada para mostrar la hora de entrada en formato local (Ecuador)
+const registroEntradaLocal = computed(() => {
+  if (registroAbierto.value && registroAbierto.value.Registro_Entrada) {
+    return new Date(registroAbierto.value.Registro_Entrada).toLocaleString("es-EC", {
+      timeZone: "America/Guayaquil",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit"
+    });
+  }
+  return "";
+});
 
 // Clases dinámicas para dark mode
 const cardClass = computed(() =>
@@ -191,22 +211,22 @@ const cargarEstudiante = async () => {
   }
   cargando.value = true;
   try {
-    const response = await fetch(`${API}/usuarios/${estudianteCedula.value}`);
+    const response = await fetch(`${API}/internal-user/${estudianteCedula.value}`);
     if (!response.ok) throw new Error("Error al obtener el estudiante");
     const data: Usuario = await response.json();
-    cedula.value = data.Usuario_Cedula;
-    nombres.value = data.Usuario_Nombres;
-    apellidos.value = data.Usuario_Apellidos;
-    correo.value = data.Usuario_Correo;
-    area.value = data.Usuario_Area || "";
+    cedula.value = data.Internal_ID;
+    nombres.value = data.Internal_Name;
+    apellidos.value = data.Internal_LastName;
+    correo.value = data.Internal_Email;
+    area.value = data.Internal_Area || "";
 
     // Opcional: obtener la huella almacenada para comparar
-    const resHuella = await fetch(`${API}/usuarios/obtener-huella/${data.Usuario_Cedula}`);
+    const resHuella = await fetch(`${API}/usuarios/obtener-huella/${data.Internal_ID}`);
     if (resHuella.ok) {
       const huellaData = await resHuella.json();
       huellaGuardada.value = huellaData.huella || "";
     }
-    // Una vez cargados los datos del estudiante, consultamos el usuarioXPeriodo
+    // Una vez cargados los datos del estudiante, consultamos usuarioXPeriodo
     await cargarUsuarioXPeriodo();
     // Y consultamos si hay un registro de asistencia abierto para hoy
     await cargarRegistroAsistenciaAbierto();
@@ -218,15 +238,20 @@ const cargarEstudiante = async () => {
   }
 };
 
-// Función para obtener el usuarioXPeriodoId
+// Función para obtener el usuarioXPeriodoId usando la ruta: /usuarioXPeriodo/:periodoId/:cedula
 const cargarUsuarioXPeriodo = async () => {
-  if (!cedula.value || !periodoId.value) return;
+  if (!cedula.value || !periodoId.value) {
+    console.log("Faltan datos para cargar usuarioXPeriodo:", { cedula: cedula.value, periodoId: periodoId.value });
+    return;
+  }
   try {
+    console.log("Cargando usuarioXPeriodo con ruta:", `${API}/usuarioXPeriodo/${periodoId.value}/${cedula.value}`);
     const response = await fetch(`${API}/usuarioXPeriodo/${periodoId.value}/${cedula.value}`);
     if (!response.ok) throw new Error("Error al obtener usuarioXPeriodo");
     const data = await response.json();
-    // Suponemos que la API devuelve { usuarioXPeriodoId: "valor" }
-    usuarioXPeriodoId.value = data.usuarioXPeriodoId;
+    console.log("Respuesta usuarioXPeriodo:", data);
+    usuarioXPeriodoId.value = data.UsuarioXPeriodo_ID;
+    console.log("usuarioXPeriodoId:", usuarioXPeriodoId.value);
   } catch (error) {
     console.error("Error al cargar usuarioXPeriodo:", error);
   }
@@ -238,8 +263,7 @@ const cargarRegistroAsistenciaAbierto = async () => {
   try {
     const hoy = new Date();
     const fechaHoy = hoy.toISOString().split("T")[0];
-    // Se consulta al endpoint /registros/abierto con usuarioCedula y fecha
-    const response = await fetch(`${API}/registros/abierto?usuarioCedula=${cedula.value}&fecha=${fechaHoy}`);
+    const response = await fetch(`${API}/registros/abierto?usuarioxPeriodoId=${usuarioXPeriodoId.value}&fecha=${fechaHoy}`);
     if (response.ok) {
       const data = await response.json();
       if (data) {
@@ -260,31 +284,14 @@ const cargarRegistroAsistenciaAbierto = async () => {
   }
 };
 
-// Función para validar el intervalo de tiempo (15 min antes y 15 min después)
-const tiempoPermitido = () => {
-  const now = new Date();
-  const diffMinutes = (now.getTime() - scheduledTime.value.getTime()) / (1000 * 60);
-  return diffMinutes >= -15 && diffMinutes <= 15;
-};
-
-// Iniciar la captura de huella
+// Función para iniciar la captura de huella
 const iniciarCaptura = async () => {
-  if (!tiempoPermitido()) {
-    toast.add({
-      severity: "warn",
-      summary: "Tiempo no permitido",
-      detail: "La captura de huella sólo se permite 15 minutos antes o después de la hora programada.",
-      life: 4000,
-    });
-    return;
-  }
   if (capturando.value) {
     console.log("Captura ya en proceso, evitando múltiples intentos.");
     return;
   }
   capturando.value = true;
   dialogoActivo.value = true;
-
   try {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 15000);
@@ -343,7 +350,7 @@ const cancelarCaptura = () => {
   capturando.value = false;
 };
 
-// Función para guardar la asistencia (POST para entrada, PUT para salida)
+// Si hay registro abierto, se actualiza la salida mediante PUT; de lo contrario, se crea un registro (entrada).
 const guardarHuella = async () => {
   if (!huellaBase64.value || !cedula.value) {
     toast.add({
@@ -354,7 +361,6 @@ const guardarHuella = async () => {
     });
     return;
   }
-  // Si no hay huella en BD para comparar, se muestra un mensaje (puedes modificar esta lógica)
   if (!huellaGuardada.value) {
     toast.add({
       severity: "info",
@@ -362,11 +368,10 @@ const guardarHuella = async () => {
       detail: "No existe huella almacenada para comparar, se procede a guardar la nueva.",
       life: 3000,
     });
-    // Aquí podrías proceder a crear el registro sin comparación (POST)
     return;
   }
   try {
-    // Comparar huellas mediante /SGIMatchScore
+    // Comparar huellas
     const params = new URLSearchParams();
     params.append("Template1", huellaGuardada.value);
     params.append("Template2", huellaBase64.value);
@@ -385,13 +390,13 @@ const guardarHuella = async () => {
     const matchData = await resMatch.json();
     if (matchData.ErrorCode === 0) {
       const score = matchData.MatchingScore;
-      const umbral = 70; // Umbral para considerar la huella válida
+      const umbral = 70;
       if (score < umbral) {
         console.log("Huella no coincide, score:", score);
         toast.add({
           severity: "error",
           summary: "Huella no coincide",
-          detail: `La huella no coincide con un puntaje de = ${score}/200. Por favor, intente de nuevo.`,
+          detail: `La huella no coincide (score: ${score}/200). Intente de nuevo.`,
           life: 3000,
         });
         huellaCapturada.value = false;
@@ -405,67 +410,48 @@ const guardarHuella = async () => {
           life: 3000,
         });
         console.log("Huella válida, score:", score);
-        if (tipoRegistro.value === "entrada") {
-          // Crear nuevo registro de asistencia (POST) usando usuarioXPeriodoId
-          try {
-            const registroData = {
-              usuarioXPeriodoId: usuarioXPeriodoId.value,
-              Registro_Entrada: new Date(), // hora de entrada actual
-              Registro_Salida: null,
-              Registro_Tipo: "presencial",
-              Registro_Observaciones: null,
-              Registro_fecha: new Date(),
-              Registro_IsDeleted: false
-            };
-            const response = await fetch(`${API}/registros`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify(registroData)
-            });
-            if (!response.ok) throw new Error("No se pudo crear el registro de asistencia.");
-            console.log("Registro de entrada creado correctamente.");
-          } catch (error) {
-            console.error("Error creando registro de entrada:", error);
+
+        if (registroAbierto.value) {
+          // Actualizar registro de salida (PUT) usando el endpoint especializado
+          const registroId = registroAbierto.value.Registro_ID;
+          if (!registroId) {
             toast.add({
               severity: "error",
               summary: "Error",
-              detail: "No se pudo registrar la entrada en la base de datos.",
+              detail: "No se encontró el registro de entrada para actualizar la salida.",
               life: 5000,
             });
             return;
           }
+          // Simular la hora de salida (en producción, se usaría la hora actual)
+          const salidaSimulada = new Date();
+          const response = await fetch(`${API}/registros/${registroId}/salida`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ Registro_Salida: salidaSimulada })
+          });
+          if (!response.ok) throw new Error("No se pudo actualizar el registro de asistencia.");
+          console.log("Registro de salida actualizado correctamente.");
         } else {
-          // Actualizar registro existente para marcar salida (PUT)
-          try {
-            const registroId = registroAbierto.value?.Registro_ID;
-            if (!registroId) {
-              toast.add({
-                severity: "error",
-                summary: "Error",
-                detail: "No se encontró el registro de entrada para actualizar la salida.",
-                life: 5000,
-              });
-              return;
-            }
-            const response = await fetch(`${API}/registros/${registroId}`, {
-              method: "PUT",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ Registro_Salida: new Date() })
-            });
-            if (!response.ok) throw new Error("No se pudo actualizar el registro de asistencia.");
-            console.log("Registro de salida actualizado correctamente.");
-          } catch (error) {
-            console.error("Error actualizando registro de salida:", error);
-            toast.add({
-              severity: "error",
-              summary: "Error",
-              detail: "No se pudo registrar la salida en la base de datos.",
-              life: 5000,
-            });
-            return;
-          }
+          // Crear un registro nuevo (entrada)
+          const registroData = {
+            UsuarioXPeriodo_ID: usuarioXPeriodoId.value,
+            Registro_Entrada: new Date(),
+            Registro_Salida: null,
+            Registro_Tipo: "Presencial",
+            Registro_Observaciones: null,
+            Registro_fecha: new Date(),
+            Registro_IsDeleted: false
+          };
+          const response = await fetch(`${API}/registros`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(registroData)
+          });
+          if (!response.ok) throw new Error("No se pudo crear el registro de asistencia.");
+          console.log("Registro de entrada creado correctamente.");
         }
-        // Mostrar toast de éxito y redirigir después de 3 segundos
+        // Redirigir después de 3 segundos
         setTimeout(() => {
           router.push("/AsignacionHuella");
         }, 3000);
@@ -489,12 +475,15 @@ const guardarHuella = async () => {
   }
 };
 
-// Volver a la vista de AsignacionHuella
+
+
+
+// Función para volver a la vista de AsignacionHuella
 const volverAsignacionHuella = () => {
   router.push("/AsignacionHuella");
 };
 
-// Al montar, cargar datos del estudiante (y luego el usuarioXPeriodo y registro abierto)
+// Al montar, cargar datos del estudiante (y luego usuarioXPeriodo y registro abierto)
 onMounted(async () => {
   await cargarEstudiante();
 });

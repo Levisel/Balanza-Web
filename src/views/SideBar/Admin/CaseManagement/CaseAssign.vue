@@ -1,7 +1,14 @@
 <script lang="ts">
-import { defineComponent, ref, onMounted, computed } from 'vue';
+import { defineComponent, ref, onMounted, computed, watch } from 'vue';
 import axios from 'axios';
-import { useAuthStore } from '@/stores/auth'; // Asegúrate de que la ruta sea correcta
+import { useAuthStore } from '@/stores/auth';
+import Dropdown from 'primevue/dropdown';
+import Textarea from 'primevue/textarea';
+import Dialog from 'primevue/dialog';
+import Button from 'primevue/button';
+import TabView from 'primevue/tabview';
+import TabPanel from 'primevue/tabpanel';
+import Paginator, { PageState } from 'primevue/paginator'; 
 
 interface Case {
   Internal_ID: string;
@@ -9,7 +16,10 @@ interface Case {
   Init_Subject: string;
   Init_Type: string;
   Init_Complexity: string;
-  assignedTo?: string;
+  assignedTo?: string | null;
+  assignedStudentName?: string;
+  assignedStudentId?: string | null; 
+  Reassignment_Reason?: string | null; 
 }
 
 interface Student {
@@ -20,24 +30,50 @@ interface Student {
 
 export default defineComponent({
   name: 'CaseAssign',
+  components: {
+    Dropdown,
+    Textarea,
+    Dialog,
+    Button,
+    TabView,
+    TabPanel,
+    Paginator // <-- Registra Paginator
+  },
   setup() {
     const authStore = useAuthStore();
     const selectedArea = ref<string>(authStore.user?.area || '');
     const loading = ref<boolean>(true);
     const cases = ref<Case[]>([]);
     const students = ref<Student[]>([]);
+    const autoAssignLoading = ref<boolean>(false);
     const showNotification = ref<boolean>(false);
     const notificationType = ref<'success' | 'error'>('');
     const notificationIcon = ref<string>('');
     const notificationTitle = ref<string>('');
     const notificationMessage = ref<string>('');
     const filters = ref<{ global: string }>({ global: '' });
+    const showReassignModal = ref<boolean>(false);
+    const selectedCaseToReassign = ref<Case | null>(null);
+    const selectedStudentToReassign = ref<string | null>(null);
+    const reassignObservation = ref<string>('');
 
+    // --- ESTADO DE PAGINACIÓN ---
+    const rowsPerPage = ref<number>(10); // Número de filas por página
+    const pendingFirst = ref<number>(0); // Índice del primer elemento en la página actual (pendientes)
+    const assignedFirst = ref<number>(0); // Índice del primer elemento en la página actual (asignados)
+    // --- FIN ESTADO DE PAGINACIÓN ---
+
+    // --- FILTROS GLOBALES (antes de paginar) ---
     const filteredPendingCases = computed(() =>
       cases.value.filter(
         (caso) =>
           caso.Init_Type === 'Por Asignar' &&
-          (selectedArea.value === '' || caso.Init_Subject === selectedArea.value)
+          (selectedArea.value === '' || caso.Init_Subject === selectedArea.value) &&
+          // Aplicar filtro de búsqueda global
+          (filters.value.global === '' ||
+           Object.values(caso).some(val =>
+             String(val).toLowerCase().includes(filters.value.global.toLowerCase())
+           ))
       )
     );
 
@@ -45,152 +81,404 @@ export default defineComponent({
       cases.value.filter(
         (caso) =>
           caso.Init_Type === 'Asignado' &&
-          (selectedArea.value === '' || caso.Init_Subject === selectedArea.value)
+          (selectedArea.value === '' || caso.Init_Subject === selectedArea.value) &&
+          // Aplicar filtro de búsqueda global
+          (filters.value.global === '' ||
+           Object.values(caso).some(val =>
+             String(val).toLowerCase().includes(filters.value.global.toLowerCase())
+           ))
       )
     );
+    // --- FIN FILTROS GLOBALES ---
+
+
+    // --- PROPIEDADES COMPUTADAS PARA PAGINACIÓN ---
+    const paginatedPendingCases = computed(() => {
+      const start = pendingFirst.value;
+      const end = start + rowsPerPage.value;
+      return filteredPendingCases.value.slice(start, end);
+    });
+
+    const paginatedAssignedCases = computed(() => {
+      const start = assignedFirst.value;
+      const end = start + rowsPerPage.value;
+      return filteredAssignedCases.value.slice(start, end);
+    });
+    // --- FIN PROPIEDADES COMPUTADAS PARA PAGINACIÓN ---
 
     const fetchCases = async (): Promise<void> => {
-  try {
-    if (!authStore.user?.area) {
-      console.error("El área del usuario no está definida.");
-      return;
-    }
+      loading.value = true; // Iniciar carga al principio
+      try {
+        if (!authStore.user?.area) {
+          console.error("El área del usuario no está definida.");
+          notificationMessage.value = 'No se pudo determinar el área del usuario.';
+          showNotification.value = true;
+          notificationType.value = 'error';
+          notificationTitle.value = 'Error de Configuración';
+          return;
+        }
 
-    // Obtener casos por asignar
-    const pendingResponse = await axios.get(
-      `http://localhost:3000/initial-consultations/type/${authStore.user.area}/Por%20Asignar/Activo`
-    );
-    const pendingCases = pendingResponse.data;
+        // Construir URLs de forma segura
+        const baseUrl = 'http://localhost:3000';
+        const areaEncoded = encodeURIComponent(authStore.user.area);
+        const pendingUrl = `${baseUrl}/initial-consultations/type/${areaEncoded}/Por%20Asignar/Activo`;
+        const assignedUrl = `${baseUrl}/initial-consultations/type/${areaEncoded}/Asignado/Activo`;
 
-    // Obtener casos asignados
-    const assignedResponse = await axios.get(
-      `http://localhost:3000/initial-consultations/type/${authStore.user.area}/Asignado/Activo`
-    );
-    const assignedCases = assignedResponse.data;
+        // Realizar peticiones en paralelo
+        const [pendingResponse, assignedResponse] = await Promise.all([
+          axios.get(pendingUrl),
+          axios.get(assignedUrl)
+        ]);
 
-    // Unir ambos conjuntos de casos en la variable principal
-    cases.value = [...pendingCases, ...assignedCases];
-  } catch (error) {
-    console.error("Error fetching cases:", error);
-  } finally {
-    loading.value = false;
-  }
-};
+        const pendingCases: Case[] = pendingResponse.data || [];
+        const assignedCases: Case[] = assignedResponse.data || [];
+
+        // Procesar casos asignados para obtener detalles del estudiante
+        const processedAssignedCases = await Promise.all(
+          assignedCases.map(async (caso) => {
+            try {
+              console.log(`Fetching assignment for case: ${caso.Init_Code}`);
+              const assignmentResponse = await axios.get(
+                `${baseUrl}/assignment/student/initcode/${caso.Init_Code}`
+              );
+
+              if (typeof assignmentResponse.data === 'string' && assignmentResponse.data) {
+                const studentId = assignmentResponse.data;
+                caso.assignedStudentId = studentId;
+                caso.assignedTo = studentId; // Mantener consistencia
+
+                try {
+                  const studentResponse = await axios.get(`${baseUrl}/internal-user/${studentId}`);
+                  const studentData = studentResponse.data;
+                  caso.assignedStudentName = `${studentData.Internal_Name || ''} ${studentData.Internal_LastName || ''}`.trim();
+                } catch (studentError: any) {
+                   console.error(`Error fetching student details for ID ${studentId} (Case ${caso.Init_Code}):`, studentError);
+                   caso.assignedStudentName = 'Estudiante no encontrado';
+                }
+
+              } else {
+                console.warn(`No assignment found or unexpected format for case ${caso.Init_Code}. Response:`, assignmentResponse.data);
+                caso.assignedStudentName = 'No asignado';
+                caso.assignedTo = null;
+                caso.assignedStudentId = null;
+              }
+            } catch (error: any) {
+              console.error(`Error fetching assignment/student for case ${caso.Init_Code}:`, error);
+              if (error.response && error.response.status === 404) {
+                console.warn(`404: No assignment found for case ${caso.Init_Code}`);
+                caso.assignedStudentName = 'No asignado';
+              } else {
+                caso.assignedStudentName = 'Error al cargar';
+              }
+              caso.assignedTo = null;
+              caso.assignedStudentId = null;
+            }
+            return caso; // Devolver el caso procesado
+          })
+        );
+
+        // Unir ambos conjuntos de casos en la variable principal
+        cases.value = [...pendingCases, ...processedAssignedCases];
+
+      } catch (error: any) {
+        console.error("Error fetching cases:", error);
+        notificationMessage.value = 'Error al cargar los casos. ' + (error.message || '');
+        showNotification.value = true;
+        notificationType.value = 'error';
+        notificationTitle.value = 'Error de Red';
+      } finally {
+        loading.value = false;
+      }
+    };
 
     const fetchStudents = async (): Promise<void> => {
+      if (!selectedArea.value) return; // No hacer fetch si no hay área
       try {
         const response = await axios.get(
-          `http://localhost:3000/internal-users/students/${selectedArea.value}`
+          `http://localhost:3000/internal-users/students/${encodeURIComponent(selectedArea.value)}`
         );
-        students.value = response.data;
+        students.value = response.data || [];
       } catch (error) {
         console.error('Error fetching students:', error);
+        students.value = []; // Limpiar estudiantes en caso de error
+        // Opcional: mostrar notificación de error al cargar estudiantes
       }
     };
 
     const assignCase = async (caso: Case): Promise<void> => {
-  if (!caso.assignedTo) {
-    console.error('No se ha seleccionado un estudiante para asignar.');
-    return;
-  }
-
-  try {
-    // Crear el registro en la tabla de asignaciones
-    const assignmentData = {
-      Init_Code: caso.Init_Code,
-      Assignment_Date: new Date().toISOString(),
-      Internal_User_ID_Student: caso.assignedTo, // Usar directamente el ID del estudiante
-      Internal_User_ID: authStore.user?.id, // ID del usuario logueado
-    };
-
-    console.log('Datos enviados a la API (asignación):', assignmentData);
-
-    // Enviar la solicitud para crear la asignación
-    await axios.post('http://localhost:3000/assignment', assignmentData, {
-      headers: {
-        'internal-id': authStore.user?.id, // ID del usuario logueado
-      },
-    });
-
-    // Actualizar el Init_Type del caso a "Asignado"
-    const updateData = { Init_Type: 'Asignado' };
-    console.log('Datos enviados a la API (actualización):', updateData);
-
-    await axios.put(
-      `http://localhost:3000/initial-consultations/${caso.Init_Code}`,
-      updateData,
-      {
-        headers: {
-          'internal-id': authStore.user?.id, // ID del usuario logueado
-        },
+      if (!caso.assignedTo) {
+        notificationMessage.value = 'Por favor, selecciona un estudiante para asignar el caso.';
+        showNotification.value = true;
+        notificationType.value = 'error';
+        notificationTitle.value = 'Error de Validación';
+        return;
       }
-    );
+      if (!authStore.user?.id) {
+         notificationMessage.value = 'No se pudo obtener el ID del usuario para la asignación.';
+         showNotification.value = true;
+         notificationType.value = 'error';
+         notificationTitle.value = 'Error de Autenticación';
+         return;
+      }
 
-    // Notificación de éxito
-    showNotification.value = true;
-    notificationType.value = 'success';
-    notificationTitle.value = 'Asignación exitosa';
-    notificationMessage.value = `El caso ${caso.Init_Code} ha sido asignado correctamente.`;
+      // Podrías añadir un estado de carga por fila si lo deseas
+      // caso.isAssigning = true; // Necesitarías añadir esta propiedad a la interfaz Case
 
-    // Actualizar la lista de casos
-    await fetchCases();
-  } catch (error) {
-    if (error.response) {
-      console.error('Error del servidor:', error.response.data);
-      notificationMessage.value = error.response.data.message || 'Error desconocido en el servidor.';
-    } else {
-      console.error('Error al asignar el caso:', error);
-      notificationMessage.value = 'No se pudo asignar el caso. Inténtalo nuevamente.';
-    }
+      try {
+        const assignmentData = {
+          Init_Code: caso.Init_Code,
+          Assignment_Date: new Date().toISOString(),
+          Internal_User_ID_Student: caso.assignedTo,
+          Internal_User_ID: authStore.user.id,
+        };
 
-    // Notificación de error
-    showNotification.value = true;
-    notificationType.value = 'error';
-    notificationTitle.value = 'Error en la asignación';
-  }
-};
+        await axios.post('http://localhost:3000/assignment', assignmentData, {
+          headers: { 'internal-id': authStore.user.id },
+        });
 
-    const getAssignedStudentName = (assignedTo: string | undefined): string => {
-      if (!assignedTo) return 'No asignado'; // Si no hay estudiante asignado, mostrar un mensaje
-      const student = students.value.find(student => student.Internal_ID === assignedTo);
-      return student ? `${student.Internal_Name} ${student.Internal_LastName}` : 'Estudiante no encontrado';
+        const updateData = { Init_Type: 'Asignado' };
+        await axios.put(
+          `http://localhost:3000/initial-consultations/${caso.Init_Code}`,
+          updateData,
+          { headers: { 'internal-id': authStore.user.id } }
+        );
+
+        showNotification.value = true;
+        notificationType.value = 'success';
+        notificationTitle.value = 'Asignación exitosa';
+        notificationMessage.value = `El caso ${caso.Init_Code} ha sido asignado correctamente.`;
+
+        // Optimización: Mover el caso de pendiente a asignado localmente antes de recargar
+        // O simplemente recargar todo con fetchCases
+        await fetchCases(); // Recarga los datos para reflejar el cambio
+
+      } catch (error: any) {
+        console.error('Error al asignar el caso:', error);
+        let errorMessage = 'No se pudo asignar el caso.';
+        if (error.response && error.response.data && error.response.data.message) {
+          errorMessage = error.response.data.message;
+        } else if (error.message) {
+          errorMessage = error.message;
+        }
+        showNotification.value = true;
+        notificationType.value = 'error';
+        notificationTitle.value = 'Error en la asignación';
+        notificationMessage.value = errorMessage;
+      } finally {
+        // caso.isAssigning = false; // Finalizar estado de carga por fila
+      }
     };
 
-    const reassignCase = (caso: Case): void => {
-      console.log(`Reasignar caso ${caso.Init_Code} a ${caso.assignedTo}`);
-      // Implementar la lógica para reasignar el caso
+    const autoAssignAllCases = async (): Promise<void> => {
+      if (!selectedArea.value) {
+        notificationMessage.value = 'No se ha seleccionado un área para la asignación automática.';
+        showNotification.value = true;
+        notificationType.value = 'error';
+        notificationTitle.value = 'Error';
+        return;
+      }
+      if (!authStore.user?.id) {
+        notificationMessage.value = 'No se pudo obtener el ID del usuario para la asignación.';
+        showNotification.value = true;
+        notificationType.value = 'error';
+        notificationTitle.value = 'Error de Autenticación';
+        return;
+      }
+
+      autoAssignLoading.value = true;
+      try {
+        const response = await axios.post(
+          'http://localhost:3000/assignment/assign-pending-by-area',
+          { area: selectedArea.value },
+          { headers: { 'internal-id': authStore.user.id } }
+        );
+
+        showNotification.value = true;
+        notificationType.value = 'success';
+        notificationTitle.value = 'Asignación Automática Iniciada';
+        notificationMessage.value = response.data.message || `Se inició la asignación automática para el área ${selectedArea.value}. Los casos se actualizarán en breve.`;
+
+        // Usar un temporizador puede ser propenso a errores si el backend tarda más.
+        // Considera usar WebSockets o Server-Sent Events para una actualización en tiempo real,
+        // o simplemente informar al usuario y dejar que recargue manualmente o esperar un fetch periódico.
+        setTimeout(() => {
+             fetchCases();
+        }, 2000); // Aumentar un poco el tiempo de espera o eliminarlo y confiar en la notificación
+
+      } catch (error: any) {
+        console.error('Error en la asignación automática:', error);
+        let errorMessage = 'Ocurrió un error al intentar asignar los casos automáticamente.';
+        if (error.response && error.response.data && error.response.data.message) {
+          errorMessage = error.response.data.message;
+        } else if (error.message) {
+          errorMessage = error.message;
+        }
+        showNotification.value = true;
+        notificationType.value = 'error';
+        notificationTitle.value = 'Error en Asignación Automática';
+        notificationMessage.value = errorMessage;
+      } finally {
+        autoAssignLoading.value = false;
+      }
     };
+
+    const openReassignModal = (caso: Case): void => {
+      selectedCaseToReassign.value = { ...caso }; // Copiar el objeto para evitar mutaciones directas
+      selectedStudentToReassign.value = caso.assignedStudentId || null; // Preseleccionar estudiante actual si existe
+      reassignObservation.value = ''; // Limpiar observación
+      showReassignModal.value = true;
+    };
+
+    // --- NUEVA FUNCIÓN PARA CONFIRMAR REASIGNACIÓN ---
+    const confirmReassign = async (): Promise<void> => {
+        // --- VALIDACIONES (sin cambios) ---
+        if (!selectedCaseToReassign.value || !selectedStudentToReassign.value) {
+            notificationMessage.value = 'Faltan datos para la reasignación (caso o estudiante).';
+            showNotification.value = true; notificationType.value = 'error'; notificationTitle.value = 'Error de Validación';
+            return;
+        }
+        if (!selectedCaseToReassign.value.Init_Code) {
+            notificationMessage.value = 'No se pudo encontrar el Código del Caso para reasignar.';
+            showNotification.value = true; notificationType.value = 'error'; notificationTitle.value = 'Error de Datos';
+            return;
+        }
+        if (!authStore.user?.id) {
+            notificationMessage.value = 'No se pudo obtener el ID del usuario para la reasignación.';
+            showNotification.value = true; notificationType.value = 'error'; notificationTitle.value = 'Error de Autenticación';
+            return;
+        }
+
+        // const reassignLoading = ref(false); // Opcional
+
+        try {
+            const initCode = selectedCaseToReassign.value.Init_Code;
+
+            // --- Payload para la API PUT /assignment/initcode/:initCode ---
+            // --- CAMBIO AQUÍ: Cambiar la clave del ID del estudiante ---
+            const updateData = {
+                Internal_User_ID_Student: selectedStudentToReassign.value, // Clave corregida para coincidir con el backend/DB
+                Reassignment_Reason: reassignObservation.value || null, // Motivo (esta clave ya era correcta)
+                // Internal_User_ID: authStore.user.id, // ID del usuario que reasigna (si la API lo necesita en el body)
+            };
+            // --- FIN CAMBIO ---
+
+            console.log(`Datos enviados a PUT /assignment/initcode/${initCode}:`, updateData);
+
+            // --- Llamada a la API (sin cambios en URL o método) ---
+            await axios.put(
+                `http://localhost:3000/assignment/initcode/${initCode}`,
+                updateData, // Ahora envía la clave correcta
+                {
+                    headers: { 'internal-id': authStore.user.id },
+                }
+            );
+
+            // --- Notificaciones y recarga (sin cambios) ---
+            showNotification.value = true;
+            notificationType.value = 'success';
+            notificationTitle.value = 'Reasignación Exitosa';
+            notificationMessage.value = `El caso ${initCode} ha sido reasignado correctamente.`;
+
+            showReassignModal.value = false;
+            await fetchCases();
+
+        } catch (error: any) {
+            console.error(`Error al reasignar el caso con Init_Code ${selectedCaseToReassign.value.Init_Code}:`, error);
+            let errorMessage = 'No se pudo reasignar el caso.';
+            if (error.response?.data?.message) {
+                errorMessage = error.response.data.message;
+            } else if (error.message) {
+                errorMessage = error.message;
+            }
+            showNotification.value = true;
+            notificationType.value = 'error';
+            notificationTitle.value = 'Error en la Reasignación';
+            notificationMessage.value = errorMessage;
+        } finally {
+            // reassignLoading.value = false; // Opcional
+        }
+    };
+    // --- FIN NUEVA FUNCIÓN ---
+
 
     const closeNotification = (): void => {
       showNotification.value = false;
     };
 
+    // --- MANEJADORES DE CAMBIO DE PÁGINA ---
+    const onPendingPageChange = (event: PageState) => {
+      pendingFirst.value = event.first;
+      rowsPerPage.value = event.rows; // Actualiza si permites cambiar filas por página
+    };
+
+    const onAssignedPageChange = (event: PageState) => {
+      assignedFirst.value = event.first;
+      rowsPerPage.value = event.rows; // Actualiza si permites cambiar filas por página
+    };
+    // --- FIN MANEJADORES DE CAMBIO DE PÁGINA ---
+
     onMounted(() => {
       fetchCases();
-      fetchStudents();
+      fetchStudents(); // Carga inicial de estudiantes basada en el área del usuario
     });
 
+    // Observar cambios en el área seleccionada (si permites cambiarla)
+    // O si el área del usuario puede cambiar dinámicamente
+    watch(selectedArea, (newArea, oldArea) => {
+      if (newArea !== oldArea) {
+        console.log(`Área cambiada a: ${newArea}. Recargando estudiantes y casos...`);
+        // Reiniciar paginación y filtros al cambiar de área
+        pendingFirst.value = 0;
+        assignedFirst.value = 0;
+        filters.value.global = ''; // Limpiar búsqueda global
+        fetchStudents(); // Recargar estudiantes para la nueva área
+        fetchCases(); // Recargar casos para la nueva área
+      }
+    });
+
+     // Observar cambios en el filtro global para reiniciar paginación
+    watch(filters, () => {
+        pendingFirst.value = 0;
+        assignedFirst.value = 0;
+    }, { deep: true }); // Usar deep watch para objetos
+
     return {
+      authStore, // Exponer para depuración o uso futuro si es necesario
       selectedArea,
       loading,
-      cases,
+      autoAssignLoading,
+      cases, // Puede ser útil para depuración, pero no se usa directamente en el template
       students,
-      filteredPendingCases,
-      filteredAssignedCases,
+      filteredPendingCases, // Necesario para totalRecords del paginador de pendientes
+      filteredAssignedCases, // Necesario para totalRecords del paginador de asignados
+      paginatedPendingCases, // Usar este en el v-for de pendientes
+      paginatedAssignedCases, // Usar este en el v-for de asignados
       showNotification,
       notificationType,
-      notificationIcon,
+      notificationIcon, // Asegúrate de asignar iconos si los usas
       notificationTitle,
       notificationMessage,
       filters,
       assignCase,
-      reassignCase,
+      showReassignModal,
+      selectedCaseToReassign,
+      selectedStudentToReassign,
+      reassignObservation,
+      openReassignModal,
+      confirmReassign, // <-- Retornar la función de confirmar reasignación
       closeNotification,
-      getAssignedStudentName,
+      autoAssignAllCases,
+      // Paginación
+      rowsPerPage,
+      pendingFirst,
+      assignedFirst,
+      onPendingPageChange,
+      onAssignedPageChange,
     };
   },
 });
 </script>
+
 
 <template>
   <div class="container mx-auto p-4">
@@ -204,134 +492,251 @@ export default defineComponent({
           placeholder="Buscar caso..."
         />
       </div>
+
+      <!-- Botón de asignación automática actualizado -->
+      <Button
+        label="Asignar automáticamente todos los casos"
+        icon="pi pi-bolt"
+        class="p-button-success ml-auto"
+        @click="autoAssignAllCases"
+        :loading="autoAssignLoading"
+        :disabled="autoAssignLoading || filteredPendingCases.length === 0"
+      />
+
     </div>
 
     <TabView>
       <TabPanel header="Casos por Asignar">
         <div class="border border-gray-300 rounded-md overflow-hidden">
+          <!-- Cabecera de la tabla -->
           <div class="bg-gray-100 font-semibold text-gray-700 flex">
             <div class="w-1/12 p-2">#</div>
-            <div class="w-2/12 p-2">Número de Caso</div>
+            <div class="w-2/12 p-2">Código de Caso</div>
             <div class="w-3/12 p-2">Área</div>
             <div class="w-2/12 p-2">Estado</div>
             <div class="w-2/12 p-2">Complejidad</div>
             <div class="w-2/12 p-2">Asignar a</div>
-            <div class="w-2/12 p-2">Acciones</div>
+            <div class="w-2/12 p-2 text-center">Acciones</div>
           </div>
 
+          <!-- Estado de carga -->
           <div v-if="loading" class="flex flex-col items-center justify-center p-8 text-gray-500">
             <i class="pi pi-spin pi-spinner text-2xl"></i>
             <span>Cargando casos...</span>
           </div>
 
+          <!-- Mensaje si no hay casos filtrados (antes de paginar) -->
           <div v-else-if="filteredPendingCases.length === 0" class="p-8 text-center text-gray-500">
-            No se encontraron casos para asignar.
+            No se encontraron casos para asignar que coincidan con los filtros.
           </div>
 
+          <!-- Iterar sobre los casos paginados -->
           <div v-else>
             <div
-              v-for="(caso, index) in filteredPendingCases"
+              v-for="(caso, index) in paginatedPendingCases"
               :key="caso.Internal_ID"
-              class="flex border-b border-gray-300 even:bg-gray-50"
+              class="flex border-b border-gray-300 even:bg-gray-50 items-center"
             >
-              <div class="w-1/12 p-2">{{ index + 1 }}</div>
+              <!-- Calcular número de fila correcto para la paginación -->
+              <div class="w-1/12 p-2">{{ pendingFirst + index + 1 }}</div>
               <div class="w-2/12 p-2">{{ caso.Init_Code }}</div>
               <div class="w-3/12 p-2">{{ caso.Init_Subject }}</div>
               <div class="w-2/12 p-2">{{ caso.Init_Type }}</div>
               <div class="w-2/12 p-2">{{ caso.Init_Complexity }}</div>
               <div class="w-2/12 p-2">
-                <select
+                <!-- Dropdown para seleccionar estudiante -->
+                <Dropdown
                   v-model="caso.assignedTo"
-                  class="w-full border border-gray-300 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  :options="students"
+                  optionLabel="Internal_Name"
+                  optionValue="Internal_ID"
+                  placeholder="Seleccionar"
+                  class="w-full text-sm"
+                  scrollHeight="150px"
                 >
-                  <option value="">Seleccionar estudiante</option>
-                  <option
-                    v-for="student in students"
-                    :key="student.Internal_ID"
-                    :value="student.Internal_ID"
-                  >
-                    {{ student.Internal_Name }} {{ student.Internal_LastName }}
-                  </option>
-                </select>
+                  <template #option="slotProps">
+                    {{ slotProps.option.Internal_Name }} {{ slotProps.option.Internal_LastName }}
+                  </template>
+                  <template #value="slotProps">
+                     <div v-if="slotProps.value">
+                        {{ students.find(s => s.Internal_ID === slotProps.value)?.Internal_Name }}
+                        {{ students.find(s => s.Internal_ID === slotProps.value)?.Internal_LastName }}
+                     </div>
+                     <span v-else class="text-gray-500 text-xs">
+                        {{ slotProps.placeholder }}
+                     </span>
+                   </template>
+                </Dropdown>
               </div>
               <div class="w-2/12 p-2 flex justify-center">
-                <button
+                <!-- Botón para asignar -->
+                <Button
+                  icon="pi pi-check"
+                  class="p-button-sm p-button-success"
                   @click="assignCase(caso)"
-                  class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 disabled:opacity-50"
                   :disabled="!caso.assignedTo"
-                >
-                  Asignar
-                </button>
+                  v-tooltip.top="'Asignar caso'"
+                />
               </div>
             </div>
           </div>
         </div>
+        <!-- Paginador para casos pendientes -->
+        <Paginator
+          v-if="filteredPendingCases.length > rowsPerPage"
+          :rows="rowsPerPage"
+          :totalRecords="filteredPendingCases.length"
+          :first="pendingFirst"
+          @page="onPendingPageChange($event)"
+          class="mt-4"
+          template="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport"
+          currentPageReportTemplate="Mostrando {first} a {last} de {totalRecords} casos por asignar"
+        />
       </TabPanel>
+
       <TabPanel header="Casos Asignados">
         <div class="border border-gray-300 rounded-md overflow-hidden">
+          <!-- Cabecera de la tabla -->
           <div class="bg-gray-100 font-semibold text-gray-700 flex">
             <div class="w-1/12 p-2">#</div>
-            <div class="w-2/12 p-2">Número de Caso</div>
+            <div class="w-2/12 p-2">Código de Caso</div>
             <div class="w-3/12 p-2">Área</div>
             <div class="w-2/12 p-2">Estado</div>
             <div class="w-2/12 p-2">Complejidad</div>
             <div class="w-2/12 p-2">Asignado a</div>
-            <div class="w-2/12 p-2">Acciones</div>
+            <div class="w-2/12 p-2 text-center">Acciones</div>
           </div>
 
+          <!-- Estado de carga -->
           <div v-if="loading" class="flex flex-col items-center justify-center p-8 text-gray-500">
             <i class="pi pi-spin pi-spinner text-2xl"></i>
             <span>Cargando casos...</span>
           </div>
 
+          <!-- Mensaje si no hay casos filtrados (antes de paginar) -->
           <div v-else-if="filteredAssignedCases.length === 0" class="p-8 text-center text-gray-500">
-            No se encontraron casos asignados.
+            No se encontraron casos asignados que coincidan con los filtros.
           </div>
 
+          <!-- Iterar sobre los casos paginados -->
           <div v-else>
             <div
-              v-for="(caso, index) in filteredAssignedCases"
+              v-for="(caso, index) in paginatedAssignedCases"
               :key="caso.Internal_ID"
-              class="flex border-b border-gray-300 even:bg-gray-50"
+              class="flex border-b border-gray-300 even:bg-gray-50 items-center"
             >
-              <div class="w-1/12 p-2">{{ index + 1 }}</div>
+              <!-- Calcular número de fila correcto para la paginación -->
+              <div class="w-1/12 p-2">{{ assignedFirst + index + 1 }}</div>
               <div class="w-2/12 p-2">{{ caso.Init_Code }}</div>
               <div class="w-3/12 p-2">{{ caso.Init_Subject }}</div>
               <div class="w-2/12 p-2">{{ caso.Init_Type }}</div>
               <div class="w-2/12 p-2">{{ caso.Init_Complexity }}</div>
-              <div class="w-2/12 p-2">{{ caso.assignedTo }}</div>
+              <div class="w-2/12 p-2">{{ caso.assignedStudentName || 'No disponible' }}</div>
               <div class="w-2/12 p-2 flex justify-center">
-                <button
-                  @click="reassignCase(caso)"
-                  class="px-4 py-2 bg-yellow-500 text-white rounded-md hover:bg-yellow-600 disabled:opacity-50"
-                  :disabled="!caso.assignedTo"
-                >
-                  Reasignar
-                </button>
+                <!-- Botón para reasignar -->
+                <Button
+                  icon="pi pi-user-edit"
+                  class="p-button-sm p-button-warning"
+                  @click="openReassignModal(caso)"
+                  v-tooltip.top="'Reasignar caso'"
+                />
               </div>
             </div>
           </div>
         </div>
+         <!-- Paginador para casos asignados -->
+         <Paginator
+          v-if="filteredAssignedCases.length > rowsPerPage"
+          :rows="rowsPerPage"
+          :totalRecords="filteredAssignedCases.length"
+          :first="assignedFirst"
+          @page="onAssignedPageChange($event)"
+          class="mt-4"
+          template="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport"
+        />
       </TabPanel>
     </TabView>
 
-    <!-- Notification Toast -->
+    <!-- Notification Toast (sin cambios) -->
     <div
       v-if="showNotification"
-      class="fixed bottom-4 left-4 right-4 max-w-md mx-auto bg-white shadow-lg rounded-md p-4 flex items-center gap-4"
-      :class="notificationType === 'success' ? 'border-green-500' : 'border-red-500'"
+      class="fixed bottom-4 right-4 z-50 max-w-sm bg-white shadow-lg rounded-lg p-4 border-l-4"
+      :class="{
+        'border-green-500': notificationType === 'success',
+        'border-red-500': notificationType === 'error',
+        'border-blue-500': notificationType === 'info', // Añadir otros tipos si es necesario
+        'border-yellow-500': notificationType === 'warning'
+      }"
+      role="alert"
     >
-      <i :class="notificationIcon" class="text-xl"></i>
-      <div>
-        <h3 class="font-semibold">{{ notificationTitle }}</h3>
-        <p>{{ notificationMessage }}</p>
+      <div class="flex items-start gap-3">
+        <div class="flex-shrink-0 text-xl">
+          <i v-if="notificationType === 'success'" class="pi pi-check-circle text-green-500"></i>
+          <i v-else-if="notificationType === 'error'" class="pi pi-times-circle text-red-500"></i>
+          <i v-else-if="notificationType === 'info'" class="pi pi-info-circle text-blue-500"></i>
+          <i v-else-if="notificationType === 'warning'" class="pi pi-exclamation-triangle text-yellow-500"></i>
+        </div>
+        <div class="flex-1">
+          <h3 class="font-semibold text-gray-800">{{ notificationTitle }}</h3>
+          <p class="text-sm text-gray-600">{{ notificationMessage }}</p>
+        </div>
+        <button @click="closeNotification" class="ml-2 -mt-1 -mr-1 p-1 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-300">
+          <span class="sr-only">Cerrar</span>
+          <i class="pi pi-times text-sm"></i>
+        </button>
       </div>
-      <button @click="closeNotification" class="ml-auto text-gray-500 hover:text-gray-700">
-        <i class="pi pi-times"></i>
-      </button>
     </div>
+
+
+    <!-- Dialog de Reasignación -->
+    <Dialog v-model:visible="showReassignModal" modal header="Reasignar Caso" :style="{ width: '30rem' }">
+      <div class="p-4">
+        <p class="mb-4 text-gray-700">
+          Selecciona un nuevo estudiante para reasignar el caso
+          <strong v-if="selectedCaseToReassign"> {{ selectedCaseToReassign.Init_Code }}</strong>.
+        </p>
+
+        <Dropdown
+          v-model="selectedStudentToReassign"
+          :options="students"
+          optionLabel="Internal_Name"
+          optionValue="Internal_ID"
+          placeholder="Seleccionar estudiante"
+          class="w-full mb-4"
+          filter  
+          showClear 
+        >
+          <template #option="slotProps">
+            {{ slotProps.option.Internal_Name }} {{ slotProps.option.Internal_LastName }}
+          </template>
+           <!-- Template para mostrar el valor seleccionado -->
+           <template #value="slotProps">
+             <div v-if="slotProps.value">
+                {{ students.find(s => s.Internal_ID === slotProps.value)?.Internal_Name }}
+                {{ students.find(s => s.Internal_ID === slotProps.value)?.Internal_LastName }}
+             </div>
+             <span v-else class="text-gray-500">
+                {{ slotProps.placeholder }}
+             </span>
+           </template>
+        </Dropdown>
+
+        <Textarea v-model="reassignObservation" placeholder="Motivo de la reasignación (opcional)..." class="w-full mb-4" rows="3"/>
+
+        <div class="flex justify-end gap-2 mt-4">
+          <Button label="Cancelar" @click="showReassignModal = false" class="p-button-text p-button-secondary"/>
+          <!-- Botón Confirmar llama a confirmReassign -->
+          <Button
+            label="Confirmar Reasignación"
+            @click="confirmReassign"
+            :disabled="!selectedStudentToReassign || selectedStudentToReassign === selectedCaseToReassign?.assignedStudentId"
+            class="p-button-warning"
+            icon="pi pi-check"
+          />
+          <!-- Deshabilitado si no hay estudiante seleccionado o es el mismo que ya está asignado -->
+        </div>
+      </div>
+    </Dialog>
+
   </div>
 </template>
-
-
-

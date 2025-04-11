@@ -10,7 +10,7 @@
         v-model="periodoOrigen"
         :options="periodos"
         optionLabel="PeriodoNombre"
-        placeholder="Filtrar por Período Origen"
+        placeholder="Filtrar por Período Origen (para extender)"
         class="w-72"
       />
       <!-- Inputs de búsqueda -->
@@ -24,6 +24,15 @@
         placeholder="Buscar por Cédula"
         class="w-60 p-inputtext-lg"
       />
+      <Dropdown
+  v-model="areaSeleccionada"
+  :options="opcionesAreas"
+  optionLabel="label"
+  optionValue="value"
+  placeholder="Filtrar por Área"
+  class="w-60"
+/>
+
       <!-- Botón para limpiar filtros -->
       <Button
         label="Limpiar Filtros"
@@ -36,7 +45,7 @@
     <!-- Sección para seleccionar el Período Destino -->
     <div class="w-full max-w-6xl mb-6 flex flex-col items-center">
       <p class="text-lg font-semibold mb-2">
-        Seleccione el Período a asignar
+        Seleccione el Período a asignar/extender
       </p>
       <Dropdown
         v-model="periodoDestino"
@@ -73,11 +82,11 @@
       removableSort
     >
       <Column selectionMode="multiple" headerStyle="width: 3rem" />
-      <Column field="Usuario_Cedula" header="Cédula" sortable />
-      <Column field="Usuario_Nombres" header="Nombres" sortable />
-      <Column field="Usuario_Apellidos" header="Apellidos" sortable />
-      <Column field="Usuario_Correo" header="Correo Institucional" sortable />
-      <Column field="Usuario_Area" header="Área" sortable />
+      <Column field="Internal_ID" header="Cédula" sortable />
+      <Column field="Internal_Name" header="Nombres" sortable />
+      <Column field="Internal_LastName" header="Apellidos" sortable />
+      <Column field="Internal_Email" header="Correo Institucional" sortable />
+      <Column field="Internal_Area" header="Área" sortable />
     </DataTable>
 
     <!-- Diálogo Confirmar Asignación -->
@@ -112,7 +121,8 @@
 
 <script setup lang="ts">
 import { ref, onMounted, computed, watch } from "vue";
-import { API, type Usuario, type Periodo } from  "@/ApiRoute";
+import { API, type Usuario, type Periodo } from "@/ApiRoute";
+import { useSubjects } from "@/useSubjects";
 
 // Importamos componentes PrimeVue
 import Toast from "primevue/toast";
@@ -121,7 +131,6 @@ import Column from "primevue/column";
 import Dropdown from "primevue/dropdown";
 import InputText from "primevue/inputtext";
 import Button from "primevue/button";
-import Message from "primevue/message";
 import Dialog from "primevue/dialog";
 import { useToast } from "primevue/usetoast";
 
@@ -129,15 +138,19 @@ const toast = useToast();
 
 // Estados
 const estudiantes = ref<Usuario[]>([]);
-const asignaciones = ref<string[]>([]); // Cédulas ya asignadas al período de origen
+const asignacionesOrigen = ref<string[]>([]);  // Internal_IDs asignados en el período de origen
+const asignacionesDestino = ref<string[]>([]); // Internal_IDs asignados en el período destino
 const estudiantesSeleccionados = ref<Usuario[]>([]);
 const periodos = ref<Periodo[]>([]);
 const periodoOrigen = ref<Periodo | null>(null);
 const periodoDestino = ref<Periodo | null>(null);
 const busquedaNombre = ref("");
 const busquedaCedula = ref("");
-const errorMensaje = ref("");
 const dialogoAsignarVisible = ref(false);
+
+const { subjects: opcionesAreas } = useSubjects();
+const areaSeleccionada = ref<string | null>(null);
+
 
 // Función para cargar períodos (GET /periodos)
 async function fetchPeriodos() {
@@ -149,49 +162,75 @@ async function fetchPeriodos() {
   }
 }
 
-// Función para cargar todos los usuarios (GET /usuarios)
+// Función para cargar todos los usuarios internos (GET /usuarioInterno/estudiantes)
 async function fetchEstudiantes() {
   try {
-    const res = await fetch(`${API}/usuarios`);
+    const res = await fetch(`${API}/usuarioInterno/estudiantes`);
     estudiantes.value = await res.json();
   } catch (error) {
     console.error("Error al cargar estudiantes:", error);
   }
 }
 
-// Función para cargar asignaciones del período origen (GET /usuarioxPeriodo/periodo/:periodoId)
-async function fetchAsignaciones(periodoId: number) {
+// Función para cargar asignaciones de un período (GET /usuarioxPeriodo/periodo/:periodoId)
+async function fetchAsignaciones(periodoId: number, destino = false) {
   try {
     const res = await fetch(`${API}/usuarioxPeriodo/periodo/${periodoId}`);
     const data = await res.json();
-    // Extraemos sólo las cédulas de los usuarios asignados
-    asignaciones.value = data.map((rel: any) => rel.usuario.Usuario_Cedula);
+    const ids = data.map((rel: any) => rel.usuario.Internal_ID);
+    if (destino) {
+      asignacionesDestino.value = ids;
+    } else {
+      asignacionesOrigen.value = ids;
+    }
   } catch (error) {
     console.error("Error al cargar asignaciones:", error);
-    asignaciones.value = [];
+    if (destino) {
+      asignacionesDestino.value = [];
+    } else {
+      asignacionesOrigen.value = [];
+    }
   }
 }
 
-// Computed para filtrar estudiantes según búsqueda y (si hay) asignación al período origen
+// Watch: Cuando cambia el período origen, se cargan sus asignaciones
+watch(periodoOrigen, async (nuevo) => {
+  if (nuevo) {
+    await fetchAsignaciones(nuevo.Periodo_ID, false);
+  } else {
+    asignacionesOrigen.value = [];
+  }
+});
+
+// Watch: Cuando cambia el período destino, se cargan sus asignaciones
+watch(periodoDestino, async (nuevo) => {
+  if (nuevo) {
+    await fetchAsignaciones(nuevo.Periodo_ID, true);
+  } else {
+    asignacionesDestino.value = [];
+  }
+});
+
 const estudiantesFiltrados = computed(() => {
   return estudiantes.value.filter((est) => {
-    const pertenecePeriodo =
-      !periodoOrigen.value || asignaciones.value.includes(est.Usuario_Cedula);
-    const nombreCompleto = `${est.Usuario_Nombres} ${est.Usuario_Apellidos}`.toLowerCase();
+    const nombreCompleto = `${est.Internal_Name} ${est.Internal_LastName}`.toLowerCase();
     const coincideNombre = nombreCompleto.includes(busquedaNombre.value.toLowerCase());
-    const coincideCedula = est.Usuario_Cedula.includes(busquedaCedula.value);
-    return pertenecePeriodo && coincideNombre && coincideCedula;
+    const coincideCedula = est.Internal_ID.includes(busquedaCedula.value);
+    const coincideArea = areaSeleccionada.value
+      ? est.Internal_Area === areaSeleccionada.value
+      : true;
+
+    if (!coincideNombre || !coincideCedula || !coincideArea) return false;
+
+    if (periodoOrigen.value) {
+      return asignacionesOrigen.value.includes(est.Internal_ID);
+    }
+    return true;
   });
 });
 
-// Watch: Cuando cambia el período origen, se cargan las asignaciones
-watch(periodoOrigen, async (nuevo) => {
-  if (nuevo) {
-    await fetchAsignaciones(nuevo.Periodo_ID);
-  } else {
-    asignaciones.value = [];
-  }
-});
+
+
 
 // Función para limpiar filtros
 function limpiarFiltros() {
@@ -199,8 +238,10 @@ function limpiarFiltros() {
   periodoDestino.value = null;
   busquedaNombre.value = "";
   busquedaCedula.value = "";
+  areaSeleccionada.value = null;
   estudiantesSeleccionados.value = [];
 }
+
 
 // Función para mostrar confirmación de asignación
 function mostrarConfirmacionAsignar() {
@@ -219,9 +260,9 @@ function mostrarConfirmacionAsignar() {
 // Función para asignar los estudiantes seleccionados al período destino
 async function asignarEstudiantes() {
   dialogoAsignarVisible.value = false;
-  // Filtrar los estudiantes que aún no están asignados en el período origen
+  // Filtrar los estudiantes que aún no están asignados en el período destino
   const nuevos = estudiantesSeleccionados.value.filter(
-    (est) => !asignaciones.value.includes(est.Usuario_Cedula)
+    (est) => !asignacionesDestino.value.includes(est.Internal_ID)
   );
   if (nuevos.length === 0) {
     toast.add({
@@ -232,9 +273,9 @@ async function asignarEstudiantes() {
     });
     return;
   }
-  // Construir el payload
+  // Construir el payload para asignarlos al período destino
   const payload = nuevos.map((est) => ({
-    Usuario_Cedula: est.Usuario_Cedula,
+    Internal_ID: est.Internal_ID, // Mantenemos la estructura esperada en el endpoint
     Periodo_ID: periodoDestino.value?.Periodo_ID,
   }));
   try {
@@ -251,8 +292,9 @@ async function asignarEstudiantes() {
         life: 3000,
       });
       estudiantesSeleccionados.value = [];
-      if (periodoOrigen.value) {
-        await fetchAsignaciones(periodoOrigen.value.Periodo_ID);
+      // Actualizamos las asignaciones del período destino
+      if (periodoDestino.value) {
+        await fetchAsignaciones(periodoDestino.value.Periodo_ID, true);
       }
     } else {
       console.error("Error al asignar estudiantes:", await res.text());

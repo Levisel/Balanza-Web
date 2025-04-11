@@ -98,6 +98,84 @@ const tableConfig = {
     { field: "Health_Insurance_Name", header: "Nombre", type: "string" },
     { field: "Health_Insurance_Status", header: "Estado", type: "boolean" },
   ],
+  /**************************************************************************** */
+  Ethnicity: [
+    { field: "Ethnicity_Name", header: "Nombre", type: "string" },
+    { field: "Ethnicity_Status", header: "Estado", type: "boolean" },
+  ],
+  Civil_Status: [
+    { field: "Civil_Status_Name", header: "Nombre", type: "string" },
+    { field: "Civil_Status_Status", header: "Estado", type: "boolean" },
+  ],
+  Sex: [
+    { field: "Sex_Name", header: "Nombre", type: "string" },
+    { field: "Sex_Status", header: "Estado", type: "boolean" },
+  ],
+  Derived_By: [
+    { field: "Derived_By_Name", header: "Nombre", type: "string" },
+    { field: "Derived_By_Status", header: "Estado", type: "boolean" },
+  ],
+  Academic_Instruction: [
+    { field: "Academic_Instruction_Name", header: "Nombre", type: "string" },
+    { field: "Academic_Instruction_Status", header: "Estado", type: "boolean" },
+  ],
+  Number_Of_Attempts: [
+    { field: "Number_Of_Attempts", header: "Nombre", type: "string" },
+    { field: "Number_Of_Attempts_Status", header: "Estado", type: "boolean" },
+  ],
+  Complexity: [
+    { field: "Complexity_Name", header: "Nombre", type: "string" },
+    { field: "Complexity_Status", header: "Estado", type: "boolean" },
+  ],
+  Documentation_Backup: [
+    { field: "Documentation_Backup_Name", header: "Nombre", type: "string" },
+    { field: "Documentation_Backup_Status", header: "Estado", type: "boolean" },
+  ],
+  Period_Type: [
+    { field: "Period_Type_Name", header: "Nombre", type: "string" },
+    { field: "Period_Type_Status", header: "Estado", type: "boolean" },
+  ],
+  Practical_Hours: [
+    { field: "Practical_Hours", header: "Nombre", type: "string" },
+    { field: "Practical_Hours_Status", header: "Estado", type: "boolean" },
+  ],
+  Country: [
+    { field: "Country_Name", header: "Nombre", type: "string" },
+    { field: "Country_Status", header: "Estado", type: "boolean" },
+  ],
+  Province: [
+    { field: "Country_FK", header: "País", type: "string" },
+    { field: "Province_Name", header: "Nombre", type: "string" },
+    { field: "Province_Status", header: "Estado", type: "boolean" },
+  ],
+  City: [
+    { field: "Province_FK", header: "Provincia", type: "string" },
+    { field: "City_Name", header: "Nombre", type: "string" },
+    { field: "City_Status", header: "Estado", type: "boolean" },
+  ],
+  Zone: [
+    { field: "Zone_Name", header: "Nombre", type: "string" },
+    { field: "Zone_Status", header: "Estado", type: "boolean" },
+  ],
+  Sector: [
+    { field: "Zone_FK", header: "Zona", type: "string" },
+    { field: "Sector_Name", header: "Nombre", type: "string" },
+    { field: "Sector_Status", header: "Estado", type: "boolean" },
+  ],
+  Subject: [
+    { field: "Subject_Name", header: "Nombre", type: "string" },
+    { field: "Subject_NRC", header: "NRC", type: "string" },
+    { field: "Subject_Status", header: "Estado", type: "boolean" },
+  ],
+  Topic: [
+    { field: "Subject_FK", header: "Área/Materia", type: "string" },
+    { field: "Topic_Name", header: "Tema", type: "string" },
+    { field: "Topic_Status", header: "Estado", type: "boolean" },
+  ],
+  Client_Type: [
+    { field: "Client_Type_Name", header: "Nombre", type: "string" },
+    { field: "Client_Type_Status", header: "Estado", type: "boolean" },
+  ],
 };
 
 // Función para resetear el registro seleccionado
@@ -107,22 +185,44 @@ const resetSelectedRecord = () => {
 
 // Mapeo de nombres amigables para el select
 const tableNames: { [key in keyof typeof tableConfig]: string } = {
-  Vulnerable_Situation: "Situación Vulnerable",
-  Catastrophic_Illness: "Enfermedad Catastrófica",
+  //USUARIO
+  Sex: "Sexo",
+  Country: "País de origen",
+  Ethnicity: "Etnia",
+  Province: "Provincia",
+  City: "Ciudad",
+  Zone: "Zona",
+  Sector: "Sector",
+  Academic_Instruction: "Instrucción",
+  Occupations: "Ocupación",
+  Civil_Status: "Estado Civil",
+  Income_Level: "Nivel de Ingresos",
+  Family_Income: "Ingresos Familiares",
+  Family_Group: "Grupo Familiar",
+  Own_Assets: "Patrimonio Propio",
+  Type_Of_Housing: "Tipo de vivienda",
+  Pensioner: "Pensionista",
+  Health_Insurance: "Seguro de Salud",
+  Vulnerable_Situation: "Situación de vulnerabilidad",
+  Documentation_Backup: "Documentos de respaldo",
   Disability: "Discapacidad",
-  Protocols: "Protocolos",
+  Catastrophic_Illness: "Enfermedad Catastrófica",
+  //FICHA TÉCNICA
   Case_Status: "Estado del Caso",
+  Client_Type: "Tipo de Cliente",
+  Subject: "Área/Materia",
+  Topic: "Tema",
   Type_Of_Attention: "Tipo de Atención",
+  Complexity: "Complejidad",
+  Derived_By: "Derivado por",
+  //CONTROL DE INGRESOS
   Schedule: "Horario",
   Profiles: "Perfiles",
-  Occupations: "Ocupaciones",
-  Income_Level: "Nivel de Ingresos",
-  Family_Group: "Grupo Familiar",
-  Family_Income: "Ingresos Familiares",
-  Type_Of_Housing: "Tipo de Vivienda",
-  Own_Assets: "Bienes Propios",
-  Pensioner: "Pensionado",
-  Health_Insurance: "Seguro de Salud",
+  Period_Type: "Tipo de Período",
+  Practical_Hours: "Horas Prácticas",
+  //EXTRA
+  Number_Of_Attempts: "Número de Intentos",
+  Protocols: "Protocolos",
 };
 
 // Mapeo de campos de ID según la tabla
@@ -143,6 +243,24 @@ const idFieldMap: { [key in keyof typeof tableConfig]: string } = {
   Own_Assets: "Own_Assets_Id",
   Pensioner: "Pensioner_Id",
   Health_Insurance: "Health_Insurance_Id",
+  Ethnicity: "Ethnicity_ID",
+  Academic_Instruction: "Academic_Instruction_ID",
+  Number_Of_Attempts: "Number_Of_Attempts_ID",
+  Complexity: "Complexity_ID",
+  Documentation_Backup: "Documentation_Backup_ID",
+  Period_Type: "Period_Type_ID",
+  Practical_Hours: "Practical_Hours_ID",
+  Sex: "Sex_ID",
+  Civil_Status: "Civil_Status_ID",
+  Derived_By: "Derived_By_ID",
+  Country: "Country_ID",
+  Province: "Province_ID",
+  City: "City_ID",
+  Zone: "Zone_ID",
+  Sector: "Sector_ID",
+  Subject: "Subject_ID",
+  Topic: "Topic_ID",
+  Client_Type: "Client_Type_ID",
 };
 
 // Computamos la clave (key) a partir del label seleccionado
@@ -192,6 +310,49 @@ const validateRecord = (): boolean => {
   return true;
 };
 
+const foreignOptions = ref<{ [key: string]: any[] }>({});
+
+const loadForeignOptions = async () => {
+  // Recorremos las columnas que tengan FK (campo que termine en "_FK")
+  for (const col of columns.value) {
+    if (col.field.endsWith("_FK")) {
+      const fkTable = col.field.replace("_FK", "");
+      if (!foreignOptions.value[fkTable]) {
+        try {
+          // Se asume que el endpoint es: API/{nombre en minúscula}s (excepto "city" que se convierte a "cities")
+          let endpoint = "";
+          if (fkTable.toLowerCase() === "country") {
+            endpoint = `${API}/countries`;
+          } else if (fkTable.toLowerCase() === "province") {
+            endpoint = `${API}/provinces`;
+          } else if (fkTable.toLowerCase() === "zone") {
+            endpoint = `${API}/zone`;
+          } else if (fkTable.toLowerCase() === "subject") {
+            endpoint = `${API}/subjects`;
+          } else {
+            endpoint = `${API}/${fkTable.toLowerCase()}s`;
+          }
+          const { data } = await axios.get(endpoint);
+          foreignOptions.value[fkTable] = Array.isArray(data) ? data : [];
+        } catch (error) {
+          console.error("Error al cargar opciones para " + fkTable, error);
+          foreignOptions.value[fkTable] = [];
+        }
+      }
+    }
+  }
+};
+
+const getForeignName = (fkField: string, id: any) => {
+  const fkTable = fkField.replace("_FK", "");
+  const options = foreignOptions.value[fkTable] || [];
+  return (
+    options.find((item: any) => item[`${fkTable}_ID`] === id)?.[
+      `${fkTable}_Name`
+    ] || id
+  );
+};
+
 const loadData = async () => {
   if (selectedTableKey.value) {
     console.log("Clave de tabla seleccionada:", selectedTableKey.value);
@@ -213,6 +374,24 @@ const loadData = async () => {
         Own_Assets: `${API}/own-assets`,
         Pensioner: `${API}/pensioner`,
         Health_Insurance: `${API}/health-insurance`,
+        Ethnicity: `${API}/ethnicities`,
+        Academic_Instruction: `${API}/academic-instructions`,
+        Number_Of_Attempts: `${API}/number-of-attempts`,
+        Complexity: `${API}/complexities`,
+        Documentation_Backup: `${API}/documentation-backups`,
+        Period_Type: `${API}/period-types`,
+        Practical_Hours: `${API}/practical-hours`,
+        Sex: `${API}/sexes`,
+        Civil_Status: `${API}/civil-statuses`,
+        Derived_By: `${API}/derived-by`,
+        Country: `${API}/countries`,
+        Province: `${API}/provinces`,
+        City: `${API}/cities`,
+        Zone: `${API}/zone`,
+        Sector: `${API}/sectors`,
+        Subject: `${API}/subjects`,
+        Topic: `${API}/topics`,
+        Client_Type: `${API}/client-types`,
       };
       console.log("Cargando datos desde:", urlMap[selectedTableKey.value]);
       const { data } = await axios.get(urlMap[selectedTableKey.value]);
@@ -224,6 +403,7 @@ const loadData = async () => {
         );
         tableData.value = [];
       }
+      await loadForeignOptions();
     } catch (error) {
       console.error("Error al cargar los datos:", error);
       toast.add({
@@ -258,6 +438,24 @@ const createData = async () => {
         Own_Assets: `${API}/own-assets`,
         Pensioner: `${API}/pensioner`,
         Health_Insurance: `${API}/health-insurance`,
+        Ethnicity: `${API}/ethnicities`,
+        Academic_Instruction: `${API}/academic-instructions`,
+        Number_Of_Attempts: `${API}/number-of-attempts`,
+        Complexity: `${API}/complexities`,
+        Documentation_Backup: `${API}/documentation-backups`,
+        Period_Type: `${API}/period-types`,
+        Practical_Hours: `${API}/practical-hours`,
+        Sex: `${API}/sexes`,
+        Civil_Status: `${API}/civil-statuses`,
+        Derived_By: `${API}/derived-by`,
+        Country: `${API}/countries`,
+        Province: `${API}/provinces`,
+        City: `${API}/cities`,
+        Zone: `${API}/zone`,
+        Sector: `${API}/sectors`,
+        Subject: `${API}/subjects`,
+        Topic: `${API}/topics`,
+        Client_Type: `${API}/client-types`,
       };
       console.log("Enviando datos para creación:", selectedRecord.value);
       await axios.post(urlMap[selectedTableKey.value], selectedRecord.value);
@@ -268,6 +466,7 @@ const createData = async () => {
         life: 3000,
       });
       selectedRecord.value = {};
+      await loadData();
     } catch (error) {
       console.error("Error al crear el dato:", error);
       toast.add({
@@ -302,6 +501,24 @@ const updateData = async () => {
         Own_Assets: `${API}/own-assets`,
         Pensioner: `${API}/pensioner`,
         Health_Insurance: `${API}/health-insurance`,
+        Ethnicity: `${API}/ethnicities`,
+        Academic_Instruction: `${API}/academic-instructions`,
+        Number_Of_Attempts: `${API}/number-of-attempts`,
+        Complexity: `${API}/complexities`,
+        Documentation_Backup: `${API}/documentation-backups`,
+        Period_Type: `${API}/period-types`,
+        Practical_Hours: `${API}/practical-hours`,
+        Sex: `${API}/sexes`,
+        Civil_Status: `${API}/civil-statuses`,
+        Derived_By: `${API}/derived-by`,
+        Country: `${API}/countries`,
+        Province: `${API}/provinces`,
+        City: `${API}/cities`,
+        Zone: `${API}/zone`,
+        Sector: `${API}/sectors`,
+        Subject: `${API}/subjects`,
+        Topic: `${API}/topics`,
+        Client_Type: `${API}/client-types`,
       };
       const idField = idFieldMap[selectedTableKey.value];
       const recordId = selectedRecord.value[idField] || selectedRecord.value.id;
@@ -326,6 +543,7 @@ const updateData = async () => {
         detail: "El registro se actualizó exitosamente.",
         life: 3000,
       });
+      await loadData();
     } catch (error) {
       if ((error as any).response?.status === 404) {
         toast.add({
@@ -368,6 +586,24 @@ const deleteData = async () => {
         Own_Assets: `${API}/own-assets`,
         Pensioner: `${API}/pensioner`,
         Health_Insurance: `${API}/health-insurance`,
+        Ethnicity: `${API}/ethnicities`,
+        Academic_Instruction: `${API}/academic-instructions`,
+        Number_Of_Attempts: `${API}/number-of-attempts`,
+        Complexity: `${API}/complexities`,
+        Documentation_Backup: `${API}/documentation-backups`,
+        Period_Type: `${API}/period-types`,
+        Practical_Hours: `${API}/practical-hours`,
+        Sex: `${API}/sexes`,
+        Civil_Status: `${API}/civil-statuses`,
+        Derived_By: `${API}/derived-by`,
+        Country: `${API}/countries`,
+        Province: `${API}/provinces`,
+        City: `${API}/cities`,
+        Zone: `${API}/zone`,
+        Sector: `${API}/sectors`,
+        Subject: `${API}/subjects`,
+        Topic: `${API}/topics`,
+        Client_Type: `${API}/client-types`,
       };
       const idField = idFieldMap[selectedTableKey.value];
       const recordId = selectedRecord.value[idField] || selectedRecord.value.id;
@@ -445,6 +681,10 @@ const deleteConfirm = (data: any) => {
     },
   });
 };
+
+onMounted(() => {
+  loadData();
+});
 </script>
 
 <template>
@@ -459,6 +699,7 @@ const deleteConfirm = (data: any) => {
       <Select
         v-model="selectedTableLabel"
         v-tooltip="'Selecciona'"
+        filter
         :options="Object.values(tableNames)"
         placeholder="Seleccione una tabla"
         @change="loadData"
@@ -497,6 +738,9 @@ const deleteConfirm = (data: any) => {
                   :value="slotProps.data[col.field] ? 'Activo' : 'Inactivo'"
                   :severity="slotProps.data[col.field] ? 'success' : 'danger'"
                 />
+              </span>
+              <span v-else-if="col.field.endsWith('_FK')">
+                {{ getForeignName(col.field, slotProps.data[col.field]) }}
               </span>
               <span v-else>
                 {{ slotProps.data[col.field] }}
@@ -567,7 +811,7 @@ const deleteConfirm = (data: any) => {
         <div v-for="col in editableColumns" :key="col.field" class="field">
           <FloatLabel variant="in">
             <InputText
-              v-if="col.type === 'string'"
+              v-if="col.type === 'string' && !col.field.endsWith('_FK')"
               :id="col.field"
               v-model="selectedRecord[col.field]"
               autocomplete="off"
@@ -577,6 +821,17 @@ const deleteConfirm = (data: any) => {
                 root: { class: 'border-round' },
               }"
             />
+            <div v-if="col.field.endsWith('_FK')">
+              <Select
+                :id="col.field"
+                v-model="selectedRecord[col.field]"
+                :options="foreignOptions[col.field.replace('_FK', '')]"
+                :optionLabel="col.field.replace('_FK', '') + '_Name'"
+                :optionValue="col.field.replace('_FK', '') + '_ID'"
+                class="w-full"
+                :pt="{ root: { class: 'border-round' } }"
+              />
+            </div>
 
             <InputNumber
               v-if="col.type === 'number'"
@@ -649,7 +904,7 @@ const deleteConfirm = (data: any) => {
         <div v-for="col in editableColumns" :key="col.field" class="field">
           <FloatLabel variant="in">
             <InputText
-              v-if="col.type === 'string'"
+              v-if="col.type === 'string' && !col.field.endsWith('_FK')"
               :id="col.field"
               v-model="selectedRecord[col.field]"
               autocomplete="off"
@@ -659,6 +914,17 @@ const deleteConfirm = (data: any) => {
                 root: { class: 'border-round' },
               }"
             />
+            <div v-if="col.field.endsWith('_FK')">
+              <Select
+                :id="col.field"
+                v-model="selectedRecord[col.field]"
+                :options="foreignOptions[col.field.replace('_FK', '')]"
+                :optionLabel="col.field.replace('_FK', '') + '_Name'"
+                :optionValue="col.field.replace('_FK', '') + '_ID'"
+                class="w-full"
+                :pt="{ root: { class: 'border-round' } }"
+              />
+            </div>
 
             <InputNumber
               v-if="col.type === 'number'"
@@ -729,6 +995,9 @@ const deleteConfirm = (data: any) => {
               :value="selectedRecord[col.field] ? 'Activo' : 'Inactivo'"
               :severity="selectedRecord[col.field] ? 'success' : 'danger'"
             />
+            <span v-else-if="col.field.endsWith('_FK')">
+              {{ getForeignName(col.field, selectedRecord[col.field]) }}
+            </span>
             <span v-else class="text-color-secondary">
               {{ selectedRecord[col.field] || "-" }}
             </span>
