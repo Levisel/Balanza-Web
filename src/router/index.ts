@@ -31,7 +31,6 @@ import NewUser from "@/views/SideBar/Admin/Users/NewUser.vue";
 
 //-- Admin -> (Social Work)
 import SocialWorkCases from "@/views/SideBar/Admin/SocialWork/SocialWorkCases.vue";
-import SocialWorkDashboard from "@/views/SideBar/Admin/SocialWork/SocialWorkDashboard.vue";
 import SocialWorkSchedule from "@/views/SideBar/Admin/SocialWork/SocialWorkSchedule.vue";
 import SocialWorkNewCase from "@/views/SideBar/Admin/SocialWork/SocialWorkNewCase.vue";
 
@@ -108,11 +107,6 @@ const routes: Array<RouteRecordRaw> = [
         component: NewUser,
       },
       // Admin -> Social Work views
-      {
-        path: "TrabajoSocialDashboard",
-        name: "SocialWorkDashboard",
-        component: SocialWorkDashboard,
-      },
       {
         path: "TrabajoSocialHorario",
         name: "SocialWorkSchedule",
