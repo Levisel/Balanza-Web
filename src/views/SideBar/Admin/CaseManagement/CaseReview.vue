@@ -50,7 +50,7 @@ const fetchReviewCases = async (initType: string, initStatus: string) => {
     });
     // Filtra los registros que no tienen 'Patrocinio' en Init_Service
     initialConsultation.value = data.filter(
-      (record: Initial_Consultation) => record.Init_Service !== "Patrocinio"
+      (record: Initial_Consultation) => record.Init_Service !== "Patrocinio" && record.Init_Type !== "En espera"
     );
     console.log("Datos de la API (filtrados):", initialConsultation.value);
   } catch (error) {

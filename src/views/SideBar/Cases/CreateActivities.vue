@@ -98,63 +98,83 @@ const verDetallesUsuario = async (cedula: string | number) => {
 
 const obtenerCasos = async () => {
   try {
-    // Obtener el Internal_ID del usuario logueado desde el authStore
-    const internalID = authStore.user?.id;
-
-    if (!internalID) {
-      throw new Error('No se pudo obtener el ID del usuario');
+    const subject = authStore.user?.area;
+    if (!subject) {
+      toast.add({
+        severity: 'error',
+        summary: 'Error',
+        detail: 'No se pudo determinar el área del usuario para filtrar los casos.',
+        life: 4000,
+      });
+      console.error("Error: authStore.user.area is not defined.");
+      casosActivos.value = [];
+      casosInactivos.value = [];
+      return;
     }
 
-    // Obtener los datos de las asignaciones usando el internal_id
-    const asignacionesResponse = await axios.get(`${API}/assignment/studentid/${internalID}`);
+    const type = 'Asignado';
 
-    console.log('asignacionesResponse:', asignacionesResponse.data); // Verificar la respuesta de asignaciones
+    const activeCasesUrl = `${API}/initial-consultations/type/${encodeURIComponent(subject)}/${encodeURIComponent(type)}/Activo`;
+    const inactiveCasesUrl = `${API}/initial-consultations/type/${encodeURIComponent(subject)}/${encodeURIComponent(type)}/Inactivo`;
 
-    if (!asignacionesResponse.data || asignacionesResponse.data.length === 0) {
-      throw new Error('No se encontraron asignaciones para el usuario');
-    }
+    const [activeResponse, inactiveResponse] = await Promise.all([
+      axios.get<Initial_Consultation[]>(activeCasesUrl),
+      axios.get<Initial_Consultation[]>(inactiveCasesUrl)
+    ]);
 
-    // Obtener los detalles de cada caso usando los init_code
-    const casosConUsuarios = await Promise.all(asignacionesResponse.data.map(async (asignacion: { Init_Code: any; }, index: number) => {
-      const consultaResponse = await axios.get(`${API}/initial-consultations/${asignacion.Init_Code}`);
-      const caso = consultaResponse.data;
-
-      if (!caso) {
-        throw new Error(`No se encontraron detalles para el init_code ${asignacion.Init_Code}`);
+    const activeCasesData = activeResponse.data || [];
+    casosActivos.value = await Promise.all(activeCasesData.map(async (caso, index) => {
+      if (!caso || !caso.User_ID) {
+          console.warn("Caso activo inválido o sin User_ID:", caso);
+          return null; 
       }
-
       const nombreUsuario = await obtenerNombreUsuario(caso.User_ID);
-
       return {
         nro: index + 1,
         codigo: caso.Init_Code,
-        fecha: new Date(caso.Init_Date).toLocaleDateString(),
+        fecha: caso.Init_Date ? new Date(caso.Init_Date).toLocaleDateString() : 'N/A',
         cedula: caso.User_ID,
-        usuario: nombreUsuario,  // Se coloca el nombre completo del usuario
+        usuario: nombreUsuario,
         caso: caso.Init_Topic,
         oficina: caso.Init_Office,
-        tema: caso.Init_Subject,
-        estado: caso.Init_Status,
+        tema: caso.Init_Subject, 
+        estado: caso.Init_Status, 
         tipocliente: caso.Init_ClientType,
-      }
-    }));
+      };
+    })).then(results => results.filter(caso => caso !== null)); 
 
-    // Separar los casos activos e inactivos
-    const casosActivosData = casosConUsuarios.filter(caso => caso.estado === 'Activo');
-    const casosInactivosData = casosConUsuarios.filter(caso => caso.estado === 'Inactivo');
-
-    // Asignar los casos a sus respectivas variables
-    casosActivos.value = casosActivosData;
-    casosInactivos.value = casosInactivosData;
+    const inactiveCasesData = inactiveResponse.data || [];
+    casosInactivos.value = await Promise.all(inactiveCasesData.map(async (caso, index) => {
+       if (!caso || !caso.User_ID) {
+           console.warn("Caso inactivo inválido o sin User_ID:", caso);
+           return null; 
+       }
+      const nombreUsuario = await obtenerNombreUsuario(caso.User_ID);
+      return {
+        nro: index + 1,
+        codigo: caso.Init_Code,
+        fecha: caso.Init_Date ? new Date(caso.Init_Date).toLocaleDateString() : 'N/A',
+        cedula: caso.User_ID,
+        usuario: nombreUsuario,
+        caso: caso.Init_Topic,
+        oficina: caso.Init_Office,
+        tema: caso.Init_Subject, 
+        estado: caso.Init_Status, 
+        tipocliente: caso.Init_ClientType,
+      };
+    })).then(results => results.filter(caso => caso !== null));
 
   } catch (error) {
-    console.error('Error al obtener los casos:', error);
+    console.error('Error al obtener los casos por tipo y estado:', error);
     toast.add({
       severity: 'error',
       summary: 'Error',
       detail: 'No se pudieron obtener los casos.',
       life: 3000,
     });
+    casosActivos.value = [];
+    casosInactivos.value = [];
+  } finally {
   }
 }
 
