@@ -30,6 +30,7 @@ import Knob from "primevue/knob";
 import Editor from "primevue/editor";
 import ConfirmDialog from "primevue/confirmdialog";
 import ProgressSpinner from "primevue/progressspinner";
+import ToggleSwitch from 'primevue/toggleswitch';
 import axios from "axios";
 
 const route = useRoute();
@@ -1043,7 +1044,11 @@ const userHealthDocumentsName = ref("");
 
 const initCode = ref("");
 const internalID = authStore.user?.id;
+//Detectamos si init social work cambia de estado a true o false 
+
+
 const initSocialWork = ref<boolean>(false);
+const initMandatorySW = ref<boolean>(false);
 
 const initStatusOptions = ref<{ name: string; value: string }[]>([]);
 const initStatus = ref<{ name: string; value: string } | null>(null);
@@ -1561,6 +1566,7 @@ const updateFormWithConsultation = async (
       (option) => option.value === data.Init_Referral
     ) || null;
   initSocialWork.value = data.Init_SocialWork;
+  initMandatorySW.value = data.Init_MandatorySW;
   initAlertNote.value = data.Init_AlertNote;
   if (initAlertNote.value === null) {
     doesConsultationHasAlert.value = false;
@@ -1814,6 +1820,7 @@ const createInitialConsultation = async () => {
   // Datos de la consulta inicial (Initial_Consultations)
   formData.append("Internal_ID", internalID || "");
   formData.append("Init_SocialWork", initSocialWork.value.toString());
+  formData.append("Init_MandatorySW", initMandatorySW.value.toString());
   formData.append("Init_Status", initStatus.value?.value || "");
   formData.append("Init_Office", initOffice.value);
   formData.append(
@@ -1832,7 +1839,11 @@ const createInitialConsultation = async () => {
   formData.append("Init_Lawyer", initLawyer.value?.value || "");
   formData.append("Init_Referral", initReferral.value?.value || "");
   formData.append("Init_Notes", initNotes.value || "");
-  formData.append("Init_Type", "Por Revisar");
+  if(initMandatorySW.value !== true){
+    formData.append("Init_Type", "Por Revisar");
+  }else{
+    formData.append("Init_Type", "En espera");
+  }
 
   //Datos de la evidencia de asesoría (Evidence)
   formData.append(
@@ -1937,10 +1948,16 @@ const newUserConsultation = async () => {
     Init_Status: initStatus.value?.value,
     Init_Notes: initNotes.value || "",
     Init_Complexity: initComplexity.value?.value || "",
-    Init_Type: "Por Revisar",
+    Init_Type: "",
     Init_SocialWork: initSocialWork.value,
+    Init_MandatorySW: initMandatorySW.value,
     User_ID: userID.value,
   };
+  if(initMandatorySW.value !== true){
+    consultationData.Init_Type = "Por Revisar";
+  }else{
+    consultationData.Init_Type = "En espera";
+  }
 
   console.log("Datos enviados:", JSON.stringify(consultationData, null, 2));
 
@@ -2096,13 +2113,23 @@ const editUserConsultation = async () => {
     Init_Complexity: initComplexity.value?.value || "",
     Init_Type: "",
     Init_SocialWork: initSocialWork.value,
+    Init_MandatorySW: initMandatorySW.value,
     User_ID: userID.value,
   };
   if (initService.value?.value === "Patrocinio") {
     consultationData.Init_Type = "Por Asignar";
-  } else if (initService.value?.value === "Asesoría") {
+  }   else if (initMandatorySW.value === true) {
     consultationData.Init_Type = "En espera";
+  } else if (initMandatorySW.value === false) {
+    consultationData.Init_Type = "Por Revisar";
   }
+
+  if(initSocialWork.value === false){
+    consultationData.Init_SocialWork = false;
+    consultationData.Init_MandatorySW = false;
+  }
+
+  
   console.log("Datos enviados:", JSON.stringify(consultationData, null, 2));
 
   try {
@@ -3612,23 +3639,43 @@ function getInternalUserName(internalId: string): string {
           class="flex justify-between items-center w-full"
           :class="authStore.user?.type == 'Estudiante' ? 'ml-266' : 'ml-0'"
         >
-          <!-- Checkbox -->
-          <div
-            v-if="authStore.user?.type == 'Administrador'"
-            class="flex items-center gap-2 ml-165"
-          >
-            <Checkbox
-              v-model="initSocialWork"
-              binary
-              :disabled="areInputsDisabled"
-              :class="
-                !doesUserRequestOp && doesUserExist
-                  ? 'mouse pointer-events-none'
-                  : ''
-              "
-            />
-            <label class="whitespace-nowrap">¿Trabajo Social?</label>
-          </div>
+<!-- Checkbox -->
+<div
+  v-if="authStore.user?.type == 'Administrador' || authStore.user?.type == 'Coordinador'"
+  class="flex items-center gap-4 ml-120"
+>
+  <div class="flex items-center gap-2">
+    <Checkbox
+      v-model="initSocialWork"
+      binary
+      :disabled="areInputsDisabled"
+      :class="
+        !doesUserRequestOp && doesUserExist
+          ? 'mouse pointer-events-none'
+          : ''
+      "
+    />
+    <label class="whitespace-nowrap">¿Trabajo Social?</label>
+  </div>
+  <transition
+    enter-active-class="transition ease-out duration-300"
+    enter-from-class="opacity-0 transform -translate-y-2"
+    enter-to-class="opacity-100 transform translate-y-0"
+    leave-active-class="transition ease-in duration-300"
+    leave-from-class="opacity-100 transform translate-y-0"
+    leave-to-class="opacity-0 transform -translate-y-2"
+  >
+    <div v-show="initSocialWork" class="flex items-center gap-2">
+      <ToggleSwitch v-model="initMandatorySW" v-tooltip.bottom="'Selecciona'"       :disabled="areInputsDisabled"
+      :class="
+        !doesUserRequestOp && doesUserExist
+          ? 'mouse pointer-events-none'
+          : ''
+      " />
+      <label class="whitespace-nowrap">¿Obligatorio?</label>
+    </div>
+  </transition>
+</div>
 
           <!-- Botones alineados al final -->
           <div class="flex items-center gap-2 mr-10">

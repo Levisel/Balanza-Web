@@ -168,7 +168,7 @@ const tableConfig = {
     { field: "Subject_Status", header: "Estado", type: "boolean" },
   ],
   Topic: [
-    { field: "Subject_FK", header: "Materia", type: "string" },
+    { field: "Subject_FK", header: "Área/Materia", type: "string" },
     { field: "Topic_Name", header: "Tema", type: "string" },
     { field: "Topic_Status", header: "Estado", type: "boolean" },
   ],
@@ -210,7 +210,7 @@ const tableNames: { [key in keyof typeof tableConfig]: string } = {
   //FICHA TÉCNICA
   Case_Status: "Estado del Caso",
   Client_Type: "Tipo de Cliente",
-  Subject: "Materia",
+  Subject: "Área/Materia",
   Topic: "Tema",
   Type_Of_Attention: "Tipo de Atención",
   Complexity: "Complejidad",
