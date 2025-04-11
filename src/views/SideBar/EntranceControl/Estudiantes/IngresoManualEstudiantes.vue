@@ -39,16 +39,9 @@ const types = ref([
   { label: "Otro", value: "Otro" },
 ]);
 
-const areas = ref([
-  { label: "Civil", value: "Civil" },
-  { label: "Penal", value: "Penal" },
-  {
-    label: "Familia, Niñez y Adolescencia",
-    value: "Familia, Niñez y Adolescencia",
-  },
-  { label: "Movilidad Humana", value: "Movilidad Humana" },
-  { label: "Trabajo Social", value: "Trabajo Social" },
-]);
+import { useSubjects } from '@/useSubjects';
+const { subjects: areas } = useSubjects();
+
 
 const status = ref([
   { label: "Activo", value: "Activo" },

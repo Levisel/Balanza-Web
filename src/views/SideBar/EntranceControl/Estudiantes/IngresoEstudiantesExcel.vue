@@ -147,9 +147,7 @@ function procesarArchivo(event: any) {
         Internal_Type: "Estudiante",
         Internal_Area: area,
         Internal_Phone:
-          row["Telefono"]?.toString().trim() ||
-          row["Celular"]?.toString().trim() ||
-          "",
+          "NA",
         Internal_Huella: undefined,
         Internal_Status: "Activo",
         completo: !!tieneDatosObligatorios,
@@ -205,6 +203,89 @@ function procesarArchivo(event: any) {
   };
   reader.readAsArrayBuffer(archivo);
 }
+
+async function forzarCargaSinCorreo() {
+  if (estudiantes.value.length === 0) {
+    errorMensaje.value = "No hay estudiantes cargados.";
+    return;
+  }
+
+  // Actualizamos "completo" sin considerar el correo
+  estudiantes.value.forEach((est) => {
+    est.completo = !!(
+      est.Internal_ID &&
+      est.Internal_LastName &&
+      est.Internal_Name &&
+      est.Internal_Phone &&
+      est.Internal_Area
+    );
+  });
+
+  // Validación mínima
+  const incompletos = estudiantes.value.filter((est) => !est.completo);
+  if (incompletos.length > 0) {
+    errorMensaje.value = `Aún hay ${incompletos.length} registros incompletos.`;
+    return;
+  }
+
+  // 💥 POST directo sin validación de correo
+  try {
+    loading.value = true;
+    errorMensaje.value = "";
+
+    console.log("Enviando estudiantes (sin correo) al backend:", estudiantes.value);
+
+    const responseUsuarios = await fetch(`${API}/usuariointernoBulk`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(estudiantes.value),
+    });
+
+    console.log("Response:", responseUsuarios);
+    if (!responseUsuarios.ok) {
+      const errorResponse = await responseUsuarios.json();
+      throw new Error(`Error al guardar estudiantes: ${errorResponse.message}`);
+       
+    }
+
+    // Asignar período
+    if (periodoSeleccionado.value ) {
+      const usuariosXPeriodo = estudiantes.value.map((est) => ({
+        Periodo_ID: periodoSeleccionado.value.Periodo_ID,
+        Internal_ID: est.Internal_ID,
+      }));
+
+      const responseAsignacion = await fetch(`${API}/usuarioXPeriodo`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(usuariosXPeriodo),
+      });
+
+      if (!responseAsignacion.ok) {
+        const errorResponse = await responseAsignacion.json();
+        throw new Error(
+          `Error al asignar estudiantes al período: ${errorResponse.message}`
+        );
+      }
+    }
+
+    toast.add({
+      severity: "success",
+      summary: "Carga sin correo exitosa",
+      detail: "Estudiantes enviados correctamente.",
+      life: 4000,
+    });
+
+    estudiantes.value = [];
+
+  } catch (error: any) {
+    toast.add({ severity: "error", summary: "Error", detail: error.message, life: 5000 });
+  } finally {
+    loading.value = false;
+  }
+}
+
+
 
 /**
  * Guarda los registros completos en la base de datos
@@ -373,6 +454,14 @@ function guardarEdicion() {
         class="px-6 py-3 rounded-full bg-blue-600 text-white transition duration-300 hover:bg-blue-700 disabled:opacity-50"
         @click="guardarEstudiantes" 
       />
+
+      <Button
+  label="Cargar sin Email (prueba)"
+  icon="pi pi-exclamation-triangle"
+  class="mt-4 px-6 py-3 rounded-full bg-yellow-500 text-white hover:bg-yellow-600"
+  @click="forzarCargaSinCorreo"
+/>
+
     </div>
 
     <div class="flex flex-col items-center mt-2 mb-4">

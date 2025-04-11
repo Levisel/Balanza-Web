@@ -25,6 +25,16 @@
         class="w-60 p-inputtext-lg"
       />
 
+      <Dropdown
+  v-model="areaSeleccionada"
+  :options="opcionesAreas"
+  optionLabel="label"
+  optionValue="value"
+  placeholder="Filtrar por Área"
+  class="w-60"
+/>
+
+
       <Button
         label="Limpiar Filtros"
         icon="pi pi-filter-slash"
@@ -91,6 +101,8 @@ import Button from 'primevue/button';
 import Message from 'primevue/message';
 import Dialog from 'primevue/dialog';
 import { useToast } from 'primevue/usetoast';
+import { useSubjects } from '@/useSubjects';
+
 
 const toast = useToast();
 
@@ -102,6 +114,11 @@ const busquedaNombre = ref('');
 const busquedaCedula = ref('');
 const errorMensaje = ref('');
 const dialogoVisible = ref(false);
+const { subjects: opcionesAreas } = useSubjects();
+const areaSeleccionada = ref<string | null>(null);
+
+
+
 
 // 🔹 Cargar períodos
 const fetchPeriodos = async () => {
@@ -139,17 +156,27 @@ const estudiantesFiltrados = computed(() => {
     const coincideNombre = (est.Internal_Name + ' ' + est.Internal_LastName)
       .toLowerCase()
       .includes(busquedaNombre.value.toLowerCase());
+
     const coincideCedula = est.Internal_ID.includes(busquedaCedula.value);
-    return coincideNombre && coincideCedula;
+
+    const coincideArea = areaSeleccionada.value
+      ? est.Internal_Area === areaSeleccionada.value
+      : true;
+
+    return coincideNombre && coincideCedula && coincideArea;
   });
 });
 
+
 // 🔹 Limpiar filtros
 const limpiarFiltros = () => {
+  periodoSeleccionado.value = null;
   busquedaNombre.value = '';
   busquedaCedula.value = '';
+  areaSeleccionada.value = null;
   estudiantesSeleccionados.value = [];
 };
+
 
 // 🔹 Mostrar confirmación
 const mostrarConfirmacion = () => {

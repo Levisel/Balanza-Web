@@ -13,11 +13,14 @@
         class="w-60"
       />
       <Dropdown
-        v-model="areaSeleccionada"
-        :options="opcionesAreas"
-        placeholder="Área"
-        class="w-60"
-      />
+  v-model="areaSeleccionada"
+  :options="opcionesAreas"
+  optionLabel="label"
+  optionValue="value"
+  placeholder="Área"
+  class="w-60"
+/>
+
       <InputText
         v-model="busquedaNombre"
         placeholder="Buscar por Nombre/Apellido"
@@ -154,6 +157,8 @@ import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
 import Dialog from 'primevue/dialog'
 import Toast from 'primevue/toast'
+import { useSubjects } from '@/useSubjects'
+
 
 const toast = useToast()
 
@@ -165,7 +170,7 @@ const periodoSeleccionado = ref<Periodo | null>(null)
 const areaSeleccionada = ref<string | null>(null)
 const busquedaNombre = ref('')
 const busquedaCedula = ref('')
-const opcionesAreas = ['Derecho Penal', 'Derecho Civil', 'Niñez y Adolescencia', 'Movilidad Humana']
+const { subjects: opcionesAreas, fetchSubjects } = useSubjects()
 
 // Para horarios virtuales
 const isGuardando = ref(false)
@@ -203,7 +208,9 @@ const dialogoCambioAdministrativo = ref(false)
 // Cargar períodos al montar
 onMounted(() => {
   fetchPeriodos()
+  fetchSubjects()  // 👈 agrega esto
 })
+
 
 // Cuando cambian período o área, limpiamos y cargamos estudiantes
 watch([periodoSeleccionado, areaSeleccionada], () => {

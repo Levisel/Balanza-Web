@@ -165,6 +165,8 @@
   import Message from "primevue/message";
   import Toast from "primevue/toast";
   import Dialog from "primevue/dialog";
+  import {useSubjects} from '@/useSubjects' // ajusta la ruta si está en otra carpeta
+
   
   // Importa la constante de API según tu proyecto
   import { API } from "@/ApiRoute";
@@ -182,14 +184,8 @@
   const areaSeleccionada = ref(""); // Dropdown: valor inicial vacío
   const errorMensaje = ref("");
   
-  // Opciones para el Dropdown de Área
-  const areas = ref([
-    { label: "Todos", value: "" },
-    { label: "Administración", value: "administración" },
-    { label: "Recursos Humanos", value: "recursos humanos" },
-    { label: "Finanzas", value: "finanzas" },
-    // Agrega más opciones según tus áreas...
-  ]);
+  const { subjects: areas, fetchSubjects } = useSubjects();
+
   
   const toast = useToast();
   const router = useRouter();
@@ -204,7 +200,7 @@
       const cedula = item.usuarioResumen?.Internal_ID?.toLowerCase() || "";
       const nombres = item.usuarioResumen?.Internal_Name?.toLowerCase() || "";
       const apellidos = item.usuarioResumen?.Internal_LastName?.toLowerCase() || "";
-      const area = item.usuarioResumen?.Internal_Area?.toLowerCase() || "";
+      const area = item.usuarioResumen?.Internal_Area?.trim() || "";
       const fullName = `${nombres} ${apellidos}`;
   
       const filtroCedula = busquedaCedula.value.trim()
@@ -213,10 +209,13 @@
       const filtroNombre = busquedaNombre.value.trim()
         ? fullName.includes(busquedaNombre.value.toLowerCase().trim())
         : true;
-      const filtroArea =
-        areaSeleccionada.value && areaSeleccionada.value !== ""
-          ? area === areaSeleccionada.value.toLowerCase()
-          : true;
+        const filtroArea =
+  areaSeleccionada.value && areaSeleccionada.value.value !== ""
+    ? area === areaSeleccionada.value.value
+    : true;
+
+
+
   
       return filtroCedula && filtroNombre && filtroArea;
     });
@@ -260,6 +259,8 @@ const irSeguimientoSemanal = (resumenId: number, internalId: number) => {
   
   onMounted(() => {
     fetchResumenes();
+    fetchSubjects();
+
   });
   </script>
   

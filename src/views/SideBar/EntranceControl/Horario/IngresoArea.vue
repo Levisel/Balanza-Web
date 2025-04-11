@@ -35,20 +35,30 @@
                    placeholder="Buscar por Nombre y Apellido"
                    class="w-72 p-inputtext-lg" />
 
-        <Dropdown v-model="filtroArea"
-                  :options="['Todos', 'Sin Asignar']"
-                  placeholder="Filtrar por Área"
-                  class="w-60" />
+                   <Dropdown
+  v-model="filtroArea"
+  :options="filtroAreasOpciones"
+  optionLabel="label"
+  optionValue="value"
+  placeholder="Filtrar por Área"
+  class="w-60"
+/>
+
 
         <!-- Label aclarativo para la sección de selección -->
         <div class="w-full max-w-6xl mb-1">
           <p class="text-lg font-bold">Selección:</p>
         </div>
 
-        <Dropdown v-model="areaSeleccionada"
-                  :options="opcionesAreas"
-                  placeholder="Seleccionar Área para Asignar"
-                  class="w-72" />
+        <Dropdown
+  v-model="areaSeleccionada"
+  :options="opcionesAreas"
+  optionLabel="label"
+  optionValue="value"
+  placeholder="Seleccionar Área para Asignar"
+  class="w-72"
+/>
+
 
         <Button label="Asignar Área"
                 icon="pi pi-check"
@@ -101,6 +111,10 @@ import InputText from 'primevue/inputtext';
 import Button from 'primevue/button';
 import Message from 'primevue/message';
 import Dialog from 'primevue/dialog';
+import { useSubjects } from "@/useSubjects";
+
+const { subjects: opcionesAreas } = useSubjects(); // ← Esto reemplaza tu arreglo hardcoded
+
 
 const toast = useToast();
 
@@ -108,7 +122,7 @@ const toast = useToast();
 const estudiantes = ref<Usuario[]>([]);
 const estudiantesSeleccionados = ref<Usuario[]>([]);
 const areaSeleccionada = ref<string | null>(null);
-const filtroArea = ref<string>("Todos");
+const filtroArea = ref<string | null>("Todos");
 const busquedaNombre = ref('');
 const busquedaCedula = ref('');
 const dialogoVisible = ref(false);
@@ -116,8 +130,7 @@ const errorMensaje = ref('');
 const periodos = ref<Periodo[]>([]);
 const periodoSeleccionado = ref<Periodo | null>(null);
 
-// 📌 Opciones de áreas
-const opcionesAreas = ['Derecho Penal', 'Derecho Civil', 'Niñez y Adolescencia', 'Movilidad Humana'];
+
 
 // 📌 Fetch de períodos
 const fetchPeriodos = async () => {
@@ -160,15 +173,26 @@ const fetchEstudiantesPorPeriodo = async (periodoId: number) => {
   }
 };
 
+const filtroAreasOpciones = computed(() => [
+  { label: "Todos", value: "Todos" },
+  { label: "Sin Asignar", value: "Sin Asignar" },
+  ...opcionesAreas.value,
+]);
+
+
 // 📌 Filtro dinámico (usando campos Internal)
 const estudiantesFiltrados = computed(() => {
   return estudiantes.value.filter(est => {
     const coincideNombre = (est.Internal_Name + ' ' + est.Internal_LastName)
       .toLowerCase().includes(busquedaNombre.value.toLowerCase());
     const coincideCedula = est.Internal_ID.includes(busquedaCedula.value);
-    const coincideArea = filtroArea.value === 'Sin Asignar'
-      ? !est.Internal_Area || est.Internal_Area === 'Sin Asignar'
-      : true;
+
+    const coincideArea = filtroArea.value === "Todos"
+      ? true
+      : filtroArea.value === "Sin Asignar"
+        ? !est.Internal_Area || est.Internal_Area === "Sin Asignar"
+        : est.Internal_Area === filtroArea.value;
+
     return coincideNombre && coincideCedula && coincideArea;
   });
 });

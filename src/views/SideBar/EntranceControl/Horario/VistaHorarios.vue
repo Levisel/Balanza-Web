@@ -17,11 +17,14 @@
     class="min-w-[130px]"
   />
   <Dropdown
-    v-model="areaSeleccionada"
-    :options="opcionesAreas"
-    placeholder="Área"
-    class="min-w-[130px]"
-  />
+  v-model="areaSeleccionada"
+  :options="opcionesAreas"
+  optionLabel="label"
+  optionValue="value"
+  placeholder="Área"
+  class="min-w-[130px]"
+/>
+
   <InputText
     v-model="busquedaNombre"
     placeholder="Buscar por Nombre/Apellido"
@@ -97,6 +100,8 @@ import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
 import Toast from 'primevue/toast'
 import CuadriculaHorario from '@/components/CuadriculaHorario.vue'
+import {useSubjects} from '@/useSubjects' // ajusta la ruta si es necesario
+
 
 // Importar XLSX y FileSaver
 import * as XLSX from 'xlsx'
@@ -104,16 +109,12 @@ import { saveAs } from 'file-saver'
 
 /* ===== ESTADOS Y VARIABLES ===== */
 const periodoSeleccionado = ref<any>(null) // Se espera objeto {Periodo_ID, PeriodoNombre, ...}
-const areaSeleccionada = ref<string>('') 
+  const areaSeleccionada = ref<string | null>(null)
 const busquedaNombre = ref('')
 const busquedaCedula = ref('')
 const periodos = ref<any[]>([])
-const opcionesAreas = ref([
-  'Derecho Penal',
-  'Derecho Civil',
-  'Niñez y Adolescencia',
-  'Movilidad Humana'
-])
+  const { subjects: opcionesAreas, fetchSubjects } = useSubjects()
+
 
 // Arreglo de estudiantes y horarios completos
 const estudiantes = ref<any[]>([])
@@ -145,6 +146,7 @@ const dataTableContainer = ref<HTMLElement | null>(null)
 /* ===== CICLO DE VIDA ===== */
 onMounted(() => {
   cargarPeriodos()
+  fetchSubjects()
 })
 
 watch([periodoSeleccionado, areaSeleccionada], async ([nuevoPeriodo, nuevaArea]) => {

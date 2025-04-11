@@ -67,7 +67,7 @@
       class="w-full max-w-6xl shadow-lg"
       removableSort
     >
-      <Column field="Periodo_ID" header="ID" sortable />
+    
       <Column field="PeriodoNombre" header="Nombre del Período" sortable />
       <Column header="Fecha Inicio" sortable>
         <template #body="slotProps">
@@ -93,14 +93,47 @@
             <Button
               icon="pi pi-trash"
               class="p-button-rounded p-button-danger"
-              @click="eliminarPeriodo(slotProps.data.Periodo_ID)"
+              @click="confirmarEliminacion(slotProps.data)"
               tooltip="Eliminar"
               tooltipOptions="{ position: 'top' }"
             />
+
           </div>
         </template>
       </Column>
     </DataTable>
+    <Dialog
+  v-model:visible="mostrarDialogoEliminar"
+  header="Confirmar Eliminación"
+  :modal="true"
+  :closable="false"
+  :style="{ width: '400px' }"
+>
+  <div class="p-4 text-center">
+    <p class="text-lg">
+      ¿Estás seguro de que deseas eliminar el período
+      <strong>{{ periodoAEliminar?.PeriodoNombre }}</strong>?
+    </p>
+  </div>
+
+  <template #footer>
+    <div class="flex justify-end gap-2">
+      <Button
+        label="Cancelar"
+        icon="pi pi-times"
+        class="p-button-outlined"
+        @click="mostrarDialogoEliminar = false"
+      />
+      <Button
+        label="Eliminar"
+        icon="pi pi-trash"
+        class="p-button-danger"
+        @click="eliminarPeriodoConfirmado"
+      />
+    </div>
+  </template>
+</Dialog>
+
   </main>
 </template>
 
@@ -132,6 +165,46 @@ const opcionesTipo = ref([
   { label: "Ordinario", value: "Ordinario" },
   { label: "Extraordinario", value: "Extraordinario" },
 ]);
+
+const mostrarDialogoEliminar = ref(false);
+const periodoAEliminar = ref<Periodo | null>(null);
+
+// Mostrar el diálogo personalizado
+const confirmarEliminacion = (periodo: Periodo) => {
+  periodoAEliminar.value = periodo;
+  mostrarDialogoEliminar.value = true;
+};
+
+// Eliminar cuando el usuario confirma desde el diálogo
+const eliminarPeriodoConfirmado = async () => {
+  if (!periodoAEliminar.value) return;
+  try {
+    const res = await fetch(`${API}/periodos/${periodoAEliminar.value.Periodo_ID}`, {
+      method: "DELETE",
+    });
+    if (!res.ok) throw new Error("Error al eliminar el período");
+    periodos.value = periodos.value.filter(
+      (p) => p.Periodo_ID !== periodoAEliminar.value?.Periodo_ID
+    );
+    toast.add({
+      severity: "success",
+      summary: "Eliminado",
+      detail: "Período eliminado correctamente",
+    });
+  } catch (error) {
+    toast.add({
+      severity: "error",
+      summary: "Error",
+      detail: "No se pudo eliminar el período",
+    });
+  } finally {
+    mostrarDialogoEliminar.value = false;
+    periodoAEliminar.value = null;
+  }
+};
+
+
+
 
 // Función para obtener períodos de la API
 const fetchPeriodos = async () => {

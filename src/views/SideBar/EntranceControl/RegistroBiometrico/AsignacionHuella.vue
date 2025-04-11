@@ -11,7 +11,7 @@
         :options="periodos"
         optionLabel="PeriodoNombre"
         placeholder="Filtrar por Período"
-        class="w-72"
+        class="w-60"
       />
 
       <!-- Input para buscar por Cédula -->
@@ -27,6 +27,17 @@
         placeholder="Buscar por Nombre y Apellido"
         class="w-72 p-inputtext-lg"
       />
+
+      <!-- Dropdown para filtrar por Área -->
+<Dropdown
+  v-model="areaSeleccionada"
+  :options="opcionesAreas"
+  optionLabel="label"
+  optionValue="value"
+  placeholder="Filtrar por Área"
+  class="w-60"
+/>
+
 
       <!-- Botón para restablecer filtros -->
       <Button
@@ -182,6 +193,8 @@ import Column from "primevue/column";
 import Message from "primevue/message";
 import Dialog from "primevue/dialog";
 import Toast from "primevue/toast";
+import {useSubjects} from '@/useSubjects' // ajusta la ruta si está en otra carpeta
+
 
 // Importa las interfaces (ajusta según tu proyecto)
 import { API, type UsuarioXPeriodoDVM, type Periodo } from "@/ApiRoute";
@@ -198,6 +211,9 @@ const busquedaNombre = ref("");
 const errorMensaje = ref("");
 const modalBorrarHuella = ref(false);
 const estudianteSeleccionado = ref<UsuarioXPeriodoDVM | null>(null);
+  const { subjects: opcionesAreas, fetchSubjects } = useSubjects()
+const areaSeleccionada = ref<string | null>(null)
+
 
 // Computed: Filtrar la relación usuario-período según los filtros
 const usuariosFiltrados = computed(() => {
@@ -214,7 +230,12 @@ const usuariosFiltrados = computed(() => {
     const filtroPeriodo = periodoSeleccionado.value
       ? est.Periodo_ID === periodoSeleccionado.value.Periodo_ID
       : true;
-    return filtroNombre && filtroCedula && filtroPeriodo;
+    const filtroArea = areaSeleccionada.value
+      ? est.Internal_Area?.toLowerCase().includes(areaSeleccionada.value.toLowerCase())
+      : true;
+
+      return filtroNombre && filtroCedula && filtroPeriodo && filtroArea;
+
   });
 
   // Ahora, agrupamos por Internal_ID para evitar duplicados
@@ -237,6 +258,7 @@ const limpiarFiltros = () => {
   periodoSeleccionado.value = null;
   busquedaCedula.value = "";
   busquedaNombre.value = "";
+  areaSeleccionada.value = null
 };
 
 // Función para obtener períodos desde la API
@@ -305,6 +327,7 @@ const fetchUsuariosXPeriodo = async () => {
 onMounted(() => {
   fetchPeriodos();
   fetchUsuariosXPeriodo();
+  fetchSubjects();
 });
 
 // Función para confirmar borrar huella

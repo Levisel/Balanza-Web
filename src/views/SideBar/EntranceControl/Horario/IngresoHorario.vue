@@ -13,11 +13,15 @@
         class="w-60"
       />
       <Dropdown
-        v-model="areaSeleccionada"
-        :options="opcionesAreas"
-        placeholder="Área"
-        class="w-60"
-      />
+  v-model="areaSeleccionada"
+  :options="opcionesAreas"
+  optionLabel="label"
+  optionValue="value"
+  placeholder="Área"
+  class="w-60"
+/>
+
+
       <InputText
         v-model="busquedaNombre"
         placeholder="Buscar por Nombre/Apellido"
@@ -198,6 +202,11 @@ import Button from 'primevue/button';
 import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
 import Dialog from 'primevue/dialog';
+import { useSubjects } from '@/useSubjects';
+
+const { subjects: opcionesAreas } = useSubjects();
+
+
 
 const toast = useToast();
 
@@ -251,7 +260,6 @@ const diasSemana = ref([
   { nombre: 'Jueves', horarios: [] },
   { nombre: 'Viernes', horarios: [] }
 ]);
-const opcionesAreas = ['Derecho Penal', 'Derecho Civil', 'Niñez y Adolescencia', 'Movilidad Humana'];
 
 /* CICLO DE VIDA */
 onMounted(() => {

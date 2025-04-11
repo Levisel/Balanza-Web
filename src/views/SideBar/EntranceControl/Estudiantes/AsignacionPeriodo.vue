@@ -24,6 +24,15 @@
         placeholder="Buscar por Cédula"
         class="w-60 p-inputtext-lg"
       />
+      <Dropdown
+  v-model="areaSeleccionada"
+  :options="opcionesAreas"
+  optionLabel="label"
+  optionValue="value"
+  placeholder="Filtrar por Área"
+  class="w-60"
+/>
+
       <!-- Botón para limpiar filtros -->
       <Button
         label="Limpiar Filtros"
@@ -113,6 +122,7 @@
 <script setup lang="ts">
 import { ref, onMounted, computed, watch } from "vue";
 import { API, type Usuario, type Periodo } from "@/ApiRoute";
+import { useSubjects } from "@/useSubjects";
 
 // Importamos componentes PrimeVue
 import Toast from "primevue/toast";
@@ -137,6 +147,10 @@ const periodoDestino = ref<Periodo | null>(null);
 const busquedaNombre = ref("");
 const busquedaCedula = ref("");
 const dialogoAsignarVisible = ref(false);
+
+const { subjects: opcionesAreas } = useSubjects();
+const areaSeleccionada = ref<string | null>(null);
+
 
 // Función para cargar períodos (GET /periodos)
 async function fetchPeriodos() {
@@ -202,8 +216,12 @@ const estudiantesFiltrados = computed(() => {
     const nombreCompleto = `${est.Internal_Name} ${est.Internal_LastName}`.toLowerCase();
     const coincideNombre = nombreCompleto.includes(busquedaNombre.value.toLowerCase());
     const coincideCedula = est.Internal_ID.includes(busquedaCedula.value);
-    if (!coincideNombre || !coincideCedula) return false;
-    // Solo se filtra si se selecciona un período de origen; el período destino se usa únicamente para asignar
+    const coincideArea = areaSeleccionada.value
+      ? est.Internal_Area === areaSeleccionada.value
+      : true;
+
+    if (!coincideNombre || !coincideCedula || !coincideArea) return false;
+
     if (periodoOrigen.value) {
       return asignacionesOrigen.value.includes(est.Internal_ID);
     }
@@ -213,14 +231,17 @@ const estudiantesFiltrados = computed(() => {
 
 
 
+
 // Función para limpiar filtros
 function limpiarFiltros() {
   periodoOrigen.value = null;
   periodoDestino.value = null;
   busquedaNombre.value = "";
   busquedaCedula.value = "";
+  areaSeleccionada.value = null;
   estudiantesSeleccionados.value = [];
 }
+
 
 // Función para mostrar confirmación de asignación
 function mostrarConfirmacionAsignar() {
