@@ -476,7 +476,7 @@ const registrosCerradosClass = computed(() => [
 
           <div v-if="authStore.user?.type == 'Administrador' || authStore.user?.type == 'Secretaria'">
             <li class="mt-4">
-              <div class="text-xs font-semibold text-surface-400 uppercase tracking-wider pl-4 mb-2">Gestión Académica</div>
+              <div class="text-sm font-bold text-surface-400 text-neutral-400 uppercase tracking-wider pl-4 mb-2">Gestión Académica</div>
               <ul class="list-none p-0 m-0">
                 <!-- PERIODOS ACADÉMICOS -->
                 <li>

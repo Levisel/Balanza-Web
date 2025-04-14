@@ -303,7 +303,10 @@ const uploadNewDocument = () => {
 
 const totalSize = ref(0);
 const totalSizePercent = ref(0);
-const watchDocumentDialog = ref(false);
+const watchHealthDocumentDialog = ref(false);
+const watchEvidenceDocumentDialog = ref(false);
+const watchAttentionSheetDialog = ref(false);
+const watchActivityDocumentDialog = ref(false);
 const urlDocument = ref("");
 
 // Captura el archivo seleccionado en FileUpload y lo guarda en userHealthDocuments
@@ -386,7 +389,7 @@ const loadUserHealthDocument = async (userID: string) => {
       const contentType = response.headers["content-type"] || "application/pdf";
       const blob = new Blob([response.data], { type: contentType });
       urlDocument.value = URL.createObjectURL(blob);
-      watchDocumentDialog.value = true;
+      watchHealthDocumentDialog.value = true;
     } else {
       throw new Error(`Error al obtener el documento: ${response.statusText}`);
     }
@@ -472,7 +475,7 @@ const loadUserEvidenceDocument = async (evidenceID: number) => {
       const contentType = response.headers["content-type"] || "application/pdf"; // Tipo de archivo
       const blob = new Blob([response.data], { type: contentType }); // Crear un blob a partir del buffer
       urlDocument.value = URL.createObjectURL(blob); // Crear una URL para visualizar el archivo
-      watchDocumentDialog.value = true; // Mostrar el diálogo con el documento
+      watchEvidenceDocumentDialog.value = true; // Mostrar el diálogo con el documento
     } else {
       throw new Error(`Error al obtener el documento: ${response.statusText}`);
     }
@@ -500,7 +503,7 @@ const loadUserAttentionSheet = async (initCode: string) => {
       const contentType = response.headers["content-type"] || "application/pdf";
       const blob = new Blob([response.data], { type: contentType });
       urlDocument.value = URL.createObjectURL(blob);
-      watchDocumentDialog.value = true;
+      watchAttentionSheetDialog.value = true;
     } else {
       throw new Error(
         `Error al obtener la hoja de atención: ${response.statusText}`
@@ -528,7 +531,7 @@ const loadActivityDocument = async (activityID: number) => {
       const contentType = response.headers["content-type"] || "application/pdf"; // Tipo de archivo
       const blob = new Blob([response.data], { type: contentType }); // Crear un blob a partir del buffer
       urlDocument.value = URL.createObjectURL(blob); // Crear una URL para visualizar el archivo
-      watchDocumentDialog.value = true; // Mostrar el diálogo con el documento
+      watchAttentionSheetDialog.value = true; // Mostrar el diálogo con el documento
     } else {
       throw new Error(`Error al obtener el documento: ${response.statusText}`);
     }
@@ -1050,19 +1053,20 @@ const internalID = authStore.user?.id;
 const initSocialWork = ref<boolean>(false);
 const initMandatorySW = ref<boolean>(false);
 
-const initStatusOptions = ref<{ name: string; value: string }[]>([]);
-const initStatus = ref<{ name: string; value: string } | null>(null);
+const initCaseStatusOptions = ref<{ name: string; value: string }[]>([]);
+const initCaseStatus = ref<{ name: string; value: string } | null>(null);
+
 
 axios.get(`${API}/case-status`).then((response) => {
-  initStatusOptions.value = response.data.map((item: any) => ({
+  initCaseStatusOptions.value = response.data.map((item: any) => ({
     name: item.Case_Status_Name,
     value: item.Case_Status_Name,
   }));
 
   // Seleccionar "Activo" si existe en la lista, si no, tomar la primera opción
-  initStatus.value =
-    initStatusOptions.value.find((option) => option.value === "Activo") ||
-    initStatusOptions.value[0] ||
+  initCaseStatus.value =
+    initCaseStatusOptions.value.find((option) => option.value === "Sin iniciar") ||
+    initCaseStatusOptions.value[0] ||
     null;
 });
 
@@ -1301,7 +1305,7 @@ const restartUserForm = () => {
 
 const restartConsultationForm = () => {
   initCode.value = "";
-  initStatus.value = initStatusOptions.value[0];
+  initCaseStatus.value = initCaseStatusOptions.value[0];
   initOffice.value = 'Consultorio Jurídico "PUCE", Sede Quito';
   initDate.value = new Date(date);
   initEndDate.value = null;
@@ -1314,6 +1318,8 @@ const restartConsultationForm = () => {
   initReferral.value = null;
   initNotes.value = "";
   initAlertNote.value = "";
+  initSocialWork.value = false;
+  initMandatorySW.value = false;
 };
 
 const searchIDButton = () => {
@@ -1525,9 +1531,9 @@ const updateFormWithConsultation = async (
   restartEvidence(); // Reiniciar la evidencia antes de cargar una nueva consulta
   if (!data) return;
   initCode.value = data.Init_Code;
-  initStatus.value =
-    initStatusOptions.value.find(
-      (option) => option.value === String(data.Init_Status)
+  initCaseStatus.value =
+    initCaseStatusOptions.value.find(
+      (option) => option.value === String(data.Init_CaseStatus)
     ) || null;
   initOffice.value = data.Init_Office;
   initDate.value = new Date(data.Init_Date);
@@ -1723,7 +1729,7 @@ const createInitialConsultation = async () => {
     "User_BirthDate",
     userBirthDate.value ? userBirthDate.value.toISOString().split("T")[0] : ""
   );
-  formData.append("User_Nationality", userNationality.value?.value || "");
+  formData.append("User_Nationality", userNationality.value?.name || "");
   formData.append("User_Ethnicity", userEthnicity.value?.value || "");
   formData.append("User_Province", userProvince.value?.value || "");
   formData.append("User_City", userCity.value?.value || "");
@@ -1821,7 +1827,8 @@ const createInitialConsultation = async () => {
   formData.append("Internal_ID", internalID || "");
   formData.append("Init_SocialWork", initSocialWork.value.toString());
   formData.append("Init_MandatorySW", initMandatorySW.value.toString());
-  formData.append("Init_Status", initStatus.value?.value || "");
+  formData.append("Init_Status", "Activo"); // Estado inicial
+  formData.append("Init_CaseStatus", initCaseStatus.value?.value || "");
   formData.append("Init_Office", initOffice.value);
   formData.append(
     "Init_Date",
@@ -1945,12 +1952,13 @@ const newUserConsultation = async () => {
     Init_Topic: initTopic.value?.value,
     Init_Service: initService.value?.value,
     Init_Referral: initReferral.value?.value,
-    Init_Status: initStatus.value?.value,
+    Init_Status: "Activo",
+    Init_CaseStatus: initCaseStatus.value?.value,
     Init_Notes: initNotes.value || "",
     Init_Complexity: initComplexity.value?.value || "",
-    Init_Type: "",
     Init_SocialWork: initSocialWork.value,
     Init_MandatorySW: initMandatorySW.value,
+    Init_Type: "",
     User_ID: userID.value,
   };
   if(initMandatorySW.value !== true){
@@ -2108,7 +2116,7 @@ const editUserConsultation = async () => {
     Init_Topic: initTopic.value?.value,
     Init_Service: initService.value?.value,
     Init_Referral: initReferral.value?.value,
-    Init_Status: initStatus.value?.value,
+    Init_CaseStatus: initCaseStatus.value?.value,
     Init_Notes: initNotes.value || "",
     Init_Complexity: initComplexity.value?.value || "",
     Init_Type: "",
@@ -2120,7 +2128,7 @@ const editUserConsultation = async () => {
     consultationData.Init_Type = "Por Asignar";
   }   else if (initMandatorySW.value === true) {
     consultationData.Init_Type = "En espera";
-  } else if (initMandatorySW.value === false) {
+  } else {
     consultationData.Init_Type = "Por Revisar";
   }
 
@@ -3604,21 +3612,7 @@ function getInternalUserName(internalId: string): string {
                 severity="contrast"
                 class="w-full md:w-70 md:h-12"
                 :disabled="areInputsDisabled"
-              />
-
-              <!-- Dialog para visualizar el documento PDF -->
-              <Dialog
-                v-model:visible="watchDocumentDialog"
-                modal
-                header="Documento"
-                class="p-6 rounded-lg shadow-lg bg-white max-w-7xl w-full"
-              >
-                <iframe
-                  :src="urlDocument"
-                  class="w-full h-250"
-                  frameborder="0"
-                ></iframe>
-              </Dialog>
+              />                    
             </div>
           </transition>
         </div>
@@ -3752,15 +3746,20 @@ function getInternalUserName(internalId: string): string {
                 <div class="w-full sm:w-2/3">
                   <FloatLabel variant="on" class="w-full">
                     <Select
-                      v-model="initStatus"
-                      inputId="initStatus"
-                      :options="initStatusOptions"
+                      v-model="initCaseStatus"
+                      inputId="initCaseStatus"
+                      :options="initCaseStatusOptions"
                       size="large"
                       optionLabel="name"
                       class="w-full"
-                      :disabled="isInitStatusDisabled"
+                      :class="
+                      !doesUserRequestOp && doesUserExist
+                        ? 'mouse pointer-events-none'
+                        : ''
+                    "
+                      :disabled="areInputsDisabled"
                     />
-                    <label for="initStatus">Estado</label>
+                    <label for="initCaseStatus">Estado</label>
                   </FloatLabel>
                 </div>
               </div>
@@ -4370,6 +4369,59 @@ function getInternalUserName(internalId: string): string {
       />
     </div>
   </div>
+
+   <!-- Dialog para visualizar el documento PDF de SALUD -->
+<Dialog
+            v-model:visible="watchHealthDocumentDialog"
+            modal
+            header="🏥🩺 Documento de Salud"
+            class="p-6 rounded-lg shadow-lg bg-white max-w-7xl w-full"
+          >
+            <iframe
+              :src="urlDocument"
+              class="w-full h-250"
+              frameborder="0"
+            ></iframe>
+          </Dialog>
+          <!-- Dialog para visualizar el documento PDF de EVIDENCIA -->
+          <Dialog
+            v-model:visible="watchEvidenceDocumentDialog"
+            modal
+            header="📋 Documento de Atención"
+            class="p-6 rounded-lg shadow-lg bg-white max-w-7xl w-full"
+          >
+            <iframe
+              :src="urlDocument"
+              class="w-full h-250"
+              frameborder="0"
+            ></iframe>
+          </Dialog>
+            <!-- Dialog para visualizar el documento PDF de Ficha de Atención -->
+            <Dialog
+            v-model:visible="watchAttentionSheetDialog"
+            modal
+            header="📂 Ficha de Atención"
+            class="p-6 rounded-lg shadow-lg bg-white max-w-7xl w-full"
+          >
+            <iframe
+              :src="urlDocument"
+              class="w-full h-250"
+              frameborder="0"
+            ></iframe>
+          </Dialog>
+            <!-- Dialog para visualizar el documento PDF de Actividades -->
+            <Dialog
+            v-model:visible="watchActivityDocumentDialog"
+            modal
+            header="📄 Actividad del Caso"
+            class="p-6 rounded-lg shadow-lg bg-white max-w-7xl w-full"
+          >
+            <iframe
+              :src="urlDocument"
+              class="w-full h-250"
+              frameborder="0"
+            ></iframe>
+          </Dialog>      
 
   <Dialog
     v-model:visible="watchAlertDialog"

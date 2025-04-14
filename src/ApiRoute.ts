@@ -67,7 +67,8 @@ export interface User {
 export interface Initial_Consultation {
     Init_Code: string;
     Internal_ID: string;
-    Init_Status: boolean;
+    Init_Status: string; //Controlar internamente el caso
+    Init_CaseStatus: string; //Estado en el que llega el caso, no importa si cambia
     Init_Office: string;
     Init_Date: Date;
     Init_EndDate: Date;
@@ -79,7 +80,7 @@ export interface Initial_Consultation {
     Init_Lawyer: string;
     Init_Referral: string;
     Init_Notes: string;
-    Init_Type: string; //Nuevo o Asignado
+    Init_Type: string; 
     Init_SocialWork: boolean;
     Init_MandatorySW: boolean;
     Init_AlertNote: string;
