@@ -841,44 +841,109 @@ axios.get(`${API}/ethnicities`).then((response) => {
   }));
 });
 
-const userProvince = ref<{ name: string; value: string } | null>(null);
-const userProvinceOptions = ref<{ name: string; value: string }[]>([]);
+const userProvince = ref<{ name: string; value: string; id: number } | null>(null);
+const userProvinceOptions = ref<{ name: string; value: string; id: number }[]>([]);
 axios.get(`${API}/provinces`).then((response) => {
   userProvinceOptions.value = response.data.map((item: any) => ({
     name: item.Province_Name,
-    value: item.Province_Name,
+    value: item.Province_Name, // Keep value as name for submission
+    id: item.Province_ID // Store the ID for filtering
   }));
 });
 
 const userCity = ref<{ name: string; value: string } | null>(null);
 const userCityOptions = ref<{ name: string; value: string }[]>([]);
-axios.get(`${API}/cities`).then((response) => {
-  userCityOptions.value = response.data.map((item: any) => ({
-    name: item.City_Name,
-    value: item.City_Name,
-  }));
+// axios.get(`${API}/cities`).then((response) => {
+//   userCityOptions.value = response.data.map((item: any) => ({
+//     name: item.City_Name,
+//     value: item.City_Name,
+//   }));
+// });
+const fetchCitiesByProvince = async (provinceId: number | null) => {
+  userCity.value = null; // Reset city selection
+  if (provinceId) {
+    try {
+      const response = await axios.get(`${API}/cities/province/${provinceId}`);
+      userCityOptions.value = response.data.map((item: any) => ({
+        name: item.City_Name,
+        value: item.City_Name, // Keep value as name for submission
+        id: item.City_ID // Store the ID if needed elsewhere, though not strictly necessary for filtering here
+      }));
+    } catch (error) {
+      console.error("Error fetching cities:", error);
+      userCityOptions.value = []; // Clear options on error
+      toast.add({
+        severity: "error",
+        summary: "Error",
+        detail: "No se pudieron cargar las ciudades para la provincia seleccionada.",
+        life: 3000,
+      });
+    }
+  } else {
+    userCityOptions.value = []; // Clear city options if no province is selected
+  }
+};
+// Watch for changes in the selected province
+watch(userProvince, (newProvince) => {
+  // Avoid fetching cities during the initial reset or if the watcher triggers unexpectedly
+  if (!isResettingConsultation.value) {
+     fetchCitiesByProvince(newProvince?.id ?? null);
+  }
 });
+
 
 //DATOS DE CONTACTO Y CONTACTO DE REFERENCIA
 const userPhone = ref("");
 const userEmail = ref("");
 const userAddress = ref("");
-const userSector = ref<{ name: string; value: string } | null>(null);
-const userSectorOptions = ref<{ name: string; value: string }[]>([]);
-axios.get(`${API}/sectors`).then((response) => {
-  userSectorOptions.value = response.data.map((item: any) => ({
-    name: item.Sector_Name,
-    value: item.Sector_Name,
-  }));
-});
 
-const userZone = ref<{ name: string; value: string } | null>(null);
-const userZoneOptions = ref<{ name: string; value: string }[]>([]);
+// Modify userSector ref to store Zone_FK
+const userSector = ref<{ name: string; value: string; zoneId: number } | null>(null);
+const userSectorOptions = ref<{ name: string; value: string; zoneId: number }[]>([]);
+
+// Modify userZone ref to store Zone_ID
+const userZone = ref<{ name: string; value: string; id: number } | null>(null);
+const userZoneOptions = ref<{ name: string; value: string; id: number }[]>([]);
+
+// Fetch Zones first and store their IDs
 axios.get(`${API}/zone`).then((response) => {
   userZoneOptions.value = response.data.map((item: any) => ({
     name: item.Zone_Name,
-    value: item.Zone_Name,
+    value: item.Zone_Name, // Keep value as name for submission
+    id: item.Zone_ID // Store the ID
   }));
+  // After zones are loaded, fetch sectors
+  fetchSectors();
+});
+
+const fetchSectors = async () => {
+  try {
+    const response = await axios.get(`${API}/sectors`);
+    userSectorOptions.value = response.data.map((item: any) => ({
+      name: item.Sector_Name,
+      value: item.Sector_Name, // Keep value as name for submission
+      zoneId: item.Zone_FK // Store the foreign key linking to Zone
+    }));
+  } catch (error) {
+    console.error("Error fetching sectors:", error);
+    userSectorOptions.value = [];
+     toast.add({
+        severity: "error",
+        summary: "Error",
+        detail: "No se pudieron cargar los sectores.",
+        life: 3000,
+      });
+  }
+};
+
+watch(userSector, (newSector) => {
+  if (newSector) {
+    // Find the corresponding zone in userZoneOptions based on the sector's zoneId
+    const correspondingZone = userZoneOptions.value.find(zone => zone.id === newSector.zoneId);
+    userZone.value = correspondingZone || null; // Set the zone automatically
+  } else {
+    userZone.value = null; // Reset zone if sector is cleared
+  }
 });
 
 const userReferenceRelationship = ref("");
@@ -1084,22 +1149,52 @@ axios.get(`${API}/client-types`).then((response) => {
   }));
 });
 
-const initSubject = ref<{ name: string; value: string } | null>(null);
-const initSubjectOptions = ref<{ name: string; value: string }[]>([]);
+// Modify initSubject ref to store ID for filtering
+const initSubject = ref<{ name: string; value: string; id: number } | null>(null);
+const initSubjectOptions = ref<{ name: string; value: string; id: number }[]>([]);
 axios.get(`${API}/subjects`).then((response) => {
   initSubjectOptions.value = response.data.map((item: any) => ({
     name: item.Subject_Name,
-    value: item.Subject_Name,
+    value: item.Subject_Name, // Keep value as name for submission
+    id: item.Subject_ID // Store the ID for filtering
   }));
 });
 
+// Modify initTopic ref (no ID needed here unless used elsewhere)
 const initTopic = ref<{ name: string; value: string } | null>(null);
 const initTopicOptions = ref<{ name: string; value: string }[]>([]);
-axios.get(`${API}/topics`).then((response) => {
-  initTopicOptions.value = response.data.map((item: any) => ({
-    name: item.Topic_Name,
-    value: item.Topic_Name,
-  }));
+
+// Function to fetch topics based on subject ID
+const fetchTopicsBySubject = async (subjectId: number | null) => {
+  initTopic.value = null; // Reset topic selection
+  if (subjectId) {
+    try {
+      const response = await axios.get(`${API}/topics/subject/${subjectId}`);
+      initTopicOptions.value = response.data.map((item: any) => ({
+        name: item.Topic_Name,
+        value: item.Topic_Name, // Keep value as name for submission
+      }));
+    } catch (error) {
+      console.error("Error fetching topics:", error);
+      initTopicOptions.value = []; // Clear options on error
+      toast.add({
+        severity: "error",
+        summary: "Error",
+        detail: "No se pudieron cargar los temas para la materia seleccionada.",
+        life: 3000,
+      });
+    }
+  } else {
+    initTopicOptions.value = []; // Clear topic options if no subject is selected
+  }
+};
+
+// Watch for changes in the selected subject
+watch(initSubject, (newSubject) => {
+  // Avoid fetching topics during the initial reset or if the watcher triggers unexpectedly
+   if (!isResettingConsultation.value) {
+      fetchTopicsBySubject(newSubject?.id ?? null);
+   }
 });
 
 const initService = ref<{ name: string; value: string } | null>(null);
@@ -1384,11 +1479,37 @@ const fetchUser = async () => {
         userEthnicity.value = option;
       }
     });
-    userProvinceOptions.value.forEach((option) => {
-      if (option.name === selectedUser.value.User_Province) {
-        userProvince.value = option;
-      }
-    });
+    // userProvinceOptions.value.forEach((option) => {
+    //   if (option.name === selectedUser.value.User_Province) {
+    //     userProvince.value = option;
+    //   }
+    // });
+    // userCityOptions.value.forEach((option) => {
+    //   if (option.name === selectedUser.value.User_City) {
+    //     userCity.value = option;
+    //   }
+    // });
+
+    const foundProvince = userProvinceOptions.value.find(
+      (option) => option.name === selectedUser.value.User_Province
+    );
+    userProvince.value = foundProvince || null;
+
+    // Fetch cities for the loaded user's province *before* trying to set the city
+    if (userProvince.value) {
+      await fetchCitiesByProvince(userProvince.value.id); // Wait for cities to load
+
+      // Now find and set the city
+      const foundCity = userCityOptions.value.find(
+        (option) => option.name === selectedUser.value.User_City
+      );
+      userCity.value = foundCity || null;
+    } else {
+       userCityOptions.value = []; // Ensure city options are empty if province wasn't found
+       userCity.value = null;
+    }
+
+
     userCityOptions.value.forEach((option) => {
       if (option.name === selectedUser.value.User_City) {
         userCity.value = option;
@@ -1399,17 +1520,16 @@ const fetchUser = async () => {
     userPhone.value = selectedUser.value.User_Phone;
     userEmail.value = selectedUser.value.User_Email;
     userAddress.value = selectedUser.value.User_Address;
-    userSectorOptions.value.forEach((option) => {
-      if (option.name === selectedUser.value.User_Sector) {
-        userSector.value = option;
-      }
-    });
+    const foundSector = userSectorOptions.value.find(
+      (option) => option.name === selectedUser.value.User_Sector
+    );
+    userSector.value = foundSector || null;
 
-    userZoneOptions.value.forEach((option) => {
-      if (option.value === selectedUser.value.User_Zone) {
-        userZone.value = option;
-      }
-    });
+    // userZoneOptions.value.forEach((option) => {
+    //   if (option.value === selectedUser.value.User_Zone) {
+    //     userZone.value = option;
+    //   }
+    // });
     userReferenceRelationship.value =
       selectedUser.value.User_ReferenceRelationship;
     userReferenceName.value = selectedUser.value.User_ReferenceName;
@@ -1544,13 +1664,31 @@ const updateFormWithConsultation = async (
     initClientTypeOptions.value.find(
       (option) => option.value === data.Init_ClientType
     ) || null;
-  initSubject.value =
-    initSubjectOptions.value.find(
-      (option) => option.value === data.Init_Subject
-    ) || null;
-  initTopic.value =
-    initTopicOptions.value.find((option) => option.value === data.Init_Topic) ||
-    null;
+  // Find the subject object including the ID
+  const foundSubject = initSubjectOptions.value.find(
+    (option) => option.name === data.Init_Subject
+  );
+  initSubject.value = foundSubject || null;
+
+  // Fetch topics for the loaded consultation's subject *before* trying to set the topic
+  if (initSubject.value) {
+    await fetchTopicsBySubject(initSubject.value.id); // Wait for topics to load
+
+    // Now find and set the topic
+    const foundTopic = initTopicOptions.value.find(
+      (option) => option.name === data.Init_Topic
+    );
+    initTopic.value = foundTopic || null;
+  } else {
+     initTopicOptions.value = []; // Ensure topic options are empty if subject wasn't found
+     initTopic.value = null;
+  }
+
+
+
+
+
+
   initService.value =
     initServiceOptions.value.find(
       (option) => option.value === data.Init_Service
@@ -2927,7 +3065,7 @@ function getInternalUserName(internalId: string): string {
                 size="large"
                 optionLabel="name"
                 class="w-full md:w-48"
-                :disabled="areInputsDisabled"
+                disabled
               />
               <label for="userZone">Zona</label>
             </FloatLabel>

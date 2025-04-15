@@ -61,6 +61,7 @@ const idOptions = ref([
 ]);
 
 const resetLabels = () => {
+  selectedIdType.value = "";
   internalUser.value.Internal_ID = "";
   internalUser.value.Internal_Name = "";
   internalUser.value.Internal_LastName = "";

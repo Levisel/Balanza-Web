@@ -225,7 +225,7 @@ onMounted(() => {
         </template>
       </Column> -->
       
-      <Column field="Init_Subject" header="Tema" sortable style="min-width: 14rem">
+      <Column field="Init_Subject" header="Área/Materia" sortable style="min-width: 14rem">
         <template #body="{ data }">
           {{ data.Init_Subject }}
         </template>
