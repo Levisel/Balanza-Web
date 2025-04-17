@@ -125,11 +125,6 @@ const socialWorkCasesClass = computed(() => [
   route.path === "/TrabajoSocialCasos" ? "text-green-400" : "",
   isDarkTheme.value ? "hover:bg-gray-700" : "hover:bg-gray-100",
 ]);
-const socialWorkDashboardClass = computed(() => [
-  "select-none flex items-center cursor-pointer p-4 rounded text-surface-700 transition-colors",
-  route.path === "/TrabajoSocialDashboard" ? "text-green-400" : "",
-  isDarkTheme.value ? "hover:bg-gray-700" : "hover:bg-gray-100",
-]);
 const socialWorkScheduleClass = computed(() => [
   "select-none flex items-center cursor-pointer p-4 rounded text-surface-700 transition-colors",
   route.path === "/TrabajoSocialHorario" ? "text-green-400" : "",
@@ -491,7 +486,7 @@ const vistaHorariosPersonalClass = computed(() => [
 
           <div v-if="authStore.user?.type == 'Administrador' || authStore.user?.type == 'Secretaria'">
             <li class="mt-4">
-              <div class="text-xs font-semibold text-surface-400 uppercase tracking-wider pl-4 mb-2">Gestión Académica</div>
+              <div class="text-sm font-bold text-surface-400 text-neutral-400 uppercase tracking-wider pl-4 mb-2">Gestión Académica</div>
               <ul class="list-none p-0 m-0">
                 <!-- PERIODOS ACADÉMICOS -->
                 <li>
@@ -739,17 +734,6 @@ const vistaHorariosPersonalClass = computed(() => [
                   <i class="pi pi-chevron-down ml-auto"> </i>
                 </a>
                 <ul class="submenu closed list-none p-0 m-0">
-                  <li>
-                    <router-link
-                      to="/TrabajoSocialDashboard"
-                      draggable="false"
-                      v-ripple
-                      :class="socialWorkDashboardClass"
-                    >
-                      <i class="pi pi-home mr-2"></i>
-                      <span class="font-medium text-lg">Dashboard</span>
-                    </router-link>
-                  </li>
                   <li>
                     <router-link
                       to="/TrabajoSocialCasos"

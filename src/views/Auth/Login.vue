@@ -73,7 +73,15 @@ const onFormSubmit = async ({ valid }: { valid: boolean }) => {
           detail: "El correo o la contraseña son incorrectos.",
           life: 3000,
         });
-      } else {
+      } else if (error.response.status === 403) {
+        // Error de acceso denegado
+        toast.add({
+          severity: "error",
+          summary: "Acceso denegado",
+          detail: "Tu cuenta se encuentra inactiva. Por favor contacta al administrador.",
+          life: 3000,
+        });
+      } else if (error.response.status === 500) {
         // Otro error del servidor
         toast.add({
           severity: "error",

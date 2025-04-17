@@ -124,7 +124,7 @@ const redirectToConsultation = (data: Initial_Consultation) => {
     router.push({ name: "NewCase", query: { userID: data.User_ID, caseID: data.Init_Code } });
 };
 const urlDocument = ref("");
-const watchDocumentDialog = ref(false);
+const watchAttentionSheetDialog = ref(false);
 
 const loadUserAttentionSheet = async (initCode: string) => {
   try {
@@ -136,7 +136,7 @@ const loadUserAttentionSheet = async (initCode: string) => {
       const contentType = response.headers["content-type"] || "application/pdf";
       const blob = new Blob([response.data], { type: contentType });
       urlDocument.value = URL.createObjectURL(blob);
-      watchDocumentDialog.value = true;
+      watchAttentionSheetDialog.value = true;
     } else {
       throw new Error(`Error al obtener la hoja de atención: ${response.statusText}`);
     }
@@ -225,7 +225,7 @@ onMounted(() => {
         </template>
       </Column> -->
       
-      <Column field="Init_Subject" header="Tema" sortable style="min-width: 14rem">
+      <Column field="Init_Subject" header="Área/Materia" sortable style="min-width: 14rem">
         <template #body="{ data }">
           {{ data.Init_Subject }}
         </template>
@@ -280,20 +280,20 @@ onMounted(() => {
       </Column>
     </DataTable>
 
-    <!-- Dialog de Información completa de la consulta -->
-    <Dialog
-                v-model:visible="watchDocumentDialog"
-                modal
-                header="Evidencia"
-                class="p-6 rounded-lg shadow-lg bg-white max-w-7xl w-full"
-              >
-                <iframe
-                  :src="urlDocument"
-                  class="w-full h-250"
-                  frameborder="0"
-                ></iframe>
-              </Dialog>
-  </div>
+   <!-- Dialog para visualizar el documento PDF de Ficha de Atención -->
+   <Dialog
+            v-model:visible="watchAttentionSheetDialog"
+            modal
+            header="📂 Ficha de Atención"
+            class="p-6 rounded-lg shadow-lg bg-white max-w-7xl w-full"
+          >
+            <iframe
+              :src="urlDocument"
+              class="w-full h-250"
+              frameborder="0"
+            ></iframe>
+          </Dialog>
+          </div>
 </template>
 
 
