@@ -76,6 +76,8 @@ import ModificacionHoras from "@/views/SideBar/EntranceControl/Horas_Extraordina
 import RegistrosAbiertos from "@/views/SideBar/EntranceControl/ControlAsistencia/RegistrosAbiertos.vue";
 import RegistrosCerrados from "@/views/SideBar/EntranceControl/ControlAsistencia/RegistrosCerrados.vue";
 import ResumenSemanal from "@/views/SideBar/EntranceControl/Seguimiento/ResumenSemanal.vue";
+import RegistroVirtual from "@/views/SideBar/EntranceControl/RegistroBiometrico/RegistroVirtual.vue";
+import VistaHorarioPersonal from "@/views/SideBar/EntranceControl/Horario/VistaHorarioPersonal.vue";
 
 
 const routes: Array<RouteRecordRaw> = [
@@ -244,6 +246,11 @@ const routes: Array<RouteRecordRaw> = [
         name: 'VistaHorarios',
         component: VistaHorarios,
       },
+      {
+        path: 'VistaHorariosPersonal',
+        name: 'VistaHorariosPersonal',
+        component: VistaHorarioPersonal,
+      },
       //FingerPrint
       {
         path: 'AsignacionHuella',
@@ -294,6 +301,18 @@ const routes: Array<RouteRecordRaw> = [
         path: 'ResumenSemanal/:resumenId/:internalId',
         name: 'ResumenSemanal',
         component: ResumenSemanal,
+      },
+      {
+        path: 'ResumenSemanalEstudiante',
+        name: 'ResumenSemanalEstudiante',
+        component: ResumenSemanal,
+      },
+      
+      //---> Entrance Control -> ESTUDIANTES
+      {
+        path: 'RegistroVirtual',
+        name: 'RegistroVirtual',
+        component: RegistroVirtual,
       }
       
     ],

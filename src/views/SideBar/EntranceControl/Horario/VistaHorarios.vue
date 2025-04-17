@@ -24,16 +24,15 @@
   placeholder="Área"
   class="min-w-[130px]"
 />
-
+<InputText
+    v-model="busquedaCedula"
+    placeholder="Buscar por Cédula"
+    class="min-w-[130px]"
+  />
   <InputText
     v-model="busquedaNombre"
     placeholder="Buscar por Nombre/Apellido"
     class="min-w-[160px]"
-  />
-  <InputText
-    v-model="busquedaCedula"
-    placeholder="Buscar por Cédula"
-    class="min-w-[130px]"
   />
   <Button
     label="Limpiar"
@@ -196,11 +195,8 @@ async function fetchEstudiantes() {
 }
 
 async function cargarHorariosCompletos() {
-
-  
   try {
     const pid = periodoSeleccionado.value.Periodo_ID
-    // Si se selecciona área, incluirla; de lo contrario, traer de todas las áreas.
     const areaParam = areaSeleccionada.value ? encodeURIComponent(areaSeleccionada.value) : ''
     let url = ''
     if (areaParam) {
@@ -208,13 +204,22 @@ async function cargarHorariosCompletos() {
     } else {
       url = `${API}/horarioEstudiantes/completo-extraccion?periodoId=${pid}`
     }
+
     const res = await fetch(url)
-    horariosCompletos.value = await res.json()
-    console.log('Horarios completos cargados:', horariosCompletos.value)
+    const todosLosHorarios = await res.json()
+    console.log("Respuesta completa de horarios:", todosLosHorarios)
+
+
+    // Mostrar solo los activos (para la cuadrícula)
+    horariosCompletos.value = todosLosHorarios.filter((h: any) => h.Horario_IsDeleted === 0)
+
+
+    console.log('Horarios activos cargados para la vista:', horariosCompletos.value)
   } catch (error) {
     console.error('Error al cargar horarios completos:', error)
   }
 }
+
 
 /* ===== EXPORTAR A EXCEL ===== */
 async function exportarAExcel() {

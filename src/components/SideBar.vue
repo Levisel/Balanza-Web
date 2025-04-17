@@ -251,6 +251,16 @@ const registrosCerradosClass = computed(() => [
   route.path === "/RegistrosCerrados" ? "text-green-400" : "",
   isDarkTheme.value ? "hover:bg-gray-700" : "hover:bg-gray-100",
 ]);
+const seguimientoSemanalClass = computed(() => [
+  "select-none flex items-center cursor-pointer p-4 rounded text-surface-700 transition-colors",
+  route.path === "/PeriodoSemanal" ? "text-green-400" : "",
+  isDarkTheme.value ? "hover:bg-gray-700" : "hover:bg-gray-100",
+]);
+const vistaHorariosPersonalClass = computed(() => [
+  "select-none flex items-center cursor-pointer p-4 rounded text-surface-700 transition-colors",
+  route.path === "/VistaHorariosPersonal" ? "text-green-400" : "",
+  isDarkTheme.value ? "hover:bg-gray-700" : "hover:bg-gray-100",
+]);
 </script>
 
 <template>
@@ -499,7 +509,7 @@ const registrosCerradosClass = computed(() => [
                       </router-link>
                     </li>
                     <li>
-                      <router-link to="/PeriodoSemanal" draggable="false" v-ripple :class="cronogramaClass">
+                      <router-link to="/PeriodoSemanal" draggable="false" v-ripple :class="seguimientoSemanalClass">
                           <i class="pi pi-calendar-times mr-2"></i>
                           <span class="font-medium text-lg">Periodo Semanal</span>
                         </router-link>
@@ -672,6 +682,38 @@ const registrosCerradosClass = computed(() => [
               </ul>
             </li>
           </div>
+
+          <!-- Gestión de Prácticas (solo para estudiantes) -->
+<div v-if="authStore.user?.type === 'Estudiante'" class="mt-4">
+  <div class="text-sm font-bold text-surface-400 text-neutral-400 uppercase tracking-wider pl-4 mb-2">
+    Gestión de Prácticas
+  </div>
+  <ul class="list-none p-0 m-0">
+
+    <li>
+      <router-link to="/VistaHorariosPersonal" draggable="false" v-ripple :class="vistaHorariosPersonalClass">
+        <i class="pi pi-calendar-plus mr-2"></i>
+        <span class="font-medium text-lg"> Horario</span>
+      </router-link>
+    </li>
+
+    <li>
+      <router-link to="/RegistroVirtual" draggable="false" v-ripple :class="registroAsistenciaClass">
+        <i class="pi pi-video mr-2"></i>
+        <span class="font-medium text-lg">Registro Virtual</span>
+      </router-link>
+    </li>
+    <li>
+      <router-link to="/ResumenSemanalEstudiante" draggable="false" v-ripple :class="seguimientoGeneralClass">
+        <i class="pi pi-book mr-2"></i>
+        <span class="font-medium text-lg">Seguimiento de Horas</span>
+      </router-link>
+    </li>
+  </ul>
+</div>
+
+
+          
 
 
 

@@ -286,8 +286,9 @@ const cargarRegistroAsistenciaAbierto = async () => {
     const hoy = new Date();
     // Se envía la fecha en formato ISO (considerando UTC)
     const response = await fetch(
-      `${API}/registros/abierto?usuarioxPeriodoId=${usuarioXPeriodoId.value}&fecha=${hoy.toISOString()}`
-    );
+  `${API}/registros/abierto?usuarioxPeriodoId=${usuarioXPeriodoId.value}&fecha=${hoy.toISOString()}&modalidad=Presencial`
+);
+
     console.log("Registro abierto:", response);
     if (response.ok) {
       const data = await response.json();
@@ -326,25 +327,6 @@ async function cargarHorarioCompleto() {
   }
 }
 
-/* Cargar horario virtual (si aplica) */
-async function cargarHorarioVirtual() {
-  if (!usuarioXPeriodoId.value) return;
-  try {
-    const url = `${API}/horarioEstudiantes/completo?periodoId=${periodoActual.value.periodo.Periodo_ID}&area=${encodeURIComponent(area.value)}`;
-    const res = await fetch(url);
-    const todosHorarios = res.ok ? await res.json() : [];
-    // Filtrar por el Internal_ID del estudiante
-    const horEstudiante = todosHorarios.filter((h: any) => h.Internal_ID === cedula.value);
-    const virtual = horEstudiante.find((h: any) => h.Horario_Modalidad === 'Virtual');
-    if (virtual) {
-      // Actualizar una variable (no se muestra en esta vista, pero se puede usar para comparar si es necesario)
-      // Por ejemplo, se asigna a una variable reactiva "horarioVirtual" (ya definida arriba)
-      // ...
-    }
-  } catch (error) {
-    console.error("Error al cargar horario virtual:", error);
-  }
-}
 
 /* CALCULAR HORARIO PROGRAMADO: Computed que usa el horario completo y el día actual */
 const scheduledTimeUTC = computed(() => {

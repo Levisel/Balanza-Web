@@ -20,16 +20,15 @@
   placeholder="Área"
   class="w-60"
 />
-
+<InputText
+        v-model="busquedaCedula"
+        placeholder="Buscar por Cédula"
+        class="w-60"
+      />
       <InputText
         v-model="busquedaNombre"
         placeholder="Buscar por Nombre/Apellido"
         class="w-72"
-      />
-      <InputText
-        v-model="busquedaCedula"
-        placeholder="Buscar por Cédula"
-        class="w-60"
       />
       <Button
         label="Limpiar"
@@ -137,8 +136,8 @@
     <Dialog v-model:visible="dialogoCambioAdministrativo" header="Confirmar Cambio">
       <p>¿El cambio se realiza antes de iniciar registros de asistencia?</p>
       <template #footer>
-        <Button label="Antes de registros" class="p-button-secondary" @click="guardarHorario(true)" />
-        <Button label="Cambio Administrativo" class="p-button-danger" @click="guardarHorario(false)" />
+        <Button label="Antes de registros" class="p-button-secondary" @click="guardarHorario(false)" />
+        <Button label="Cambio Administrativo" class="p-button-danger" @click="guardarHorario(true)" />
       </template>
     </Dialog>
   </main>
@@ -349,6 +348,7 @@ async function cargarHorarioVirtual() {
     const horEstudiante = todosHorarios.filter((h: any) => h.Internal_ID === estudianteSeleccionado.value.usuario.Internal_ID)
     const virtual = horEstudiante.find((h: any) => h.Horario_Modalidad === 'Virtual')
     if (virtual) {
+      console.log('Horario virtual encontrado:', virtual)
       horarioActual.value = virtual
       horarioGuardado.value = true
       await asignarHorarioVirtualActual(virtual)
@@ -513,7 +513,7 @@ async function guardarHorario(esCambioAdministrativo: boolean) {
       url = `${API}/horarioEstudiantes/cambio-administrativo`
       body = JSON.stringify({
         usuarioXPeriodoId: usuarioXPeriodoId.value,
-        nuevoHorario: nuevoHorario
+        nuevosHorarios: [nuevoHorario]
       })
     } else {
       if (horarioActual.value && horarioActual.value.Horario_ID) {

@@ -125,6 +125,13 @@
     </div>
   </div>
 
+  <!-- Label informativo si tiene virtual -->
+<div class="pl-28 mt-1" v-if="horarioVirtual[dia.nombre]">
+  <span class="text-sm text-green-700">
+    Virtual: {{ horarioVirtual[dia.nombre].label }} ({{ horarioVirtual[dia.nombre].tipo }})
+  </span>
+</div>
+
   <!-- Botón agregar horario 2 -->
   <div
     v-if="horariosSeleccionados[dia.nombre].length === 1 && horariosSeleccionados[dia.nombre][0]"
@@ -171,24 +178,44 @@
       </template>
     </Dialog>
 
-    <!-- Modal: Confirmación de cambio administrativo / modificación -->
-    <Dialog v-model:visible="dialogoCambioAdministrativo" header="Confirmar Cambio">
-      <p>Seleccione el tipo de cambio:</p>
-      <template #footer>
-        <Button
-          label="Modificar (PUT)"
-          class="p-button-secondary"
-          @click="guardarHorario(false)"
-          tooltip="Actualizar únicamente el horario(s) modificado(s)"
-        />
-        <Button
-          label="Cambio Administrativo"
-          class="p-button-danger"
-          @click="guardarHorario(true)"
-          tooltip="Eliminar todos los horarios actuales y crear nuevos"
-        />
-      </template>
-    </Dialog>
+  <!-- Modal: Confirmación de cambio administrativo / modificación -->
+<Dialog v-model:visible="dialogoCambioAdministrativo" header="Confirmar Acción">
+  <div class="flex items-center justify-between mb-3">
+    <p class="text-base font-medium">¿Qué deseas hacer con el horario del estudiante?</p>
+    <Button
+      icon="pi pi-question-circle"
+      class="p-button-text p-button-sm"
+      @click="mostrarAyudaCambio = true"
+      tooltip="¿Cuál es la diferencia?"
+      tooltipOptions="{ position: 'top' }"
+    />
+  </div>
+  <template #footer>
+    <Button
+      label="Modificar (antes de registrar asistencia)"
+      class="p-button-secondary"
+      @click="guardarHorario(false)"
+    />
+    <Button
+      label="Cambio Administrativo (con historial)"
+      class="p-button-danger"
+      @click="guardarHorario(true)"
+    />
+  </template>
+</Dialog>
+
+<!-- Dialogo de Ayuda para el cambio -->
+<Dialog v-model:visible="mostrarAyudaCambio" header="¿Qué significa cada opción?">
+  <div class="text-sm leading-relaxed">
+    <p><strong>Modificar:</strong> Solo cambia los horarios actuales <em>si aún no se ha comenzado a registrar asistencia</em>.</p>
+    <p class="mt-2"><strong>Cambio Administrativo:</strong> Guarda un registro del horario anterior, lo deja como inactivo y crea uno nuevo. Ideal cuando ya hay registros de asistencia y necesitas cambiar los horarios sin perder historial.</p>
+  </div>
+  <template #footer>
+    <Button label="Entendido" class="p-button-primary" @click="mostrarAyudaCambio = false" />
+  </template>
+</Dialog>
+
+
   </main>
 </template>
 
@@ -224,6 +251,8 @@ const periodoSeleccionado = ref<Periodo | null>(null);
 const areaSeleccionada = ref<string | null>(null);
 const busquedaNombre = ref('');
 const busquedaCedula = ref('');
+const mostrarAyudaCambio = ref(false);
+
 
 /* CACHE DE PARÁMETROS */
 const parametroHorarioCache = {};
@@ -345,7 +374,12 @@ function limpiarHorarios() {
   usuarioXPeriodoId.value = null;
   tieneHorarioActual.value = false;
   cuposDisponibles.value = {};
-  diasSemana.value.forEach(dia => (dia.horarios = []));
+  horarioVirtual.value = {}; // Limpia los datos virtuales
+diasSemana.value.forEach(dia => {
+  dia.horarios = [];
+  horariosSeleccionados.value[dia.nombre] = []; // Limpia las selecciones visuales
+});
+
 }
 
 /* CARGAR HORARIOS DISPONIBLES */
@@ -413,39 +447,45 @@ async function cargarHorarios() {
 /* CARGAR HORARIO ACTUAL */
 async function cargarHorarioActual() {
   if (!usuarioXPeriodoId.value) return;
+
   try {
     const res = await fetch(`${API}/horarioEstudiantes/usuarioxperiodo/${usuarioXPeriodoId.value}`);
     if (!res.ok) return;
+
     const horarioData = await res.json();
-    console.log("Horario actual:", horarioData);
-    // Guardar en la variable global para usarla en la modificación (PUT)
-    horarioActual.value = horarioData;
+
+    // ✅ Filtrar solo modalidad presencial
+    const soloPresencial = Array.isArray(horarioData)
+      ? horarioData.filter((h: any) => h.Horario_Modalidad === "Presencial")
+      : [];
+
+    horarioActual.value = soloPresencial;
+    tieneHorarioActual.value = soloPresencial.length > 0;
+
     const days = ['Lunes', 'Martes', 'Miercoles', 'Jueves', 'Viernes'];
+
     for (const day of days) {
-      let registros = [];
-      if (Array.isArray(horarioData)) {
-        registros = horarioData.filter((h: any) => h[`Horario_Dia_${day}`]);
-      } else {
-        if (horarioData[`Horario_Dia_${day}`]) {
-          registros = [horarioData];
-        }
-      }
+      const registros = soloPresencial.filter((h: any) => h[`Horario_Dia_${day}`]);
       horariosSeleccionados.value[day] = [];
+
       for (const reg of registros) {
         const paramId = reg[`Horario_Dia_${day}`];
         if (!paramId) continue;
+
         const option = await asignarHorarioExistente(day, paramId);
         if (option) {
           horariosSeleccionados.value[day].push(option);
         }
       }
     }
+
     horarioGuardado.value = true;
     await nextTick();
   } catch (error) {
     console.error("Error al cargar el horario actual", error);
   }
 }
+
 
 // Función auxiliar para inyectar la opción "Tu horario actual"
 async function asignarHorarioExistente(dayName: string, paramId: number) {
@@ -475,11 +515,21 @@ function getOpcionesDia(dayName: string, tipoFiltrar: string | null) {
   const dayObj = diasSemana.value.find(d => d.nombre === dayName);
   if (!dayObj || !dayObj.horarios) return [];
   let opciones = dayObj.horarios.map((opt: any) => ({ ...opt }));
+
+  // Si hay un horario virtual, elimina ese turno
+  const tipoVirtual = horarioVirtual.value[dayName]?.tipo;
+  if (tipoVirtual) {
+    opciones = opciones.filter(op => op.tipo !== tipoVirtual);
+  }
+
+  // Además, si hay que filtrar un tipo (para evitar que se repita en segundo turno)
   if (tipoFiltrar) {
     opciones = opciones.filter(op => op.tipo !== tipoFiltrar);
   }
+
   return opciones;
 }
+
 
 /* MANEJO DE LOS HORARIOS: AGREGAR/QUITAR */
 function agregarSegundoHorario(dayName: string) {
@@ -506,7 +556,7 @@ async function guardarHorario(esCambioAdministrativo: boolean) {
   if (isGuardando.value) return;
   isGuardando.value = true;
 
-  // Armar dos registros: registro1 y registro2
+  // Armar los dos registros PRESENCIALES
   const registro1 = {
     UsuarioXPeriodo_ID: usuarioXPeriodoId.value,
     Horario_Modalidad: "Presencial",
@@ -516,6 +566,7 @@ async function guardarHorario(esCambioAdministrativo: boolean) {
     Horario_Dia_Jueves: null,
     Horario_Dia_Viernes: null
   };
+
   const registro2 = {
     UsuarioXPeriodo_ID: usuarioXPeriodoId.value,
     Horario_Modalidad: "Presencial",
@@ -526,7 +577,7 @@ async function guardarHorario(esCambioAdministrativo: boolean) {
     Horario_Dia_Viernes: null
   };
 
-  // Llenar los registros con la selección (usando la propiedad "value" de la opción)
+  // Llenar solo si hay selección
   for (const dia of diasSemana.value) {
     const sel = horariosSeleccionados.value[dia.nombre];
     if (sel[0]) {
@@ -537,20 +588,19 @@ async function guardarHorario(esCambioAdministrativo: boolean) {
     }
   }
 
-  // Armar arreglo de registros a guardar: siempre incluir registro1; incluir registro2 si tiene algún dato
+  // Solo se agregará registro2 si contiene algún valor válido
   const nuevosRegistros = [registro1];
   const registro2TieneDatos = Object.keys(registro2).some(key => {
     if (key === "UsuarioXPeriodo_ID" || key === "Horario_Modalidad") return false;
     return registro2[key] !== null;
   });
   if (registro2TieneDatos || (Array.isArray(horarioActual.value) && horarioActual.value.length > 1)) {
-  nuevosRegistros.push(registro2);
-}
-
+    nuevosRegistros.push(registro2);
+  }
 
   try {
     if (!horarioGuardado.value) {
-      // Si no existe horario actual, crear cada registro (POST)
+      // No existía un horario: se crea (POST)
       for (const reg of nuevosRegistros) {
         await fetch(`${API}/horarioEstudiantes`, {
           method: "POST",
@@ -561,9 +611,8 @@ async function guardarHorario(esCambioAdministrativo: boolean) {
       horarioGuardado.value = true;
       tieneHorarioActual.value = true;
     } else {
-      // Si ya existe, diferenciamos entre cambio administrativo y modificación
+      // Ya había horario presencial: PUT o cambio administrativo
       if (esCambioAdministrativo) {
-        // Cambio administrativo: se elimina todo y se crean nuevos registros
         await fetch(`${API}/horarioEstudiantes/cambio-administrativo`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -573,18 +622,16 @@ async function guardarHorario(esCambioAdministrativo: boolean) {
           })
         });
       } else {
-        // Modificación: se actualiza cada registro existente; si falta alguno, se crea
+        // Modificación por PUT
         if (Array.isArray(horarioActual.value)) {
           for (let i = 0; i < nuevosRegistros.length; i++) {
-            if (i < horarioActual.value.length && horarioActual.value[i] && horarioActual.value[i].Horario_ID) {
-              console.log("Actualizando registro:", nuevosRegistros[i]);
+            if (i < horarioActual.value.length && horarioActual.value[i]?.Horario_ID) {
               await fetch(`${API}/horarioEstudiantes/${horarioActual.value[i].Horario_ID}`, {
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(nuevosRegistros[i])
               });
             } else {
-              // Si no existe registro, se crea
               await fetch(`${API}/horarioEstudiantes`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -593,8 +640,8 @@ async function guardarHorario(esCambioAdministrativo: boolean) {
             }
           }
         } else {
-          // Caso de un único registro
-          if (horarioActual.value && horarioActual.value.Horario_ID) {
+          // Caso único registro
+          if (horarioActual.value?.Horario_ID) {
             await fetch(`${API}/horarioEstudiantes/${horarioActual.value.Horario_ID}`, {
               method: "PUT",
               headers: { "Content-Type": "application/json" },
@@ -610,6 +657,7 @@ async function guardarHorario(esCambioAdministrativo: boolean) {
         }
       }
     }
+
     toast.add({
       severity: "success",
       summary: "Horario Guardado",
@@ -617,13 +665,14 @@ async function guardarHorario(esCambioAdministrativo: boolean) {
       life: 3000
     });
   } catch (error: any) {
-    toast.add({ severity: "error", summary: "Error", detail: "No se pudo guardar el horario." });
     console.error("Error al guardarHorario:", error);
+    toast.add({ severity: "error", summary: "Error", detail: "No se pudo guardar el horario." });
   } finally {
     isGuardando.value = false;
     dialogoCambioAdministrativo.value = false;
   }
 }
+
 
 /* CALCULAR HORAS TOTALES */
 function calcularHorasTotales() {
@@ -631,8 +680,11 @@ function calcularHorasTotales() {
   for (const day in horariosSeleccionados.value) {
     for (const horario of horariosSeleccionados.value[day]) {
       if (!horario || !horario.label) continue;
+
+      // Validación: saltar si ya hay horario virtual ese día
+      if (horarioVirtual.value[day]) continue;
+
       const cleanLabel = horario.label.replace("Tu horario actual: ", "");
-      // Se asume formato "HH:MM - HH:MM (Tipo)"
       const [inicioStr, resto] = cleanLabel.split(" - ");
       const [finStr] = resto.split(" ");
       const inicio = parseInt(inicioStr.split(":")[0]);
@@ -642,6 +694,7 @@ function calcularHorasTotales() {
   }
   return total;
 }
+
 
 // Abrir modal de horario especial
 function abrirModalHorarioEspecial() {
@@ -710,7 +763,18 @@ async function validarYGuardar() {
   }
   if (!validarCupos()) return;
   // Muestra el diálogo de confirmación para elegir el tipo de cambio (PUT o administrativo)
-  dialogoCambioAdministrativo.value = true;
+  if (tieneHorarioActual.value) {
+  // ⚠️ Verifica si lo actual tiene registros presenciales, no virtuales
+  if (Array.isArray(horarioActual.value) && horarioActual.value.length > 0) {
+    dialogoCambioAdministrativo.value = true;
+  } else {
+    // No hay horarios presenciales, se hace POST directo
+    await guardarHorario(false);
+  }
+} else {
+  await guardarHorario(false);
+}
+
 }
 
 /* HORARIO ESPECIAL */
