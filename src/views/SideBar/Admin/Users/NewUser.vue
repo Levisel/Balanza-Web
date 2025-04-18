@@ -1,17 +1,17 @@
 <script setup lang="ts">
-import { computed, ref, watch } from "vue";
+import { computed, onMounted, ref, watch } from "vue";
 import { type Internal_User } from "@/ApiRoute";
 import { useToast } from "primevue/usetoast";
 import { API } from "@/ApiRoute";
 
 import InputMask from "primevue/inputmask";
 import InputText from "primevue/inputtext";
-import Select from 'primevue/select';
+import Select from "primevue/select";
 import Password from "primevue/password";
 import Button from "primevue/button";
 import axios from "axios";
 import type { boolean } from "zod";
-
+import { useSubjects } from "@/useSubjects";
 
 const toast = useToast();
 const selectedIdType = ref<string>("");
@@ -30,25 +30,15 @@ const internalUser = ref<Internal_User>({
   Internal_Status: "",
 });
 
-const types = ref([
-  { label: "Estudiante", value: "Estudiante" },
-  { label: "Administrador", value: "Administrador"},
-  { label: "Abogado", value: "Abogado"  },
-  { label: "Secretaría", value: "Secretaría" },
-  { label: "Conserje", value: "Conserje" },
-  { label: "Otro", value: "Otro" },
-]);
+const profileOptions = ref<{ name: string; value: string }[]>([]);
+axios.get(`${API}/profile`).then((response) => {
+  profileOptions.value = response.data.map((item: any) => ({
+    name: item.Profile_Name,
+    value: item.Profile_Name,
+  }));
+});
 
-const areas = ref([
-  { label: "Civil", value: "Civil" },
-  { label: "Penal", value: "Penal" },
-  {
-    label: "Familia, Niñez y Adolescencia",
-    value: "Familia, Niñez y Adolescencia",
-  },
-  { label: "Movilidad Humana", value: "Movilidad Humana" },
-  { label: "Trabajo Social", value: "Trabajo Social" },
-]);
+const { subjects: opcionesAreas, fetchSubjects } = useSubjects();
 
 const status = ref([
   { label: "Activo", value: "Activo" },
@@ -75,7 +65,7 @@ const resetLabels = () => {
 
 // Validar cédula
 
-  const validateID = (ID: string): boolean => {
+const validateID = (ID: string): boolean => {
   if (!/^\d{10}$/.test(ID)) return false; // Solo permite 10 dígitos numéricos
 
   const digits = ID.split("").map(Number);
@@ -97,12 +87,12 @@ const checkUserExists = async (): Promise<boolean> => {
   if (!internalUser.value.Internal_ID) {
     return false;
   }
-  
+
   try {
     const response = await axios.get<Internal_User>(
       `${API}/internal-user/${internalUser.value.Internal_ID}`
     );
-    
+
     if (response.data) {
       internalUser.value.Internal_ID = "";
       return true;
@@ -112,7 +102,8 @@ const checkUserExists = async (): Promise<boolean> => {
       toast.add({
         severity: "error",
         summary: "Error del servidor",
-        detail: "Ha ocurrido un error en el servidor. Por favor intenta más tarde.",
+        detail:
+          "Ha ocurrido un error en el servidor. Por favor intenta más tarde.",
         life: 3000,
       });
     }
@@ -125,12 +116,12 @@ const checkEmailExists = async (): Promise<boolean> => {
   if (!internalUser.value.Internal_Email) {
     return false;
   }
-  
+
   try {
     const response = await axios.get<Internal_User>(
       `${API}/internal-user/email/${internalUser.value.Internal_Email}`
     );
-    
+
     if (response.data) {
       internalUser.value.Internal_Email = "";
       return true;
@@ -140,7 +131,8 @@ const checkEmailExists = async (): Promise<boolean> => {
       toast.add({
         severity: "error",
         summary: "Error del servidor",
-        detail: "Ha ocurrido un error en el servidor. Por favor intenta más tarde.",
+        detail:
+          "Ha ocurrido un error en el servidor. Por favor intenta más tarde.",
         life: 3000,
       });
     }
@@ -155,23 +147,22 @@ watch(
     if (selectedIdType.value === "cedula" && nuevoValor.length === 10) {
       if (validateID(nuevoValor)) {
         checkUserExists().then((existe) => {
-        if (existe) {
+          if (existe) {
             toast.add({
-            severity: "warn",
-            summary: "Usuario ya existe",
-            detail: "Ya existe un usuario con la cédula ingresada.",
-            life: 3000,
-          });
-        } else {
-          toast.add({
-          severity: "success",
-          summary: "Cédula válida",
-          detail: "La cédula ingresada es correcta.",
-          life: 3000,
-           });
-        }
+              severity: "warn",
+              summary: "Usuario ya existe",
+              detail: "Ya existe un usuario con la cédula ingresada.",
+              life: 3000,
+            });
+          } else {
+            toast.add({
+              severity: "success",
+              summary: "Cédula válida",
+              detail: "La cédula ingresada es correcta.",
+              life: 3000,
+            });
+          }
         });
-        
       } else {
         toast.add({
           severity: "error",
@@ -191,20 +182,23 @@ watch(
     if (nuevoValor) {
       checkEmailExists().then((existe) => {
         if (existe) {
-            toast.add({
+          toast.add({
             severity: "warn",
             summary: "Correo ya existe",
             detail: "Ya existe un usuario con ese correo ingresado.",
             life: 3000,
           });
-        } 
-        });
+        }
+      });
     }
   }
 );
 
 const checkIdSize = (shouldShowToast: boolean = true): boolean => {
-  if (selectedIdType.value === "cedula" && internalUser.value.Internal_ID.length !== 10) {
+  if (
+    selectedIdType.value === "cedula" &&
+    internalUser.value.Internal_ID.length !== 10
+  ) {
     bandera.value = false;
     toast.add({
       severity: "warn",
@@ -213,13 +207,11 @@ const checkIdSize = (shouldShowToast: boolean = true): boolean => {
       life: 8000,
     });
     internalUser.value.Internal_ID = "";
-  }
-  else {
+  } else {
     bandera.value = true;
   }
   return bandera.value;
 };
-
 
 const onFormSubmit = async () => {
   // Make the API call
@@ -232,7 +224,7 @@ const onFormSubmit = async () => {
       Internal_Password: internalUser.value.Internal_Password,
       Internal_Type: internalUser.value.Internal_Type,
       Internal_Area: internalUser.value.Internal_Area,
-      Internal_Phone: internalUser.value.Internal_Phone.replace(/\D/g,""),
+      Internal_Phone: internalUser.value.Internal_Phone.replace(/\D/g, ""),
       Internal_Status: internalUser.value.Internal_Status,
     });
     // If the API returns a success message
@@ -390,6 +382,10 @@ const createPassword = () => {
     Math.floor(Math.random() * 100);
   internalUser.value.Internal_Password = password;
 };
+
+onMounted(() => {
+  fetchSubjects();
+});
 </script>
 
 <template>
@@ -412,8 +408,8 @@ const createPassword = () => {
                     v-model="selectedIdType"
                     :options="idOptions"
                     size="large"
-                    optionLabel="name"
-                    optionValue="value" 
+                    option-label="name"
+                    option-value="value"
                     class="w-full"
                     @change="internalUser.Internal_ID = ''"
                   />
@@ -487,13 +483,15 @@ const createPassword = () => {
                 class="w-full md:w-80"
                 mask="(999)-999-9999"
               />
-              <label for="telefono"><span class="text-red-500">*</span> Teléfono</label>
+              <label for="telefono"
+                ><span class="text-red-500">*</span> Teléfono</label
+              >
             </FloatLabel>
             <FloatLabel variant="on" class="w-full md:w-80">
               <Select
                 id="userArea"
                 v-model="internalUser.Internal_Area"
-                :options="areas"
+                :options="opcionesAreas"
                 optionLabel="label"
                 optionValue="value"
                 class="w-full"
@@ -517,8 +515,8 @@ const createPassword = () => {
               <Select
                 id="userType"
                 v-model="internalUser.Internal_Type"
-                :options="types"
-                optionLabel="label"
+                :options="profileOptions"
+                optionLabel="name"
                 optionValue="value"
                 class="w-full"
                 size="large"
@@ -573,13 +571,13 @@ const createPassword = () => {
 
     <div class="mt-6 text-center mb-10">
       <Button
-      @click="$router.push('/Usuarios')"
-      label="Regresar"
-      severity="contrast"
-       class="w-full md:w-auto bg-blue-600 hover:bg-blue-700 text-white mt-10 mr-10"
-       icon="pi pi-arrow-circle-left"
+        @click="$router.push('/Usuarios')"
+        label="Regresar"
+        severity="contrast"
+        class="w-full md:w-auto bg-blue-600 hover:bg-blue-700 text-white mt-10 mr-10"
+        icon="pi pi-arrow-circle-left"
       />
-      
+
       <Button
         type="submit"
         label="Crear Usuario"
