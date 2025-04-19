@@ -1674,9 +1674,20 @@ const updateFormWithConsultation = async (
       (option) => option.value === String(data.Init_CaseStatus)
     ) || null;
   initOffice.value = data.Init_Office;
-  initDate.value = new Date(data.Init_Date);
+  const utcInitDate = new Date(data.Init_Date);
+  // Adjust by the local timezone offset to keep the original date parts
+  utcInitDate.setMinutes(utcInitDate.getMinutes() + utcInitDate.getTimezoneOffset());
+  initDate.value = utcInitDate;
+
   if (data.Init_EndDate) {
-    initEndDate.value = new Date(data.Init_EndDate);
+    // Parse the UTC date string
+    const utcEndDate = new Date(data.Init_EndDate);
+    // Adjust by the local timezone offset
+    utcEndDate.setMinutes(utcEndDate.getMinutes() + utcEndDate.getTimezoneOffset());
+    initEndDate.value = utcEndDate;
+  }
+  else {
+    initEndDate.value = null; // Set to null if no end date is provided
   }
   initClientType.value =
     initClientTypeOptions.value.find(
@@ -3942,7 +3953,7 @@ const getActivityStatusSeverity = (status: string) => {
                       :options="initCaseStatusOptions"
                       size="large"
                       optionLabel="name"
-                      class="w-full"
+                      class="w-full max-w-48"
                       :class="
                         !doesUserRequestOp && doesUserExist
                           ? 'mouse pointer-events-none'
