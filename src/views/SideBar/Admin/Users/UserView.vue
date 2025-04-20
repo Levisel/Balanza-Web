@@ -160,6 +160,8 @@ axios.get(`${API}/profile`).then((response) => {
   }));
 });
 
+const defaultAvatar = '/src/components/icons/default-user.png'; 
+
 // Función para asignar la clase de color al Tag según el estado
 const getSeverity = (status: string) => {
   switch (status) {
@@ -194,7 +196,6 @@ onMounted(() => {
       :rows="10"
       dataKey="Internal_ID"
       filterDisplay="menu"
-      size="large"
       removableSort
       :globalFilterFields="[
         'Internal_ID',
@@ -230,6 +231,17 @@ onMounted(() => {
         </div>
       </template>
       <template #empty> No hay usuarios registrados </template>
+
+      <Column  
+      >
+      <template #body="{ data }">
+        <Avatar
+          :image="data.Internal_Picture || defaultAvatar"
+          :size="'xlarge'"
+          shape="circle"
+        />
+      </template>
+    </Column>
 
       <Column
         field="Internal_ID"

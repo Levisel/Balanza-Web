@@ -12,6 +12,7 @@ interface User {
   area: string;
   phone: string;
   status: string;
+  picture: string;
 }
 
 export const useAuthStore = defineStore("auth", {
@@ -20,6 +21,7 @@ export const useAuthStore = defineStore("auth", {
   }),
   getters: {
     isAuthenticated: (state) => state.user !== null,
+    userProfilePicture: (state) => state.user?.picture || '/src/components/icons/default-user.png', 
   },
   actions: {
     async verifySession() {
@@ -36,5 +38,11 @@ export const useAuthStore = defineStore("auth", {
       const response = await axios.post(`${API}/logout`);
       if (response.status === 200) router.push({ name: "Login" });
     },
+    async updateProfilePictureUrl(newUrl: string) {
+      if (this.user) {
+          this.user.picture = newUrl;
+      }
+  },
+    
   },
 });

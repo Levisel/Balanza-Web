@@ -15,6 +15,14 @@ const router = useRouter();
 const authStore = useAuthStore();
 const menu = ref();
 
+
+const userAvatar = computed(() => {
+   const defaultAvatar = '/src/components/icons/default-user.png'; 
+   console.log("User Avatar:", authStore.user?.picture);
+   return authStore.user?.picture || defaultAvatar;
+   
+});
+
 //User Menu Items
 const items = ref([
   {
@@ -1008,7 +1016,7 @@ const vistaHorariosPersonalClass = computed(() => [
       </main>
       <!-- Pie de página con Avatar -->
       <footer class="mt-auto p-4">
-        <hr class="mb-5 border-t border-gray-300" />
+        <hr class="mb-3 border-t border-gray-300" />
         <div class="flex items-center justify-between mb-2">
           <!-- Grupo de avatar y nombre -->
           <div class="flex items-center gap-4">
@@ -1020,11 +1028,12 @@ const vistaHorariosPersonalClass = computed(() => [
               aria-controls="overlay_menu"
             >
               <Avatar
-                image="https://primefaces.org/cdn/primevue/images/avatar/amyelsner.png"
+                :image="userAvatar"
                 class="mr-3"
                 shape="circle"
+                size="large"
               />
-              <span class="inline-flex flex-col items-start">
+              <span class="inline-flex flex-col items-start mt-1">
                 <span class="font-bold">
                   {{ authStore.user?.name }}
                 </span>
@@ -1096,5 +1105,8 @@ i {
 }
 .pi-chevron-down {
   font-size: 1.2rem;
+}
+.p-avatar img { /* Asegura que la imagen dentro del avatar se muestre correctamente */
+    object-fit: cover;
 }
 </style>

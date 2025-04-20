@@ -12,6 +12,7 @@ export interface Internal_User {
     Internal_Area: string;
     Internal_Phone: string;
     Internal_Status: string;
+    Internal_Picture: string;
 }
 // 📌 Internal User (The external user that requires the consultation service)
 export interface User {

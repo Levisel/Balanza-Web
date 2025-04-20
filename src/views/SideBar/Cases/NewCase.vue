@@ -2270,7 +2270,6 @@ const editUserConsultation = async () => {
     Init_ClientType: initClientType.value?.value,
     Init_Subject: initSubject.value?.value,
     Init_Lawyer: initLawyer.value?.value,
-    Init_Date: initDate.value ? initDate.value.toISOString().split("T")[0] : "",
     Init_EndDate: initEndDate.value
       ? initEndDate.value.toISOString().split("T")[0]
       : null,
@@ -2297,6 +2296,17 @@ const editUserConsultation = async () => {
   if (initSocialWork.value === false) {
     consultationData.Init_SocialWork = false;
     consultationData.Init_MandatorySW = false;
+  }
+
+  //Verificamos que la fecha de fin no sea menor a la fecha de inicio
+  if (initEndDate.value && initEndDate.value < initDate.value) {
+    toast.add({
+      severity: "error",
+      summary: "Error",
+      detail: "La fecha de fin no puede ser menor a la fecha de inicio.",
+      life: 4000,
+    });
+    return;
   }
 
   console.log("Datos enviados:", JSON.stringify(consultationData, null, 2));
@@ -3826,7 +3836,7 @@ const getActivityStatusSeverity = (status: string) => {
         <div
           v-if="isAsesoriasTab"
           class="flex justify-between items-center w-full"
-          :class="authStore.user?.type == 'Estudiante' ? 'ml-266' : 'ml-0'"
+          :class="authStore.user?.type == 'Estudiante' || authStore.user?.type == 'Abogado' ? 'ml-266' : 'ml-0'"
         >
           <!-- Checkbox -->
           <div
@@ -3901,7 +3911,7 @@ const getActivityStatusSeverity = (status: string) => {
               aria-label="Nueva Ficha"
               :disabled="!doesUserExist || isSaveButtonDisabled"
             />
-            <div v-if="authStore.user?.type !== 'Estudiante'">
+            <div v-if="authStore.user?.type !== 'Estudiante' && authStore.user?.type !== 'Abogado'">
               <Button
                 icon="pi pi-file-edit"
                 @click="requestEditConsultation()"
