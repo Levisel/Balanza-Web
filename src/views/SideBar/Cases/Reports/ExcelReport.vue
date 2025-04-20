@@ -64,6 +64,28 @@ const downloadExcelConsultationReport = async () => {
     return;
   }
 
+  //We check if the start date is greater than the end date
+  if (startDate.value > endDate.value) {
+    toast.add({
+      severity: "warn",
+      summary: "Advertencia",
+      detail: "La fecha de inicio no puede ser mayor que la fecha de fin",
+      life: 3000,
+    });
+    return;
+  }
+  //We check if the start date is less than the end date
+  if (startDate.value < endDate.value) {
+    toast.add({
+      severity: "warn",
+      summary: "Advertencia",
+      detail: "La fecha de inicio no puede ser menor que la fecha de fin",
+      life: 3000,
+    });
+    return;
+  }
+
+
   const formatDate = (date: Date | null): string => {
     if (!date) return '';
     // Ensure month and day are two digits
@@ -163,6 +185,28 @@ const downloadExcelActivityReport = async () => {
     return;
   }
 
+  //We check if the start date is greater than the end date
+  if (startDate.value > endDate.value) {
+    toast.add({
+      severity: "warn",
+      summary: "Advertencia",
+      detail: "La fecha de inicio no puede ser mayor que la fecha de fin",
+      life: 3000,
+    });
+    return;
+  }
+  //We check if the start date is less than the end date
+  if (startDate.value < endDate.value) {
+    toast.add({
+      severity: "warn",
+      summary: "Advertencia",
+      detail: "La fecha de inicio no puede ser menor que la fecha de fin",
+      life: 3000,
+    });
+    return;
+  }
+
+
   const formatDate = (date: Date | null): string => {
     if (!date) return '';
     // Ensure month and day are two digits
@@ -261,6 +305,29 @@ const downloadExcelSWReport = async () => {
     });
     return;
   }
+
+  //We check if the start date is greater than the end date
+  if (startDate.value > endDate.value) {
+    toast.add({
+      severity: "warn",
+      summary: "Advertencia",
+      detail: "La fecha de inicio no puede ser mayor que la fecha de fin",
+      life: 3000,
+    });
+    return;
+  }
+  //We check if the start date is less than the end date
+  if (startDate.value < endDate.value) {
+    toast.add({
+      severity: "warn",
+      summary: "Advertencia",
+      detail: "La fecha de inicio no puede ser menor que la fecha de fin",
+      life: 3000,
+    });
+    return;
+  }
+
+  
 
   const formatDate = (date: Date | null): string => {
     if (!date) return '';
