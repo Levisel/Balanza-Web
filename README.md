@@ -62,7 +62,7 @@ Balanza-Web/
     - `vue`, `@vue/compiler-sfc`
     - `vite`
     - `vue-tsc`
-    - `primevue`, `primeicons` (Biblioteca de componentes U.I)
+    - `primevue`, `primeicons` (Biblioteca de componentes U.I, usando la versión 4.2.5)
     - `pinia` (Manejo de estados, incluyendo la sesión activa del usuario)
     - `vue-router`
     - `xlsx`, `file-saver` (para exportación/importación de Excel)
@@ -125,7 +125,7 @@ npm run build
 
 - [Documentación de Vite](https://vite.dev/config/)
 - [Documentación de Vue 3](https://vuejs.org/)
-- [PrimeVue](https://www.primefaces.org/primevue/)
+- [PrimeVue](https://primevue.org/)
 
 ---
 
