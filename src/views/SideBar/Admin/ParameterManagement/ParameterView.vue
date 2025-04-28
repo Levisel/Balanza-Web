@@ -700,6 +700,7 @@ onMounted(() => {
         v-model="selectedTableLabel"
         v-tooltip="'Selecciona'"
         filter
+        resetFilterOnHide
         :options="Object.values(tableNames)"
         placeholder="Seleccione una tabla"
         @change="loadData"

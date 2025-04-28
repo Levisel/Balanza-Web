@@ -43,6 +43,7 @@ import CreateActivities from "@/views/SideBar/Cases/CreateActivities.vue";
 //Cases -> Reports
 import FeasibilityReport from "@/views/SideBar/Cases/Reports/FeasibilityReport.vue";
 import FileReport from "@/views/SideBar/Cases/Reports/FileReport.vue";
+import ExcelReport from "@/views/SideBar/Cases/Reports/ExcelReport.vue";
 
 //----------------------------------------------------------------------------------------------------------------//
 //ENTRANCE CONTROL
@@ -170,6 +171,11 @@ const routes: Array<RouteRecordRaw> = [
         path: "ReporteDeDocumentos",
         name: "FileReport",
         component: FileReport,
+      },
+      {
+        path: "ReporteDeExcel",
+        name: "ExcelReport",
+        component: ExcelReport,
       },
       // Entrance Control
       // Cronogram

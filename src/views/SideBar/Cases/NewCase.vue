@@ -30,7 +30,7 @@ import Knob from "primevue/knob";
 import Editor from "primevue/editor";
 import ConfirmDialog from "primevue/confirmdialog";
 import ProgressSpinner from "primevue/progressspinner";
-import ToggleSwitch from 'primevue/toggleswitch';
+import ToggleSwitch from "primevue/toggleswitch";
 import axios from "axios";
 
 const route = useRoute();
@@ -531,18 +531,24 @@ const loadActivityDocument = async (activityID: number) => {
       const contentType = response.headers["content-type"] || "application/pdf"; // Tipo de archivo
       const blob = new Blob([response.data], { type: contentType }); // Crear un blob a partir del buffer
       urlDocument.value = URL.createObjectURL(blob); // Crear una URL para visualizar el archivo
-      watchAttentionSheetDialog.value = true; // Mostrar el diálogo con el documento
-    } else {
-      throw new Error(`Error al obtener el documento: ${response.statusText}`);
+      watchActivityDocumentDialog.value = true; // Mostrar el diálogo con el documento
     }
-  } catch (error) {
-    toast.add({
-      severity: "error",
-      summary: "Error",
-      detail: "No se pudo cargar el documento PDF.",
-      life: 3000,
-    });
-    console.error("Error al cargar el documento PDF:", error);
+  } catch (error: any) {
+    if (error.response.status === 404) {
+      toast.add({
+        severity: "warn",
+        summary: "Atención",
+        detail: "La actividad no tiene documento registrado.",
+        life: 3000,
+      });
+    } else {
+      toast.add({
+        severity: "error",
+        summary: "Error",
+        detail: "No se pudo cargar el documento PDF.",
+        life: 3000,
+      });
+    }
   }
 };
 
@@ -598,223 +604,222 @@ const userBirthDate = ref<Date | null>(null);
 const userNationality = ref<{ name: string; value: string } | null>(null);
 const countriesList = ref<{ name: string; value: string }[]>([]);
 const originalCountries = ref([
-{ name: "Ecuador", code: "EC" },
-    { name: "Afganistán", code: "AF" },
-    { name: "Albania", code: "AL" },
-    { name: "Alemania", code: "DE" },
-    { name: "Andorra", code: "AD" },
-    { name: "Angola", code: "AO" },
-    { name: "Antigua y Barbuda", code: "AG" },
-    { name: "Arabia Saudita", code: "SA" },
-    { name: "Argelia", code: "DZ" },
-    { name: "Argentina", code: "AR" },
-    { name: "Armenia", code: "AM" },
-    { name: "Aruba", code: "AW" },
-    { name: "Australia", code: "AU" },
-    { name: "Austria", code: "AT" },
-    { name: "Azerbaiyán", code: "AZ" },
-  
-    { name: "Bahamas", code: "BS" },
-    { name: "Baréin", code: "BH" },
-    { name: "Bangladesh", code: "BD" },
-    { name: "Birmania", code: "MM" },
-    { name: "Barbados", code: "BB" },
-    { name: "Bielorrusia", code: "BY" },
-    { name: "Bélgica", code: "BE" },
-    { name: "Belice", code: "BZ" },
-    { name: "Bermudas", code: "BM" },
-    { name: "Bután", code: "BT" },
-    { name: "Bolivia", code: "BO" },
-    { name: "Bosnia y Herzegovina", code: "BA" },
-    { name: "Botsuana", code: "BW" },
-    { name: "Brasil", code: "BR" },
-    { name: "Brunéi", code: "BN" },
-    { name: "Bulgaria", code: "BG" },
-    { name: "Burkina Faso", code: "BF" },
-    { name: "Burundi", code: "BI" },
-  
-    { name: "Cabo Verde", code: "CV" },
-    { name: "Camboya", code: "KH" },
-    { name: "Camerún", code: "CM" },
-    { name: "Canadá", code: "CA" },
-    { name: "Catar", code: "QA" },
-    { name: "Chad", code: "TD" },
-    { name: "Chile", code: "CL" },
-    { name: "China", code: "CN" },
-    { name: "Chipre", code: "CY" },
-    { name: "Colombia", code: "CO" },
-    { name: "Comoras", code: "KM" },
-    { name: "Costa de Marfil", code: "CI" },
-    { name: "Costa Rica", code: "CR" },
-    { name: "Croacia", code: "HR" },
-    { name: "Cuba", code: "CU" },
-    { name: "Curazao", code: "CW" },
-  
-    { name: "Dinamarca", code: "DK" },
-    { name: "Dominica", code: "DM" },
-    { name: "República Dominicana", code: "DO" },
-  
+  { name: "Ecuador", code: "EC" },
+  { name: "Afganistán", code: "AF" },
+  { name: "Albania", code: "AL" },
+  { name: "Alemania", code: "DE" },
+  { name: "Andorra", code: "AD" },
+  { name: "Angola", code: "AO" },
+  { name: "Antigua y Barbuda", code: "AG" },
+  { name: "Arabia Saudita", code: "SA" },
+  { name: "Argelia", code: "DZ" },
+  { name: "Argentina", code: "AR" },
+  { name: "Armenia", code: "AM" },
+  { name: "Aruba", code: "AW" },
+  { name: "Australia", code: "AU" },
+  { name: "Austria", code: "AT" },
+  { name: "Azerbaiyán", code: "AZ" },
 
-    { name: "Egipto", code: "EG" },
-    { name: "El Salvador", code: "SV" },
-    { name: "Emiratos Árabes Unidos", code: "AE" },
-    { name: "Eritrea", code: "ER" },
-    { name: "Eslovaquia", code: "SK" },
-    { name: "Eslovenia", code: "SI" },
-    { name: "España", code: "ES" },
-    { name: "Estados Unidos", code: "US" },
-    { name: "Estonia", code: "EE" },
-    { name: "Esuatini", code: "SZ" },
-    { name: "Etiopía", code: "ET" },
-  
-    { name: "Filipinas", code: "PH" },
-    { name: "Finlandia", code: "FI" },
-    { name: "Francia", code: "FR" },
-  
-    { name: "Gabón", code: "GA" },
-    { name: "Gambia", code: "GM" },
-    { name: "Georgia", code: "GE" },
-    { name: "Ghana", code: "GH" },
-    { name: "Granada", code: "GD" },
-    { name: "Guatemala", code: "GT" },
-    { name: "Guayana", code: "GY" },
-    { name: "Guinea", code: "GN" },
-    { name: "Guinea-Bisáu", code: "GW" },
-    { name: "Guinea Ecuatorial", code: "GQ" },
-  
-    { name: "Haití", code: "HT" },
-    { name: "Honduras", code: "HN" },
-    { name: "Hungría", code: "HU" },
-  
-    { name: "India", code: "IN" },
-    { name: "Indonesia", code: "ID" },
-    { name: "Inglaterra", code: "GB" },
-    { name: "Irán", code: "IR" },
-    { name: "Irak", code: "IQ" },
-    { name: "Irlanda", code: "IE" },
-    { name: "Islandia", code: "IS" },
-    { name: "Israel", code: "IL" },
-    { name: "Italia", code: "IT" },
-  
-    { name: "Jamaica", code: "JM" },
-    { name: "Japón", code: "JP" },
-    { name: "Jordania", code: "JO" },
-  
-    { name: "Kazajistán", code: "KZ" },
-    { name: "Kenia", code: "KE" },
-    { name: "Kirguistán", code: "KG" },
-    { name: "Kiribati", code: "KI" },
-    { name: "Corea del Norte", code: "KP" },
-    { name: "Corea del Sur", code: "KR" },
-    { name: "Kuwait", code: "KW" },
-  
-    { name: "Laos", code: "LA" },
-    { name: "Letonia", code: "LV" },
-    { name: "Líbano", code: "LB" },
-    { name: "Liberia", code: "LR" },
-    { name: "Libia", code: "LY" },
-    { name: "Liechtenstein", code: "LI" },
-    { name: "Lituania", code: "LT" },
-    { name: "Luxemburgo", code: "LU" },
-  
-    { name: "Macedonia del Norte", code: "MK" },
-    { name: "Madagascar", code: "MG" },
-    { name: "Malaui", code: "MW" },
-    { name: "Malasia", code: "MY" },
-    { name: "Maldivas", code: "MV" },
-    { name: "Malí", code: "ML" },
-    { name: "Malta", code: "MT" },
-    { name: "Islas Marshall", code: "MH" },
-    { name: "Mauritania", code: "MR" },
-    { name: "Mauricio", code: "MU" },
-    { name: "México", code: "MX" },
-    { name: "Micronesia", code: "FM" },
-    { name: "Moldavia", code: "MD" },
-    { name: "Mónaco", code: "MC" },
-    { name: "Mongolia", code: "MN" },
-    { name: "Montenegro", code: "ME" },
-    { name: "Marruecos", code: "MA" },
-    { name: "Mozambique", code: "MZ" },
-  
-    { name: "Namibia", code: "NA" },
-    { name: "Nauru", code: "NR" },
-    { name: "Nepal", code: "NP" },
-    { name: "Países Bajos", code: "NL" },
-    { name: "Nueva Zelanda", code: "NZ" },
-    { name: "Nicaragua", code: "NI" },
-    { name: "Níger", code: "NE" },
-    { name: "Nigeria", code: "NG" },
-  
-    { name: "Isla de Man", code: "IM" },
-    { name: "Noruega", code: "NO" },
-  
-    { name: "Omán", code: "OM" },
-  
-    { name: "Pakistán", code: "PK" },
-    { name: "Palaos", code: "PW" },
-    { name: "Palestina", code: "PS" },
-    { name: "Panamá", code: "PA" },
-    { name: "Papúa Nueva Guinea", code: "PG" },
-    { name: "Paraguay", code: "PY" },
-    { name: "Perú", code: "PE" },
-    { name: "Polonia", code: "PL" },
-    { name: "Portugal", code: "PT" },
-  
-    { name: "Ruanda", code: "RW" },
-  
-    { name: "Rumania", code: "RO" },
-    { name: "Rusia", code: "RU" },
-  
-    { name: "San Cristóbal y Nieves", code: "KN" },
-    { name: "Santa Lucía", code: "LC" },
-    { name: "San Vicente y las Granadinas", code: "VC" },
-    { name: "San Marino", code: "SM" },
-    { name: "Santo Tomé y Príncipe", code: "ST" },
-    { name: "Senegal", code: "SN" },
-    { name: "Serbia", code: "RS" },
-    { name: "Seychelles", code: "SC" },
-    { name: "Sierra Leona", code: "SL" },
-    { name: "Singapur", code: "SG" },
-    { name: "Siria", code: "SY" },
-    { name: "Somalia", code: "SO" },
-    { name: "Sudáfrica", code: "ZA" },
-    { name: "Sudán", code: "SD" },
-    { name: "Sudán del Sur", code: "SS" },
-    { name: "Suecia", code: "SE" },
-    { name: "Suiza", code: "CH" },
-  
-    { name: "Surinam", code: "SR" },
-  
-    { name: "Tailandia", code: "TH" },
-    { name: "Tanzania", code: "TZ" },
-    { name: "Timor Oriental", code: "TL" },
-    { name: "Togo", code: "TG" },
-    { name: "Tonga", code: "TO" },
-    { name: "Trinidad y Tobago", code: "TT" },
-    { name: "Túnez", code: "TN" },
-    { name: "Turkmenistán", code: "TM" },
-    { name: "Turquía", code: "TR" },
-    { name: "Tuvalu", code: "TV" },
-  
-    { name: "Uganda", code: "UG" },
-    { name: "Ucrania", code: "UA" },
-    { name: "Uruguay", code: "UY" },
-    { name: "Uzbekistán", code: "UZ" },
-  
-    { name: "Vanuatu", code: "VU" },
-    { name: "Ciudad del Vaticano", code: "VA" },
-    { name: "Venezuela", code: "VE" },
-    { name: "Vietnam", code: "VN" },
-  
-    { name: "Islas Vírgenes Británicas", code: "VG" },
-    { name: "Islas Vírgenes de los Estados Unidos", code: "VI" },
-  
-    { name: "Wallis y Futuna", code: "WF" },
-  
-    { name: "Yemen", code: "YE" },
-  
-    { name: "Zambia", code: "ZM" },
-    { name: "Zimbabue", code: "ZW" },
+  { name: "Bahamas", code: "BS" },
+  { name: "Baréin", code: "BH" },
+  { name: "Bangladesh", code: "BD" },
+  { name: "Birmania", code: "MM" },
+  { name: "Barbados", code: "BB" },
+  { name: "Bielorrusia", code: "BY" },
+  { name: "Bélgica", code: "BE" },
+  { name: "Belice", code: "BZ" },
+  { name: "Bermudas", code: "BM" },
+  { name: "Bután", code: "BT" },
+  { name: "Bolivia", code: "BO" },
+  { name: "Bosnia y Herzegovina", code: "BA" },
+  { name: "Botsuana", code: "BW" },
+  { name: "Brasil", code: "BR" },
+  { name: "Brunéi", code: "BN" },
+  { name: "Bulgaria", code: "BG" },
+  { name: "Burkina Faso", code: "BF" },
+  { name: "Burundi", code: "BI" },
+
+  { name: "Cabo Verde", code: "CV" },
+  { name: "Camboya", code: "KH" },
+  { name: "Camerún", code: "CM" },
+  { name: "Canadá", code: "CA" },
+  { name: "Catar", code: "QA" },
+  { name: "Chad", code: "TD" },
+  { name: "Chile", code: "CL" },
+  { name: "China", code: "CN" },
+  { name: "Chipre", code: "CY" },
+  { name: "Colombia", code: "CO" },
+  { name: "Comoras", code: "KM" },
+  { name: "Costa de Marfil", code: "CI" },
+  { name: "Costa Rica", code: "CR" },
+  { name: "Croacia", code: "HR" },
+  { name: "Cuba", code: "CU" },
+  { name: "Curazao", code: "CW" },
+
+  { name: "Dinamarca", code: "DK" },
+  { name: "Dominica", code: "DM" },
+  { name: "República Dominicana", code: "DO" },
+
+  { name: "Egipto", code: "EG" },
+  { name: "El Salvador", code: "SV" },
+  { name: "Emiratos Árabes Unidos", code: "AE" },
+  { name: "Eritrea", code: "ER" },
+  { name: "Eslovaquia", code: "SK" },
+  { name: "Eslovenia", code: "SI" },
+  { name: "España", code: "ES" },
+  { name: "Estados Unidos", code: "US" },
+  { name: "Estonia", code: "EE" },
+  { name: "Esuatini", code: "SZ" },
+  { name: "Etiopía", code: "ET" },
+
+  { name: "Filipinas", code: "PH" },
+  { name: "Finlandia", code: "FI" },
+  { name: "Francia", code: "FR" },
+
+  { name: "Gabón", code: "GA" },
+  { name: "Gambia", code: "GM" },
+  { name: "Georgia", code: "GE" },
+  { name: "Ghana", code: "GH" },
+  { name: "Granada", code: "GD" },
+  { name: "Guatemala", code: "GT" },
+  { name: "Guayana", code: "GY" },
+  { name: "Guinea", code: "GN" },
+  { name: "Guinea-Bisáu", code: "GW" },
+  { name: "Guinea Ecuatorial", code: "GQ" },
+
+  { name: "Haití", code: "HT" },
+  { name: "Honduras", code: "HN" },
+  { name: "Hungría", code: "HU" },
+
+  { name: "India", code: "IN" },
+  { name: "Indonesia", code: "ID" },
+  { name: "Inglaterra", code: "GB" },
+  { name: "Irán", code: "IR" },
+  { name: "Irak", code: "IQ" },
+  { name: "Irlanda", code: "IE" },
+  { name: "Islandia", code: "IS" },
+  { name: "Israel", code: "IL" },
+  { name: "Italia", code: "IT" },
+
+  { name: "Jamaica", code: "JM" },
+  { name: "Japón", code: "JP" },
+  { name: "Jordania", code: "JO" },
+
+  { name: "Kazajistán", code: "KZ" },
+  { name: "Kenia", code: "KE" },
+  { name: "Kirguistán", code: "KG" },
+  { name: "Kiribati", code: "KI" },
+  { name: "Corea del Norte", code: "KP" },
+  { name: "Corea del Sur", code: "KR" },
+  { name: "Kuwait", code: "KW" },
+
+  { name: "Laos", code: "LA" },
+  { name: "Letonia", code: "LV" },
+  { name: "Líbano", code: "LB" },
+  { name: "Liberia", code: "LR" },
+  { name: "Libia", code: "LY" },
+  { name: "Liechtenstein", code: "LI" },
+  { name: "Lituania", code: "LT" },
+  { name: "Luxemburgo", code: "LU" },
+
+  { name: "Macedonia del Norte", code: "MK" },
+  { name: "Madagascar", code: "MG" },
+  { name: "Malaui", code: "MW" },
+  { name: "Malasia", code: "MY" },
+  { name: "Maldivas", code: "MV" },
+  { name: "Malí", code: "ML" },
+  { name: "Malta", code: "MT" },
+  { name: "Islas Marshall", code: "MH" },
+  { name: "Mauritania", code: "MR" },
+  { name: "Mauricio", code: "MU" },
+  { name: "México", code: "MX" },
+  { name: "Micronesia", code: "FM" },
+  { name: "Moldavia", code: "MD" },
+  { name: "Mónaco", code: "MC" },
+  { name: "Mongolia", code: "MN" },
+  { name: "Montenegro", code: "ME" },
+  { name: "Marruecos", code: "MA" },
+  { name: "Mozambique", code: "MZ" },
+
+  { name: "Namibia", code: "NA" },
+  { name: "Nauru", code: "NR" },
+  { name: "Nepal", code: "NP" },
+  { name: "Países Bajos", code: "NL" },
+  { name: "Nueva Zelanda", code: "NZ" },
+  { name: "Nicaragua", code: "NI" },
+  { name: "Níger", code: "NE" },
+  { name: "Nigeria", code: "NG" },
+
+  { name: "Isla de Man", code: "IM" },
+  { name: "Noruega", code: "NO" },
+
+  { name: "Omán", code: "OM" },
+
+  { name: "Pakistán", code: "PK" },
+  { name: "Palaos", code: "PW" },
+  { name: "Palestina", code: "PS" },
+  { name: "Panamá", code: "PA" },
+  { name: "Papúa Nueva Guinea", code: "PG" },
+  { name: "Paraguay", code: "PY" },
+  { name: "Perú", code: "PE" },
+  { name: "Polonia", code: "PL" },
+  { name: "Portugal", code: "PT" },
+
+  { name: "Ruanda", code: "RW" },
+
+  { name: "Rumania", code: "RO" },
+  { name: "Rusia", code: "RU" },
+
+  { name: "San Cristóbal y Nieves", code: "KN" },
+  { name: "Santa Lucía", code: "LC" },
+  { name: "San Vicente y las Granadinas", code: "VC" },
+  { name: "San Marino", code: "SM" },
+  { name: "Santo Tomé y Príncipe", code: "ST" },
+  { name: "Senegal", code: "SN" },
+  { name: "Serbia", code: "RS" },
+  { name: "Seychelles", code: "SC" },
+  { name: "Sierra Leona", code: "SL" },
+  { name: "Singapur", code: "SG" },
+  { name: "Siria", code: "SY" },
+  { name: "Somalia", code: "SO" },
+  { name: "Sudáfrica", code: "ZA" },
+  { name: "Sudán", code: "SD" },
+  { name: "Sudán del Sur", code: "SS" },
+  { name: "Suecia", code: "SE" },
+  { name: "Suiza", code: "CH" },
+
+  { name: "Surinam", code: "SR" },
+
+  { name: "Tailandia", code: "TH" },
+  { name: "Tanzania", code: "TZ" },
+  { name: "Timor Oriental", code: "TL" },
+  { name: "Togo", code: "TG" },
+  { name: "Tonga", code: "TO" },
+  { name: "Trinidad y Tobago", code: "TT" },
+  { name: "Túnez", code: "TN" },
+  { name: "Turkmenistán", code: "TM" },
+  { name: "Turquía", code: "TR" },
+  { name: "Tuvalu", code: "TV" },
+
+  { name: "Uganda", code: "UG" },
+  { name: "Ucrania", code: "UA" },
+  { name: "Uruguay", code: "UY" },
+  { name: "Uzbekistán", code: "UZ" },
+
+  { name: "Vanuatu", code: "VU" },
+  { name: "Ciudad del Vaticano", code: "VA" },
+  { name: "Venezuela", code: "VE" },
+  { name: "Vietnam", code: "VN" },
+
+  { name: "Islas Vírgenes Británicas", code: "VG" },
+  { name: "Islas Vírgenes de los Estados Unidos", code: "VI" },
+
+  { name: "Wallis y Futuna", code: "WF" },
+
+  { name: "Yemen", code: "YE" },
+
+  { name: "Zambia", code: "ZM" },
+  { name: "Zimbabue", code: "ZW" },
 ]);
 axios.get(`${API}/countries`).then((response) => {
   countriesList.value = response.data.map((item: any) => {
@@ -841,13 +846,17 @@ axios.get(`${API}/ethnicities`).then((response) => {
   }));
 });
 
-const userProvince = ref<{ name: string; value: string; id: number } | null>(null);
-const userProvinceOptions = ref<{ name: string; value: string; id: number }[]>([]);
+const userProvince = ref<{ name: string; value: string; id: number } | null>(
+  null
+);
+const userProvinceOptions = ref<{ name: string; value: string; id: number }[]>(
+  []
+);
 axios.get(`${API}/provinces`).then((response) => {
   userProvinceOptions.value = response.data.map((item: any) => ({
     name: item.Province_Name,
     value: item.Province_Name, // Keep value as name for submission
-    id: item.Province_ID // Store the ID for filtering
+    id: item.Province_ID, // Store the ID for filtering
   }));
 });
 
@@ -867,7 +876,7 @@ const fetchCitiesByProvince = async (provinceId: number | null) => {
       userCityOptions.value = response.data.map((item: any) => ({
         name: item.City_Name,
         value: item.City_Name, // Keep value as name for submission
-        id: item.City_ID // Store the ID if needed elsewhere, though not strictly necessary for filtering here
+        id: item.City_ID, // Store the ID if needed elsewhere, though not strictly necessary for filtering here
       }));
     } catch (error) {
       console.error("Error fetching cities:", error);
@@ -875,7 +884,8 @@ const fetchCitiesByProvince = async (provinceId: number | null) => {
       toast.add({
         severity: "error",
         summary: "Error",
-        detail: "No se pudieron cargar las ciudades para la provincia seleccionada.",
+        detail:
+          "No se pudieron cargar las ciudades para la provincia seleccionada.",
         life: 3000,
       });
     }
@@ -887,10 +897,9 @@ const fetchCitiesByProvince = async (provinceId: number | null) => {
 watch(userProvince, (newProvince) => {
   // Avoid fetching cities during the initial reset or if the watcher triggers unexpectedly
   if (!isResettingConsultation.value) {
-     fetchCitiesByProvince(newProvince?.id ?? null);
+    fetchCitiesByProvince(newProvince?.id ?? null);
   }
 });
-
 
 //DATOS DE CONTACTO Y CONTACTO DE REFERENCIA
 const userPhone = ref("");
@@ -898,8 +907,12 @@ const userEmail = ref("");
 const userAddress = ref("");
 
 // Modify userSector ref to store Zone_FK
-const userSector = ref<{ name: string; value: string; zoneId: number } | null>(null);
-const userSectorOptions = ref<{ name: string; value: string; zoneId: number }[]>([]);
+const userSector = ref<{ name: string; value: string; zoneId: number } | null>(
+  null
+);
+const userSectorOptions = ref<
+  { name: string; value: string; zoneId: number }[]
+>([]);
 
 // Modify userZone ref to store Zone_ID
 const userZone = ref<{ name: string; value: string; id: number } | null>(null);
@@ -910,7 +923,7 @@ axios.get(`${API}/zone`).then((response) => {
   userZoneOptions.value = response.data.map((item: any) => ({
     name: item.Zone_Name,
     value: item.Zone_Name, // Keep value as name for submission
-    id: item.Zone_ID // Store the ID
+    id: item.Zone_ID, // Store the ID
   }));
   // After zones are loaded, fetch sectors
   fetchSectors();
@@ -922,24 +935,26 @@ const fetchSectors = async () => {
     userSectorOptions.value = response.data.map((item: any) => ({
       name: item.Sector_Name,
       value: item.Sector_Name, // Keep value as name for submission
-      zoneId: item.Zone_FK // Store the foreign key linking to Zone
+      zoneId: item.Zone_FK, // Store the foreign key linking to Zone
     }));
   } catch (error) {
     console.error("Error fetching sectors:", error);
     userSectorOptions.value = [];
-     toast.add({
-        severity: "error",
-        summary: "Error",
-        detail: "No se pudieron cargar los sectores.",
-        life: 3000,
-      });
+    toast.add({
+      severity: "error",
+      summary: "Error",
+      detail: "No se pudieron cargar los sectores.",
+      life: 3000,
+    });
   }
 };
 
 watch(userSector, (newSector) => {
   if (newSector) {
     // Find the corresponding zone in userZoneOptions based on the sector's zoneId
-    const correspondingZone = userZoneOptions.value.find(zone => zone.id === newSector.zoneId);
+    const correspondingZone = userZoneOptions.value.find(
+      (zone) => zone.id === newSector.zoneId
+    );
     userZone.value = correspondingZone || null; // Set the zone automatically
   } else {
     userZone.value = null; // Reset zone if sector is cleared
@@ -1112,15 +1127,13 @@ const userHealthDocumentsName = ref("");
 
 const initCode = ref("");
 const internalID = authStore.user?.id;
-//Detectamos si init social work cambia de estado a true o false 
-
+//Detectamos si init social work cambia de estado a true o false
 
 const initSocialWork = ref<boolean>(false);
 const initMandatorySW = ref<boolean>(false);
 
 const initCaseStatusOptions = ref<{ name: string; value: string }[]>([]);
 const initCaseStatus = ref<{ name: string; value: string } | null>(null);
-
 
 axios.get(`${API}/case-status`).then((response) => {
   initCaseStatusOptions.value = response.data.map((item: any) => ({
@@ -1130,7 +1143,9 @@ axios.get(`${API}/case-status`).then((response) => {
 
   // Seleccionar "Activo" si existe en la lista, si no, tomar la primera opción
   initCaseStatus.value =
-    initCaseStatusOptions.value.find((option) => option.value === "Sin iniciar") ||
+    initCaseStatusOptions.value.find(
+      (option) => option.value === "Sin iniciar"
+    ) ||
     initCaseStatusOptions.value[0] ||
     null;
 });
@@ -1150,13 +1165,17 @@ axios.get(`${API}/client-types`).then((response) => {
 });
 
 // Modify initSubject ref to store ID for filtering
-const initSubject = ref<{ name: string; value: string; id: number } | null>(null);
-const initSubjectOptions = ref<{ name: string; value: string; id: number }[]>([]);
+const initSubject = ref<{ name: string; value: string; id: number } | null>(
+  null
+);
+const initSubjectOptions = ref<{ name: string; value: string; id: number }[]>(
+  []
+);
 axios.get(`${API}/subjects`).then((response) => {
   initSubjectOptions.value = response.data.map((item: any) => ({
     name: item.Subject_Name,
     value: item.Subject_Name, // Keep value as name for submission
-    id: item.Subject_ID // Store the ID for filtering
+    id: item.Subject_ID, // Store the ID for filtering
   }));
 });
 
@@ -1192,9 +1211,9 @@ const fetchTopicsBySubject = async (subjectId: number | null) => {
 // Watch for changes in the selected subject
 watch(initSubject, (newSubject) => {
   // Avoid fetching topics during the initial reset or if the watcher triggers unexpectedly
-   if (!isResettingConsultation.value) {
-      fetchTopicsBySubject(newSubject?.id ?? null);
-   }
+  if (!isResettingConsultation.value) {
+    fetchTopicsBySubject(newSubject?.id ?? null);
+  }
 });
 
 const initService = ref<{ name: string; value: string } | null>(null);
@@ -1505,10 +1524,9 @@ const fetchUser = async () => {
       );
       userCity.value = foundCity || null;
     } else {
-       userCityOptions.value = []; // Ensure city options are empty if province wasn't found
-       userCity.value = null;
+      userCityOptions.value = []; // Ensure city options are empty if province wasn't found
+      userCity.value = null;
     }
-
 
     userCityOptions.value.forEach((option) => {
       if (option.name === selectedUser.value.User_City) {
@@ -1656,9 +1674,20 @@ const updateFormWithConsultation = async (
       (option) => option.value === String(data.Init_CaseStatus)
     ) || null;
   initOffice.value = data.Init_Office;
-  initDate.value = new Date(data.Init_Date);
+  const utcInitDate = new Date(data.Init_Date);
+  // Adjust by the local timezone offset to keep the original date parts
+  utcInitDate.setMinutes(utcInitDate.getMinutes() + utcInitDate.getTimezoneOffset());
+  initDate.value = utcInitDate;
+
   if (data.Init_EndDate) {
-    initEndDate.value = new Date(data.Init_EndDate);
+    // Parse the UTC date string
+    const utcEndDate = new Date(data.Init_EndDate);
+    // Adjust by the local timezone offset
+    utcEndDate.setMinutes(utcEndDate.getMinutes() + utcEndDate.getTimezoneOffset());
+    initEndDate.value = utcEndDate;
+  }
+  else {
+    initEndDate.value = null; // Set to null if no end date is provided
   }
   initClientType.value =
     initClientTypeOptions.value.find(
@@ -1680,14 +1709,9 @@ const updateFormWithConsultation = async (
     );
     initTopic.value = foundTopic || null;
   } else {
-     initTopicOptions.value = []; // Ensure topic options are empty if subject wasn't found
-     initTopic.value = null;
+    initTopicOptions.value = []; // Ensure topic options are empty if subject wasn't found
+    initTopic.value = null;
   }
-
-
-
-
-
 
   initService.value =
     initServiceOptions.value.find(
@@ -1984,9 +2008,9 @@ const createInitialConsultation = async () => {
   formData.append("Init_Lawyer", initLawyer.value?.value || "");
   formData.append("Init_Referral", initReferral.value?.value || "");
   formData.append("Init_Notes", initNotes.value || "");
-  if(initMandatorySW.value !== true){
+  if (initMandatorySW.value !== true) {
     formData.append("Init_Type", "Por Revisar");
-  }else{
+  } else {
     formData.append("Init_Type", "En espera");
   }
 
@@ -2099,9 +2123,9 @@ const newUserConsultation = async () => {
     Init_Type: "",
     User_ID: userID.value,
   };
-  if(initMandatorySW.value !== true){
+  if (initMandatorySW.value !== true) {
     consultationData.Init_Type = "Por Revisar";
-  }else{
+  } else {
     consultationData.Init_Type = "En espera";
   }
 
@@ -2246,7 +2270,6 @@ const editUserConsultation = async () => {
     Init_ClientType: initClientType.value?.value,
     Init_Subject: initSubject.value?.value,
     Init_Lawyer: initLawyer.value?.value,
-    Init_Date: initDate.value ? initDate.value.toISOString().split("T")[0] : "",
     Init_EndDate: initEndDate.value
       ? initEndDate.value.toISOString().split("T")[0]
       : null,
@@ -2264,18 +2287,28 @@ const editUserConsultation = async () => {
   };
   if (initService.value?.value === "Patrocinio") {
     consultationData.Init_Type = "Por Asignar";
-  }   else if (initMandatorySW.value === true) {
+  } else if (initMandatorySW.value === true) {
     consultationData.Init_Type = "En espera";
   } else {
     consultationData.Init_Type = "Por Revisar";
   }
 
-  if(initSocialWork.value === false){
+  if (initSocialWork.value === false) {
     consultationData.Init_SocialWork = false;
     consultationData.Init_MandatorySW = false;
   }
 
-  
+  //Verificamos que la fecha de fin no sea menor a la fecha de inicio
+  if (initEndDate.value && initEndDate.value < initDate.value) {
+    toast.add({
+      severity: "error",
+      summary: "Error",
+      detail: "La fecha de fin no puede ser menor a la fecha de inicio.",
+      life: 4000,
+    });
+    return;
+  }
+
   console.log("Datos enviados:", JSON.stringify(consultationData, null, 2));
 
   try {
@@ -2757,6 +2790,28 @@ function getInternalUserName(internalId: string): string {
     return "Cargando...";
   }
 }
+
+// Add refs for DataTable pagination
+const activityFirst = ref(0);
+const activityRows = ref(7); // Or any default number of rows per page
+
+// ...existing code...
+
+// Function to get status severity for Tag component
+const getActivityStatusSeverity = (status: string) => {
+  switch (status?.toLowerCase()) {
+    case "completada":
+      return "success";
+    case "en progreso":
+      return "info";
+    case "pendiente":
+      return "warning";
+    case "cancelada":
+      return "danger";
+    default:
+      return "secondary";
+  }
+};
 </script>
 
 <template>
@@ -2913,13 +2968,14 @@ function getInternalUserName(internalId: string): string {
             />
             <label for="userBirthDate">Fecha de nacimiento</label>
           </FloatLabel>
-          <!-- Nacionalidad (sin modificar íconos) -->
+          <!-- Nacionalidad -->
           <FloatLabel variant="on" class="w-full">
             <Select
               v-model="userNationality"
               inputId="nacionalidad"
               :options="countriesList"
               filter
+              resetFilterOnHide
               optionLabel="name"
               size="large"
               placeholder="ㅤ"
@@ -2968,6 +3024,7 @@ function getInternalUserName(internalId: string): string {
               optionLabel="name"
               class="w-full"
               filter
+              resetFilterOnHide
               :disabled="areInputsDisabled"
             />
             <label for="userEthnicity">Etnia</label>
@@ -2981,6 +3038,7 @@ function getInternalUserName(internalId: string): string {
               :options="userProvinceOptions"
               size="large"
               filter
+              resetFilterOnHide
               optionLabel="name"
               class="w-full"
               :disabled="areInputsDisabled"
@@ -2996,6 +3054,7 @@ function getInternalUserName(internalId: string): string {
               :options="userCityOptions"
               size="large"
               filter
+              resetFilterOnHide
               optionLabel="name"
               class="w-full"
               :disabled="areInputsDisabled"
@@ -3053,6 +3112,7 @@ function getInternalUserName(internalId: string): string {
                 optionLabel="name"
                 class="w-full md:w-48"
                 filter
+                resetFilterOnHide
                 :disabled="areInputsDisabled"
               />
               <label for="userSector">Sector</label>
@@ -3177,6 +3237,7 @@ function getInternalUserName(internalId: string): string {
               optionLabel="name"
               class="w-full"
               filter
+              resetFilterOnHide
               :disabled="areInputsDisabled"
             />
             <label for="userAcademicInstruction">Instrucción</label>
@@ -3192,6 +3253,7 @@ function getInternalUserName(internalId: string): string {
               optionLabel="name"
               class="w-full"
               filter
+              resetFilterOnHide
               :disabled="areInputsDisabled"
             />
             <label for="userProfession">Ocupación</label>
@@ -3238,6 +3300,7 @@ function getInternalUserName(internalId: string): string {
               optionLabel="name"
               class="w-full"
               filter
+              resetFilterOnHide
               :disabled="areInputsDisabled"
             />
             <label for="userIncomeLevel">Nivel de ingresos</label>
@@ -3253,6 +3316,7 @@ function getInternalUserName(internalId: string): string {
               optionLabel="name"
               class="w-full"
               filter
+              resetFilterOnHide
               :disabled="areInputsDisabled"
             />
             <label for="userIncomeLevel">Ingresos Familiares</label>
@@ -3265,6 +3329,7 @@ function getInternalUserName(internalId: string): string {
               :options="userFamilyGroupOptions"
               optionLabel="name"
               filter
+              resetFilterOnHide
               :disabled="areInputsDisabled"
               size="large"
               :maxSelectedLabels="3"
@@ -3394,6 +3459,7 @@ function getInternalUserName(internalId: string): string {
               :options="userOwnAssetsOptions"
               optionLabel="name"
               filter
+              resetFilterOnHide
               :disabled="areInputsDisabled"
               size="large"
               :maxSelectedLabels="2"
@@ -3518,6 +3584,7 @@ function getInternalUserName(internalId: string): string {
                   optionLabel="name"
                   class="w-full"
                   filter
+                  resetFilterOnHide
                   :disabled="areInputsDisabled"
                 />
                 <label for="userCatastrophicIllness"
@@ -3750,7 +3817,7 @@ function getInternalUserName(internalId: string): string {
                 severity="contrast"
                 class="w-full md:w-70 md:h-12"
                 :disabled="areInputsDisabled"
-              />                    
+              />
             </div>
           </transition>
         </div>
@@ -3769,45 +3836,52 @@ function getInternalUserName(internalId: string): string {
         <div
           v-if="isAsesoriasTab"
           class="flex justify-between items-center w-full"
-          :class="authStore.user?.type == 'Estudiante' ? 'ml-266' : 'ml-0'"
+          :class="authStore.user?.type == 'Estudiante' || authStore.user?.type == 'Abogado' ? 'ml-266' : 'ml-0'"
         >
-<!-- Checkbox -->
-<div
-  v-if="authStore.user?.type == 'Administrador' || authStore.user?.type == 'Coordinador'"
-  class="flex items-center gap-4 ml-120"
->
-  <div class="flex items-center gap-2">
-    <Checkbox
-      v-model="initSocialWork"
-      binary
-      :disabled="areInputsDisabled"
-      :class="
-        !doesUserRequestOp && doesUserExist
-          ? 'mouse pointer-events-none'
-          : ''
-      "
-    />
-    <label class="whitespace-nowrap">¿Trabajo Social?</label>
-  </div>
-  <transition
-    enter-active-class="transition ease-out duration-300"
-    enter-from-class="opacity-0 transform -translate-y-2"
-    enter-to-class="opacity-100 transform translate-y-0"
-    leave-active-class="transition ease-in duration-300"
-    leave-from-class="opacity-100 transform translate-y-0"
-    leave-to-class="opacity-0 transform -translate-y-2"
-  >
-    <div v-show="initSocialWork" class="flex items-center gap-2">
-      <ToggleSwitch v-model="initMandatorySW" v-tooltip.bottom="'Selecciona'"       :disabled="areInputsDisabled"
-      :class="
-        !doesUserRequestOp && doesUserExist
-          ? 'mouse pointer-events-none'
-          : ''
-      " />
-      <label class="whitespace-nowrap">¿Obligatorio?</label>
-    </div>
-  </transition>
-</div>
+          <!-- Checkbox -->
+          <div
+            v-if="
+              authStore.user?.type == 'Administrador' ||
+              authStore.user?.type == 'Coordinador'
+            "
+            class="flex items-center gap-4 ml-120"
+          >
+            <div class="flex items-center gap-2">
+              <Checkbox
+                v-model="initSocialWork"
+                binary
+                :disabled="areInputsDisabled"
+                :class="
+                  !doesUserRequestOp && doesUserExist
+                    ? 'mouse pointer-events-none'
+                    : ''
+                "
+              />
+              <label class="whitespace-nowrap">¿Trabajo Social?</label>
+            </div>
+            <transition
+              enter-active-class="transition ease-out duration-300"
+              enter-from-class="opacity-0 transform -translate-y-2"
+              enter-to-class="opacity-100 transform translate-y-0"
+              leave-active-class="transition ease-in duration-300"
+              leave-from-class="opacity-100 transform translate-y-0"
+              leave-to-class="opacity-0 transform -translate-y-2"
+            >
+              <div v-show="initSocialWork" class="flex items-center gap-2">
+                <ToggleSwitch
+                  v-model="initMandatorySW"
+                  v-tooltip.bottom="'Selecciona'"
+                  :disabled="areInputsDisabled"
+                  :class="
+                    !doesUserRequestOp && doesUserExist
+                      ? 'mouse pointer-events-none'
+                      : ''
+                  "
+                />
+                <label class="whitespace-nowrap">¿Obligatorio?</label>
+              </div>
+            </transition>
+          </div>
 
           <!-- Botones alineados al final -->
           <div class="flex items-center gap-2 mr-10">
@@ -3837,7 +3911,7 @@ function getInternalUserName(internalId: string): string {
               aria-label="Nueva Ficha"
               :disabled="!doesUserExist || isSaveButtonDisabled"
             />
-            <div v-if="authStore.user?.type !== 'Estudiante'">
+            <div v-if="authStore.user?.type !== 'Estudiante' && authStore.user?.type !== 'Abogado'">
               <Button
                 icon="pi pi-file-edit"
                 @click="requestEditConsultation()"
@@ -3889,12 +3963,12 @@ function getInternalUserName(internalId: string): string {
                       :options="initCaseStatusOptions"
                       size="large"
                       optionLabel="name"
-                      class="w-full"
+                      class="w-full max-w-48"
                       :class="
-                      !doesUserRequestOp && doesUserExist
-                        ? 'mouse pointer-events-none'
-                        : ''
-                    "
+                        !doesUserRequestOp && doesUserExist
+                          ? 'mouse pointer-events-none'
+                          : ''
+                      "
                       :disabled="areInputsDisabled"
                     />
                     <label for="initCaseStatus">Estado</label>
@@ -3979,6 +4053,7 @@ function getInternalUserName(internalId: string): string {
                   "
                   size="large"
                   filter
+                  resetFilterOnHide
                   :disabled="areInputsDisabled"
                 />
                 <label for="initSubject">Área/Materia</label>
@@ -3998,6 +4073,7 @@ function getInternalUserName(internalId: string): string {
                   "
                   size="large"
                   filter
+                  resetFilterOnHide
                   :disabled="areInputsDisabled"
                 />
                 <label for="initTopic">Tema</label>
@@ -4113,9 +4189,10 @@ function getInternalUserName(internalId: string): string {
                     areInputsDisabled ? 'select-none opacity-50' : '',
                   ]"
                   :readonly="
-                    ((!doesUserExist && areInputsDisabled) ||
-                    (!doesUserRequestNewConsultation) &&
-                      (!doesUserRequestEditConsultation && doesUserExist))
+                    (!doesUserExist && areInputsDisabled) ||
+                    (!doesUserRequestNewConsultation &&
+                      !doesUserRequestEditConsultation &&
+                      doesUserExist)
                   "
                 >
                   <template v-slot:toolbar>
@@ -4317,68 +4394,118 @@ function getInternalUserName(internalId: string): string {
 
         <TabPanel value="1">
           <div class="p-6">
-            <!-- Mostrar actividades si existen -->
-            <div class="scroll-container">
-              <div
-                v-if="doesActivityExist"
-                class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
-              >
-                <Card
-                  v-for="activity in selectedActivity"
-                  :key="activity.Activity_ID"
-                  style="
-                    width: 100%;
-                    overflow: hidden;
-                    box-shadow: 0 0 8px #ccc;
-                  "
+            <DataTable
+              :value="selectedActivity"
+              :paginator="true"
+              :rows="activityRows"
+              size="large"
+              removableSort
+              v-model:first="activityFirst"
+              :globalFilterFields="[
+                'Activity_Name',
+                'Activity_Location',
+                'Activity_Status',
+              ]"
+              v-if="doesActivityExist"
+              class="p-datatable-sm"
+              responsiveLayout="scroll"
+            >
+              <template #empty>
+                <div
+                  class="flex flex-row justify-center items-center h-40 font-medium text-2xl gap-2 mt-50"
                 >
-                  <template #title>{{ activity.Activity_Name }}</template>
-                  <template #subtitle
-                    >Fecha:
-                    {{
-                      new Date(
-                        activity.Activity_Start_Date
-                      ).toLocaleDateString()
-                    }}</template
-                  >
-                  <template #content>
-                    <p class="m-0">
-                      <strong>Estudiante: </strong
-                      >{{ getInternalUserName(activity.Internal_ID) }}
-                      <br />
-                      <strong>Lugar: </strong>{{ activity.Activity_Location }}
-                      <br />
-                      <strong>Abogado: </strong>
-                      {{ activity.Activity_Judge_Name || "No asignado" }}
-                      <br />
-                      <strong>Estado: </strong> {{ activity.Activity_Status }}
-                    </p>
-                  </template>
-                  <template #footer>
-                    <div class="flex gap-4 mt-4 justify-center items-center">
-                      <Button
-                        label="Ver información"
-                        severity="info"
-                        icon="pi pi-info-circle"
-                        class="w-full md:w-50"
-                        @click="showActivityDetails(activity)"
-                      />
-                    </div>
-                  </template>
-                </Card>
-              </div>
+                  <p>Este caso aún no tiene actividades registradas 🔎</p>
+                </div>
+              </template>
 
-              <!-- Mensaje si no hay actividades -->
-              <div
-                v-else
-                class="flex flex-row justify-center items-center h-40 font-medium text-2xl gap-2 mt-50"
+              <Column
+                field="Activity_ID"
+                header="Código"
+                sortable
+                style="min-width: 8rem"
+              ></Column>
+              <Column
+                field="Activity_Name"
+                header="Nombre"
+                sortable
+                style="min-width: 12rem"
+              ></Column>
+              <Column
+                header="Estudiante"
+                sortable
+                sortField="Internal_ID"
+                style="min-width: 12rem"
               >
-                <p>Este caso aún no tiene actividades registradas 🔎</p>
-              </div>
+                <template #body="slotProps">
+                  {{ getInternalUserName(slotProps.data.Internal_ID) }}
+                </template>
+              </Column>
+              <Column
+                field="Activity_Location"
+                header="Lugar"
+                sortable
+                style="min-width: 10rem"
+              ></Column>
+              <Column
+                header="Abogado"
+                sortable
+                sortField="Activity_Judge_Name"
+                style="min-width: 12rem"
+              >
+                <template #body="slotProps">
+                  {{ slotProps.data.Activity_Judge_Name || "No asignado" }}
+                </template>
+              </Column>
+              <Column
+                field="Activity_Status"
+                header="Estado"
+                sortable
+                style="min-width: 10rem"
+              >
+                <template #body="slotProps">
+                  <Tag
+                    :value="slotProps.data.Activity_Status"
+                    :severity="
+                      getActivityStatusSeverity(slotProps.data.Activity_Status)
+                    "
+                  />
+                </template>
+              </Column>
+              <Column
+                header="Acciones"
+                style="min-width: 10rem; text-align: center"
+              >
+                <template #body="slotProps">
+                  <div class="flex justify-center items-center gap-2">
+                    <Button
+                      @click="showActivityDetails(slotProps.data)"
+                      v-tooltip.bottom="'Ver Detalles'"
+                      icon="pi pi-eye"
+                      severity="info"
+                      rounded
+                    />
+                    <Button
+                      @click="loadActivityDocument(slotProps.data.Activity_ID)"
+                      v-tooltip.bottom="'Ver documento'"
+                      icon="pi pi-file-pdf"
+                      severity="contrast"
+                      rounded
+                    />
+                  </div>
+                </template>
+              </Column>
+            </DataTable>
+
+            <!-- Mensaje si no hay actividades (redundant if DataTable's empty template is used, but kept for safety) -->
+            <div
+              v-else
+              class="flex flex-row justify-center items-center h-40 font-medium text-2xl gap-2 mt-50"
+            >
+              <p>Este caso aún no tiene actividades registradas 🔎</p>
             </div>
           </div>
 
-          <!-- Diálogo para mostrar detalles de la actividad -->
+          <!-- Diálogo para mostrar detalles de la actividad (remains the same) -->
           <Dialog
             v-model:visible="activityDialogVisible"
             modal
@@ -4391,11 +4518,11 @@ function getInternalUserName(internalId: string): string {
               class="grid grid-cols-1 md:grid-cols-2 gap-4 text-lg"
             >
               <div>
-                <p class="mb-2">
+                <p class="mb-3">
                   <strong>📌 Nombre:</strong>
                   {{ selectedActivityDetails.Activity_Name }}
                 </p>
-                <p class="mb-2">
+                <p class="mb-3">
                   <strong>📅 Fecha:</strong>
                   {{
                     new Date(
@@ -4403,43 +4530,52 @@ function getInternalUserName(internalId: string): string {
                     ).toLocaleDateString()
                   }}
                 </p>
-                <p class="mb-2">
+                <p class="mb-3">
                   <strong>🕒 Hora:</strong>
                   {{ selectedActivityDetails.Activity_Start_Time }}
                 </p>
-                <p class="mb-2">
+                <p class="mb-3">
                   <strong>📍 Lugar:</strong>
                   {{ selectedActivityDetails.Activity_Location }}
                 </p>
-                <p class="mb-2">
+                <p class="mb-3">
                   <strong>⏳ Duración:</strong>
                   {{ selectedActivityDetails.Activity_Duration }}
                 </p>
-                <p class="mb-2">
+                <p class="mb-3">
                   <strong>🤝 Contraparte:</strong>
                   {{ selectedActivityDetails.Activity_Counterparty }}
                 </p>
               </div>
 
               <div>
-                <p class="mb-2">
+                <p class="mb-3">
                   <strong>🏛️ Juzgado:</strong>
                   {{ selectedActivityDetails.Activity_Judged }}
                 </p>
-                <p class="mb-2">
+                <p class="mb-3">
                   <strong>⚖️ Juez:</strong>
-                  {{ selectedActivityDetails.Activity_Judge_Name }}
+                  {{
+                    selectedActivityDetails.Activity_Judge_Name || "No asignado"
+                  }}
                 </p>
-                <p class="mb-2">
-                  <strong>📌 Estado:</strong>
-                  {{ selectedActivityDetails.Activity_Status }}
+                <p class="mb-3">
+                  <strong>📌 Estado: </strong>
+                  <Tag
+                    :value="selectedActivityDetails.Activity_Status"
+                    :severity="
+                      getActivityStatusSeverity(
+                        selectedActivityDetails.Activity_Status
+                      )
+                    "
+                  />
                 </p>
-                <p class="mb-2">
+                <p class="mb-3">
                   <strong>📁 Referencia:</strong>
                   {{ selectedActivityDetails.Activity_Reference_File }}
                 </p>
-                <p class="mb-2">
-                  <strong>⏱️ ¿A tiempo?:</strong>
+                <p class="mb-3">
+                  <strong>⏱️ ¿A tiempo?: </strong>
                   <span
                     :class="
                       selectedActivityDetails.Activity_OnTime
@@ -4450,15 +4586,6 @@ function getInternalUserName(internalId: string): string {
                     {{ selectedActivityDetails.Activity_OnTime ? "Sí" : "No" }}
                   </span>
                 </p>
-                <Button
-                  label="Ver documento"
-                  icon="pi pi-file-pdf"
-                  class="mt-4 w-full md:w-50"
-                  @click="
-                    loadActivityDocument(selectedActivityDetails.Activity_ID)
-                  "
-                  severity="contrast"
-                />
               </div>
             </div>
           </Dialog>
@@ -4508,58 +4635,42 @@ function getInternalUserName(internalId: string): string {
     </div>
   </div>
 
-   <!-- Dialog para visualizar el documento PDF de SALUD -->
-<Dialog
-            v-model:visible="watchHealthDocumentDialog"
-            modal
-            header="🏥🩺 Documento de Salud"
-            class="p-6 rounded-lg shadow-lg bg-white max-w-7xl w-full"
-          >
-            <iframe
-              :src="urlDocument"
-              class="w-full h-250"
-              frameborder="0"
-            ></iframe>
-          </Dialog>
-          <!-- Dialog para visualizar el documento PDF de EVIDENCIA -->
-          <Dialog
-            v-model:visible="watchEvidenceDocumentDialog"
-            modal
-            header="📋 Documento de Atención"
-            class="p-6 rounded-lg shadow-lg bg-white max-w-7xl w-full"
-          >
-            <iframe
-              :src="urlDocument"
-              class="w-full h-250"
-              frameborder="0"
-            ></iframe>
-          </Dialog>
-            <!-- Dialog para visualizar el documento PDF de Ficha de Atención -->
-            <Dialog
-            v-model:visible="watchAttentionSheetDialog"
-            modal
-            header="📂 Ficha de Atención"
-            class="p-6 rounded-lg shadow-lg bg-white max-w-7xl w-full"
-          >
-            <iframe
-              :src="urlDocument"
-              class="w-full h-250"
-              frameborder="0"
-            ></iframe>
-          </Dialog>
-            <!-- Dialog para visualizar el documento PDF de Actividades -->
-            <Dialog
-            v-model:visible="watchActivityDocumentDialog"
-            modal
-            header="📄 Actividad del Caso"
-            class="p-6 rounded-lg shadow-lg bg-white max-w-7xl w-full"
-          >
-            <iframe
-              :src="urlDocument"
-              class="w-full h-250"
-              frameborder="0"
-            ></iframe>
-          </Dialog>      
+  <!-- Dialog para visualizar el documento PDF de SALUD -->
+  <Dialog
+    v-model:visible="watchHealthDocumentDialog"
+    modal
+    header="🏥🩺 Documento de Salud"
+    class="p-6 rounded-lg shadow-lg bg-white max-w-7xl w-full"
+  >
+    <iframe :src="urlDocument" class="w-full h-250" frameborder="0"></iframe>
+  </Dialog>
+  <!-- Dialog para visualizar el documento PDF de EVIDENCIA -->
+  <Dialog
+    v-model:visible="watchEvidenceDocumentDialog"
+    modal
+    header="📋 Documento de Atención"
+    class="p-6 rounded-lg shadow-lg bg-white max-w-7xl w-full"
+  >
+    <iframe :src="urlDocument" class="w-full h-250" frameborder="0"></iframe>
+  </Dialog>
+  <!-- Dialog para visualizar el documento PDF de Ficha de Atención -->
+  <Dialog
+    v-model:visible="watchAttentionSheetDialog"
+    modal
+    header="📂 Ficha de Atención"
+    class="p-6 rounded-lg shadow-lg bg-white max-w-7xl w-full"
+  >
+    <iframe :src="urlDocument" class="w-full h-250" frameborder="0"></iframe>
+  </Dialog>
+  <!-- Dialog para visualizar el documento PDF de Actividades -->
+  <Dialog
+    v-model:visible="watchActivityDocumentDialog"
+    modal
+    header="💼 Actividad del Caso"
+    class="p-6 rounded-lg shadow-lg bg-white max-w-7xl w-full"
+  >
+    <iframe :src="urlDocument" class="w-full h-250" frameborder="0"></iframe>
+  </Dialog>
 
   <Dialog
     v-model:visible="watchAlertDialog"
