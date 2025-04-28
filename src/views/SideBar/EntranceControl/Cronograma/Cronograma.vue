@@ -60,48 +60,41 @@
   
 
     <!-- DataTable de Períodos -->
-    <DataTable
-      :value="periodosFiltrados"
-      paginator
-      :rows="10"
-      class="w-full max-w-6xl shadow-lg"
-      removableSort
-    >
-    
-      <Column field="PeriodoNombre" header="Nombre del Período" sortable />
-      <Column header="Fecha Inicio" sortable>
-        <template #body="slotProps">
-          {{ formatDate(slotProps.data.Periodo_Inicio) }}
-        </template>
-      </Column>
-      <Column header="Fecha Fin" sortable>
-        <template #body="slotProps">
-          {{ formatDate(slotProps.data.Periodo_Fin) }}
-        </template>
-      </Column>
-      <Column field="PeriodoTipo" header="Tipo" sortable />
-      <Column header="Acciones">
-        <template #body="slotProps">
-          <div class="flex gap-2">
-            <Button
-              icon="pi pi-pencil"
-              class="p-button-rounded p-button-warning"
-              @click="editarPeriodo(slotProps.data.Periodo_ID)"
-              tooltip="Editar"
-              tooltipOptions="{ position: 'top' }"
-            />
-            <Button
-              icon="pi pi-trash"
-              class="p-button-rounded p-button-danger"
-              @click="confirmarEliminacion(slotProps.data)"
-              tooltip="Eliminar"
-              tooltipOptions="{ position: 'top' }"
-            />
+   <DataTable :value="filteredPeriods" paginator :rows="10" class="w-full max-w-6xl shadow-lg" removableSort>
+  <Column field="Period_Name" header="Nombre del Período" sortable />
+  <Column header="Fecha Inicio" sortable>
+    <template #body="slotProps">
+      {{ formatDate(slotProps.data.Period_Start) }}
+    </template>
+  </Column>
+  <Column header="Fecha Fin" sortable>
+    <template #body="slotProps">
+      {{ formatDate(slotProps.data.Period_End) }}
+    </template>
+  </Column>
+  <Column field="Period_Type" header="Tipo" sortable />
+  <Column header="Acciones">
+    <template #body="slotProps">
+      <div class="flex gap-2">
+        <Button
+          icon="pi pi-pencil"
+          class="p-button-rounded p-button-warning"
+          @click="editPeriod(slotProps.data.Period_ID)"
+          tooltip="Editar"
+          tooltipOptions="{ position: 'top' }"
+        />
+        <Button
+          icon="pi pi-trash"
+          class="p-button-rounded p-button-danger"
+          @click="confirmDelete(slotProps.data)"
+          tooltip="Eliminar"
+          tooltipOptions="{ position: 'top' }"
+        />
+      </div>
+    </template>
+  </Column>
+</DataTable>
 
-          </div>
-        </template>
-      </Column>
-    </DataTable>
     <Dialog
   v-model:visible="mostrarDialogoEliminar"
   header="Confirmar Eliminación"
@@ -112,7 +105,7 @@
   <div class="p-4 text-center">
     <p class="text-lg">
       ¿Estás seguro de que deseas eliminar el período
-      <strong>{{ periodoAEliminar?.PeriodoNombre }}</strong>?
+      <strong>{{ periodoAEliminar?.Period_Name }}</strong>?
     </p>
   </div>
 
@@ -147,14 +140,14 @@ import DataTable from "primevue/datatable";
 import Column from "primevue/column";
 import Toast from "primevue/toast";
 import { useToast } from "primevue/usetoast";
-import { API, type Periodo } from  "@/ApiRoute";
+import { API, type Period } from  "@/ApiRoute";
 
 // Router y Toast
 const router = useRouter();
 const toast = useToast();
 
 // Estados reactivos
-const periodos = ref<Periodo[]>([]);
+const periods = ref<Period[]>([]);
 const filtroInicio = ref<string>(""); // Formato YYYY-MM-DD
 const filtroFin = ref<string>("");
 const busqueda = ref<string>("");
@@ -167,10 +160,10 @@ const opcionesTipo = ref([
 ]);
 
 const mostrarDialogoEliminar = ref(false);
-const periodoAEliminar = ref<Periodo | null>(null);
+const periodoAEliminar = ref<Period | null>(null);
 
 // Mostrar el diálogo personalizado
-const confirmarEliminacion = (periodo: Periodo) => {
+const confirmDelete = (periodo: Period) => {
   periodoAEliminar.value = periodo;
   mostrarDialogoEliminar.value = true;
 };
@@ -179,12 +172,12 @@ const confirmarEliminacion = (periodo: Periodo) => {
 const eliminarPeriodoConfirmado = async () => {
   if (!periodoAEliminar.value) return;
   try {
-    const res = await fetch(`${API}/periodos/${periodoAEliminar.value.Periodo_ID}`, {
+    const res = await fetch(`${API}/periodos/${periodoAEliminar.value.Period_ID}`, {
       method: "DELETE",
     });
     if (!res.ok) throw new Error("Error al eliminar el período");
-    periodos.value = periodos.value.filter(
-      (p) => p.Periodo_ID !== periodoAEliminar.value?.Periodo_ID
+    periods.value = periods.value.filter(
+      (p) => p.Period_ID !== periodoAEliminar.value?.Period_ID
     );
     toast.add({
       severity: "success",
@@ -210,8 +203,8 @@ const eliminarPeriodoConfirmado = async () => {
 const fetchPeriodos = async () => {
   try {
     const res = await fetch(`${API}/periodos`);
-    if (!res.ok) throw new Error("Error al obtener los períodos");
-    periodos.value = await res.json();
+    if (!res.ok) throw new Error("Error fetching periods");
+    periods.value = await res.json();
   } catch (error: any) {
     toast.add({ severity: "error", summary: "Error", detail: error.message });
   }
@@ -224,28 +217,31 @@ const formatDate = (dateStr: string): string => {
 };
 
 // Computed para filtrar períodos según fecha de inicio, fecha fin, búsqueda por nombre y tipo
-const periodosFiltrados = computed(() => {
-  return periodos.value.filter((p) => {
-    let cumpleInicio = true;
-    let cumpleFin = true;
-    let cumpleBusqueda = true;
-    let cumpleTipo = true;
+const filteredPeriods = computed(() => {
+  return periods.value.filter((p) => {
+    let startOk = true;
+    let endOk = true;
+    let searchOk = true;
+    let typeOk = true;
+
     if (filtroInicio.value) {
-      cumpleInicio = new Date(p.Periodo_Inicio) >= new Date(filtroInicio.value);
+      startOk = new Date(p.Period_Start) >= new Date(filtroInicio.value);
     }
     if (filtroFin.value) {
-      cumpleFin = new Date(p.Periodo_Fin) <= new Date(filtroFin.value);
+      endOk = new Date(p.Period_End) <= new Date(filtroFin.value);
     }
     if (busqueda.value.trim()) {
       const search = busqueda.value.toLowerCase().trim();
-      cumpleBusqueda = p.PeriodoNombre.toLowerCase().includes(search);
+      searchOk = p.Period_Name.toLowerCase().includes(search);
     }
     if (tipoSeleccionado.value) {
-      cumpleTipo = p.PeriodoTipo === tipoSeleccionado.value;
+      typeOk = p.Period_Type === tipoSeleccionado.value;
     }
-    return cumpleInicio && cumpleFin && cumpleBusqueda && cumpleTipo;
+
+    return startOk && endOk && searchOk && typeOk;
   });
 });
+
 
 // Función para redirigir a la vista de ingreso de cronograma
 const irAIngresoCronograma = () => {
@@ -253,7 +249,7 @@ const irAIngresoCronograma = () => {
 };
 
 // Función para editar un período
-const editarPeriodo = (id: number) => {
+const editPeriod = (id: number) => {
   router.push(`/IngresoCronograma/${id}`);
 };
 
@@ -263,7 +259,7 @@ const eliminarPeriodo = (id: number) => {
   fetch(`${API}/periodos/${id}`, { method: "DELETE" })
     .then((res) => {
       if (!res.ok) throw new Error("Error al eliminar el período");
-      periodos.value = periodos.value.filter((p) => p.Periodo_ID !== id);
+      periods.value = periods.value.filter((p) => p.Period_ID !== id);
       toast.add({
         severity: "success",
         summary: "Eliminado",

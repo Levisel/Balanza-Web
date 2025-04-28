@@ -9,7 +9,7 @@
       <Dropdown
         v-model="periodoSeleccionado"
         :options="periodos"
-        optionLabel="PeriodoNombre"
+        optionLabel="Period_Name"
         placeholder="Filtrar por Período"
         class="w-60"
       />
@@ -19,6 +19,7 @@
         v-model="busquedaCedula"
         placeholder="Buscar por Cédula"
         class="w-60 p-inputtext-lg"
+        
       />
 
       <!-- Input para buscar por Nombre y Apellido -->
@@ -33,7 +34,7 @@
   v-model="areaSeleccionada"
   :options="opcionesAreas"
   optionLabel="label"
-  optionValue="value"
+  optionValue="label"
   placeholder="Filtrar por Área"
   class="w-60"
 />
@@ -87,12 +88,14 @@
         </template>
       </Column>
       <!-- Columna para mostrar si tiene huella -->
-      <Column field="TieneHuella" header="Tiene Huella?" sortable>
-        <template #body="slotProps">
-          <span v-if="slotProps.data.Internal_Huella" class="text-green-600 font-bold">✔️</span>
-          <span v-else class="text-red-600 font-bold">❌</span>
-        </template>
-      </Column>
+      <Column field="TieneHuellaValor" header="Tiene Huella?" sortable>
+  <template #body="slotProps">
+    <span v-if="slotProps.data.Internal_Huella" class="text-green-600 font-bold">✔️</span>
+    <span v-else class="text-red-600 font-bold">❌</span>
+  </template>
+</Column>
+
+
       <!-- Columna de acciones -->
       <Column header="Acciones">
         <template #body="slotProps">
@@ -118,7 +121,7 @@
             />
 
             <!-- Botón para registrar asistencia -->
-            <Button
+          <!--  <Button
               v-if="slotProps.data.Internal_Huella"
               icon="pi pi-address-book"
               class="p-button-rounded p-button-success"
@@ -136,7 +139,7 @@
               }"
               :tooltipOptions="{ position: 'top', showDelay: 300 }"
               :disabled="!periodoSeleccionado"
-            />
+            /> -->
 
             <!-- Botón para borrar huella -->
             <Button
@@ -184,7 +187,6 @@ import { useRouter } from "vue-router";
 import { useToast } from "primevue/usetoast";
 
 // Componentes PrimeVue
-import Tooltip from 'primevue/tooltip';
 import Dropdown from "primevue/dropdown";
 import InputText from "primevue/inputtext";
 import Button from "primevue/button";
@@ -197,27 +199,27 @@ import {useSubjects} from '@/useSubjects' // ajusta la ruta si está en otra car
 
 
 // Importa las interfaces (ajusta según tu proyecto)
-import { API, type UsuarioXPeriodoDVM, type Periodo } from "@/ApiRoute";
+import { API, type UserXPeriodDVM, type Period } from "@/ApiRoute";
 
 const router = useRouter();
 const toast = useToast();
 
 // Estados
-const usuariosXPeriodoDVM = ref<UsuarioXPeriodoDVM[]>([]);
-const periodos = ref<Periodo[]>([]);
-const periodoSeleccionado = ref<Periodo | null>(null);
+const usuariosXPeriodoDVM = ref<UserXPeriodDVM[]>([]);
+const periodos = ref<Period[]>([]);
+const periodoSeleccionado = ref<Period | null>(null);
 const busquedaCedula = ref("");
 const busquedaNombre = ref("");
 const errorMensaje = ref("");
 const modalBorrarHuella = ref(false);
-const estudianteSeleccionado = ref<UsuarioXPeriodoDVM | null>(null);
+const estudianteSeleccionado = ref<UserXPeriodDVM
+ | null>(null);
   const { subjects: opcionesAreas, fetchSubjects } = useSubjects()
 const areaSeleccionada = ref<string | null>(null)
 
 
 // Computed: Filtrar la relación usuario-período según los filtros
 const usuariosFiltrados = computed(() => {
-  // Primero, aplicamos los filtros actuales
   const filtrados = usuariosXPeriodoDVM.value.filter((est) => {
     const nombreCompleto = `${est.Internal_Name} ${est.Internal_LastName}`.toLowerCase();
     const cedula = est.Internal_ID.toLowerCase();
@@ -228,25 +230,28 @@ const usuariosFiltrados = computed(() => {
       ? cedula.includes(busquedaCedula.value.toLowerCase().trim())
       : true;
     const filtroPeriodo = periodoSeleccionado.value
-      ? est.Periodo_ID === periodoSeleccionado.value.Periodo_ID
+      ? est.Period_ID === periodoSeleccionado.value.Period_ID
       : true;
     const filtroArea = areaSeleccionada.value
       ? est.Internal_Area?.toLowerCase().includes(areaSeleccionada.value.toLowerCase())
       : true;
 
-      return filtroNombre && filtroCedula && filtroPeriodo && filtroArea;
-
+    return filtroNombre && filtroCedula && filtroPeriodo && filtroArea;
   });
 
-  // Ahora, agrupamos por Internal_ID para evitar duplicados
   const mapa = new Map();
   filtrados.forEach((est) => {
     if (!mapa.has(est.Internal_ID)) {
-      mapa.set(est.Internal_ID, est);
+      mapa.set(est.Internal_ID, {
+        ...est,
+        TieneHuellaValor: est.Internal_Huella ? 1 : 0, // Agregamos aquí
+      });
     }
   });
+
   return Array.from(mapa.values());
 });
+
 // Función para redirigir a RegistroHuella.vue pasando la cédula
 const irRegistroHuella = (cedula: string) => {
   router.push(`/RegistroHuella/${cedula}`);
@@ -277,41 +282,44 @@ const fetchPeriodos = async () => {
 // Función para obtener la relación usuario-período
 const fetchUsuariosXPeriodo = async () => {
   try {
-    // Primero, obtenemos la lista base de estudiantes
+    // Obtener estudiantes base
     const resEst = await fetch(`${API}/usuariointerno/estudiantes`);
     if (!resEst.ok) throw new Error("Error al obtener estudiantes");
     const dataEst = await resEst.json();
 
-    // Luego, obtenemos la relación usuario-período
+    // Obtener relaciones usuario-período
     const resRel = await fetch(`${API}/usuarioxPeriodo/all`);
     if (!resRel.ok) throw new Error("Error al obtener usuarioxPeriodo");
     const dataRel = await resRel.json();
 
-    // Creamos un mapa (por Internal_ID) con la información de período
+    // Mapa por Internal_ID con info del período
     const periodMap = new Map();
     dataRel.forEach((rel: any) => {
-      periodMap.set(rel.usuario.Internal_ID, {
-        Periodo_ID: rel.periodo.Periodo_ID,
-        PeriodoNombre: rel.periodo.PeriodoNombre
+      periodMap.set(rel.user.Internal_ID, {
+        Period_ID: rel.period.Period_ID,
+        Period_Name: rel.period.Period_Name
       });
     });
 
-    // Fusionamos: para cada estudiante de dataEst agregamos la info de período (si existe)
+    // Fusionar estudiantes con período si existe
     const merged = dataEst.map((student: any) => {
-      const periodData = periodMap.get(student.Internal_ID) || { Periodo_ID: null, PeriodoNombre: null };
+      const periodData = periodMap.get(student.Internal_ID) || {
+        Period_ID: null,
+        Period_Name: null
+      };
       return {
         ...student,
         ...periodData
       };
     });
 
-    // Además, si hay estudiantes en la relación (dataRel) que no están en dataEst, se agregan
+    // Agregar estudiantes que solo están en la relación
     dataRel.forEach((rel: any) => {
-      if (!merged.find((s: any) => s.Internal_ID === rel.usuario.Internal_ID)) {
+      if (!merged.find((s: any) => s.Internal_ID === rel.user.Internal_ID)) {
         merged.push({
-          ...rel.usuario,
-          Periodo_ID: rel.periodo.Periodo_ID,
-          PeriodoNombre: rel.periodo.PeriodoNombre
+          ...rel.user,
+          Period_ID: rel.period.Period_ID,
+          Period_Name: rel.period.Period_Name
         });
       }
     });
@@ -323,6 +331,7 @@ const fetchUsuariosXPeriodo = async () => {
   }
 };
 
+
 // Cargar datos al montar
 onMounted(() => {
   fetchPeriodos();
@@ -331,7 +340,7 @@ onMounted(() => {
 });
 
 // Función para confirmar borrar huella
-const confirmarBorrarHuella = (usuario: UsuarioXPeriodoDVM) => {
+const confirmarBorrarHuella = (usuario: UserXPeriodDVM) => {
   estudianteSeleccionado.value = usuario;
   modalBorrarHuella.value = true;
 };
@@ -379,7 +388,7 @@ const borrarHuella = async () => {
 // Función para redirigir a RegistroAsistencia.vue pasando la cédula y el id del período seleccionado
 const irRegistroAsistencia = (cedula: string) => {
   if (!periodoSeleccionado.value) return; // Por seguridad, aunque el botón esté deshabilitado
-  const periodoId = periodoSeleccionado.value.Periodo_ID;
+  const periodoId = periodoSeleccionado.value.Period_ID;
   router.push(`/RegistroAsistencia/${cedula}/periodo/${periodoId}`);
   console.log("Redirigiendo a RegistroAsistencia con cédula:", cedula, "y periodo:", periodoId);
 };

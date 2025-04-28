@@ -256,6 +256,18 @@ const vistaHorariosPersonalClass = computed(() => [
   route.path === "/VistaHorariosPersonal" ? "text-green-400" : "",
   isDarkTheme.value ? "hover:bg-gray-700" : "hover:bg-gray-100",
 ]);
+
+const registroVirtualClass = computed(() => [
+  "select-none flex items-center cursor-pointer p-4 rounded text-surface-700 transition-colors",
+  route.path === "/RegistroVirtual" ? "text-green-400" : "",
+  isDarkTheme.value ? "hover:bg-gray-700" : "hover:bg-gray-100",
+]);
+
+const seguimientoHorasClass = computed(() => [
+  "select-none flex items-center cursor-pointer p-4 rounded text-surface-700 transition-colors",
+  route.path === "/ResumenSemanalEstudiante" ? "text-green-400" : "",
+  isDarkTheme.value ? "hover:bg-gray-700" : "hover:bg-gray-100",
+]);
 </script>
 
 <template>
@@ -565,7 +577,7 @@ const vistaHorariosPersonalClass = computed(() => [
                   <a v-ripple v-styleclass="{ selector: '@next', toggleClass: 'closed' }"
                     class="select-none flex items-center cursor-pointer p-4 rounded text-surface-700 transition-colors">
                     <i class="pi pi-clock mr-2"></i>
-                    <span class="font-medium text-lg">Administración de Horarios</span>
+                    <span class="font-medium text-lg">Gestión de Horarios</span>
                     <i class="pi pi-chevron-down ml-auto"></i>
                   </a>
                   <ul class="submenu closed list-none p-0 m-0">
@@ -693,13 +705,13 @@ const vistaHorariosPersonalClass = computed(() => [
     </li>
 
     <li>
-      <router-link to="/RegistroVirtual" draggable="false" v-ripple :class="registroAsistenciaClass">
+      <router-link to="/RegistroVirtual" draggable="false" v-ripple :class="registroVirtualClass">
         <i class="pi pi-video mr-2"></i>
         <span class="font-medium text-lg">Registro Virtual</span>
       </router-link>
     </li>
     <li>
-      <router-link to="/ResumenSemanalEstudiante" draggable="false" v-ripple :class="seguimientoGeneralClass">
+      <router-link to="/ResumenSemanalEstudiante" draggable="false" v-ripple :class="seguimientoHorasClass">
         <i class="pi pi-book mr-2"></i>
         <span class="font-medium text-lg">Seguimiento de Horas</span>
       </router-link>
