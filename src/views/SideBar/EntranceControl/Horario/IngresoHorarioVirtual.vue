@@ -8,7 +8,7 @@
       <Dropdown
         v-model="periodoSeleccionado"
         :options="periodos"
-        optionLabel="PeriodoNombre"
+        optionLabel="Period_Name"
         placeholder="Período"
         class="w-60"
       />
@@ -16,7 +16,7 @@
   v-model="areaSeleccionada"
   :options="opcionesAreas"
   optionLabel="label"
-  optionValue="value"
+  optionValue="label"
   placeholder="Área"
   class="w-60"
 />
@@ -50,10 +50,10 @@
         responsiveLayout="scroll"
       >
         <Column selectionMode="single" headerStyle="width: 3rem" />
-        <Column field="usuario.Internal_ID" header="Cédula" />
-        <Column field="usuario.Internal_Name" header="Nombres" />
-        <Column field="usuario.Internal_LastName" header="Apellidos" />
-        <Column field="usuario.Internal_Area" header="Área" />
+        <Column field="user.Internal_ID" header="Cédula" />
+        <Column field="user.Internal_Name" header="Nombres" />
+        <Column field="user.Internal_LastName" header="Apellidos" />
+        <Column field="user.Internal_Area" header="Área" />
       </DataTable>
     </div>
 
@@ -69,6 +69,13 @@
           class="p-button-success"
           @click="dialogoHorarioEspecialVisible = true"
         />
+        <Button
+          label="Cambiar máximo de horas"
+          icon="pi pi-cog"
+          class="p-button-secondary"
+          @click="abrirDialogoMaxHoras"
+        />
+
       </div>
 
       <!-- Dropdowns para cada día -->
@@ -126,7 +133,7 @@
 
     <!-- Modal de error (más de 8 horas virtuales) -->
     <Dialog v-model:visible="dialogoErrorVisible" header="Error">
-      <p>No puedes asignar más de 8 horas semanales en modalidad Virtual.</p>
+      <p>No puedes asignar más de {{ maxHorasVirtuales }} horas semanales en modalidad Virtual.</p>
       <template #footer>
         <Button label="Entendido" class="p-button-danger" @click="dialogoErrorVisible = false" />
       </template>
@@ -140,12 +147,35 @@
         <Button label="Cambio Administrativo" class="p-button-danger" @click="guardarHorario(true)" />
       </template>
     </Dialog>
+
+    <Dialog v-model:visible="mostrarDialogoMaxHoras" header="Cambiar máximo de horas permitidas">
+  <div class="p-4">
+    <p>Valor actual: <strong>{{ maxHorasVirtuales }}</strong> horas</p>
+    <p class="mt-2">Ingrese un nuevo máximo (entre 1 y 100):</p>
+    <InputNumber
+      v-model="nuevoMaxHoras"
+      :min="1"
+      :max="100"
+      showButtons
+      class="w-full mt-2"
+    />
+  </div>
+  <template #footer>
+    <Button label="Cancelar" @click="mostrarDialogoMaxHoras = false" />
+    <Button 
+      label="Guardar" 
+      class="p-button-success" 
+      @click="guardarNuevoMaximoHoras" 
+    />
+  </template>
+</Dialog>
+
   </main>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted, computed, watch, nextTick } from 'vue'
-import { API, type UsuarioXPeriodo, type Periodo } from "@/ApiRoute"
+import { API, type UserXPeriod, type Period } from "@/ApiRoute"
 import { useToast } from 'primevue/usetoast'
 
 // Componentes PrimeVue
@@ -162,14 +192,45 @@ import { useSubjects } from '@/useSubjects'
 const toast = useToast()
 
 // Filtros y selección de estudiante
-const periodos = ref<Periodo[]>([])
-const estudiantes = ref<UsuarioXPeriodo[]>([])
-const estudianteSeleccionado = ref<UsuarioXPeriodo | null>(null)
-const periodoSeleccionado = ref<Periodo | null>(null)
+const periodos = ref<Period[]>([])
+const estudiantes = ref<UserXPeriod[]>([])
+const estudianteSeleccionado = ref<UserXPeriod | null>(null)
+const periodoSeleccionado = ref<Period | null>(null)
 const areaSeleccionada = ref<string | null>(null)
 const busquedaNombre = ref('')
 const busquedaCedula = ref('')
 const { subjects: opcionesAreas, fetchSubjects } = useSubjects()
+
+const maxHorasVirtuales = ref(8); // valor por defecto
+const mostrarDialogoMaxHoras = ref(false);
+const nuevoMaxHoras = ref(8);
+
+function abrirDialogoMaxHoras() {
+  nuevoMaxHoras.value = maxHorasVirtuales.value;
+  mostrarDialogoMaxHoras.value = true;
+}
+
+function guardarNuevoMaximoHoras() {
+  if (nuevoMaxHoras.value < 1 || nuevoMaxHoras.value > 100) {
+    toast.add({
+      severity: 'error',
+      summary: 'Valor inválido',
+      detail: 'Debe estar entre 1 y 100',
+      life: 3000
+    });
+    return;
+  }
+  maxHorasVirtuales.value = nuevoMaxHoras.value;
+  mostrarDialogoMaxHoras.value = false;
+  toast.add({
+    severity: 'success',
+    summary: 'Máximo actualizado',
+    detail: `Nuevo límite: ${nuevoMaxHoras.value} horas`,
+    life: 3000
+  });
+}
+
+
 
 // Para horarios virtuales
 const isGuardando = ref(false)
@@ -186,12 +247,13 @@ const horariosSeleccionados = ref<Record<string, any>>({})
 
 // Días de la semana (fijos)
 const diasSemana = ref([
-  { nombre: 'Lunes', horarios: [] },
-  { nombre: 'Martes', horarios: [] },
-  { nombre: 'Miercoles', horarios: [] },
-  { nombre: 'Jueves', horarios: [] },
-  { nombre: 'Viernes', horarios: [] }
-])
+  { nombre: 'Monday', horarios: [] },
+  { nombre: 'Tuesday', horarios: [] },
+  { nombre: 'Wednesday', horarios: [] },
+  { nombre: 'Thursday', horarios: [] },
+  { nombre: 'Friday', horarios: [] }
+]);
+
 
 // Horario presencial (informativo y para filtrar)
 const horarioPresencial = ref<Record<string, { label: string; tipo: string; bloqueado?: boolean }>>({})
@@ -245,7 +307,7 @@ async function fetchPeriodos() {
 async function fetchEstudiantes() {
   if (!periodoSeleccionado.value || !areaSeleccionada.value) return
   try {
-    const url = `${API}/usuarioXPeriodo/periodo/${periodoSeleccionado.value.Periodo_ID}/area/${areaSeleccionada.value}`
+    const url = `${API}/usuarioXPeriodo/periodo/${periodoSeleccionado.value.Period_ID}/area/${areaSeleccionada.value}`
     const res = await fetch(url)
     estudiantes.value = await res.json()
   } catch (error) {
@@ -260,8 +322,8 @@ async function cargarParametros() {
     let data = res.ok ? await res.json() : []
     // Filtrar por rango (asumiendo que los tiempos vienen en formato "HH:MM:SS")
     data = data.filter((p: any) =>
-      p.Parametro_Horario_Hora_Entrada >= '09:00:00' &&
-      p.Parametro_Horario_Hora_Salida  <= '17:00:00'
+      p.Parameter_Schedule_Start_Time >= '09:00:00' &&
+      p.Parameter_Schedule_End_Time  <= '17:00:00'
     )
     allParametros.value = data
   } catch (err) {
@@ -286,55 +348,57 @@ async function cargarHorarioPresencial() {
   if (!estudianteSeleccionado.value) return;
 
   try {
-    const urlUXP = `${API}/usuarioXPeriodo/${periodoSeleccionado.value.Periodo_ID}/${estudianteSeleccionado.value.usuario.Internal_ID}`;
+    const urlUXP = `${API}/usuarioXPeriodo/${periodoSeleccionado.value.Period_ID}/${estudianteSeleccionado.value.user.Internal_ID}`;
     const resUXP = await fetch(urlUXP);
     const dataUXP = await resUXP.json();
-    usuarioXPeriodoId.value = dataUXP.UsuarioXPeriodo_ID;
+    usuarioXPeriodoId.value = dataUXP.UserXPeriod_ID;
 
-    const urlHor = `${API}/horarioEstudiantes/completo?periodoId=${periodoSeleccionado.value.Periodo_ID}&area=${encodeURIComponent(areaSeleccionada.value)}`;
+    const urlHor = `${API}/horarioEstudiantes/completo?periodId=${periodoSeleccionado.value.Period_ID}&area=${encodeURIComponent(areaSeleccionada.value)}`;
     const resHor = await fetch(urlHor);
     const todosHorarios = resHor.ok ? await resHor.json() : [];
 
     const horariosEstudiante = todosHorarios.filter(
-      (h: any) =>
-        h.Internal_ID === estudianteSeleccionado.value.usuario.Internal_ID &&
-        h.Horario_Modalidad === 'Presencial'
-    );
+  (h: any) =>
+    h.Internal_ID === estudianteSeleccionado.value.user.Internal_ID &&
+    h.Schedule_Mode === 'Presencial' &&
+    h.Schedule_IsDeleted === 0 // ✅ Aquí el filtro clave
+);
 
-    const dias = ['Lunes', 'Martes', 'Miercoles', 'Jueves', 'Viernes'];
 
-    for (const dia of dias) {
-      const turnos: string[] = [];
-      const rangos: string[] = [];
+    const dias = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
 
-      for (const h of horariosEstudiante) {
-        const paramId = h[`Horario_Dia_${dia}`];
-        if (!paramId) continue;
+for (const dia of dias) {
+  const turnos: string[] = [];
+  const rangos: string[] = [];
 
-        let param = allParametros.value.find(p => p.Parametro_Horario_ID === paramId);
-        if (!param) {
-          const res = await fetch(`${API}/parametroHorario/${paramId}`);
-          param = await res.json();
-          allParametros.value.push(param);
-        }
+  for (const h of horariosEstudiante) {
+    const paramId = h[`Schedule_Day_${dia}`];
+    if (!paramId) continue;
 
-        turnos.push(param.Parametro_Horario_Tipo); // Temprano o Tarde
-        const entrada = param.Parametro_Horario_Hora_Entrada.slice(0, 5);
-        const salida = param.Parametro_Horario_Hora_Salida.slice(0, 5);
-        rangos.push(`${entrada} - ${salida}`);
-      }
-
-      if (turnos.length > 0) {
-        horarioPresencial.value[dia] = {
-          label: rangos.join(' / '),
-          tipo: turnos.length === 2 ? 'Ambos' : turnos[0],
-          bloqueado: turnos.includes('Temprano') && turnos.includes('Tarde')
-        };
-      }
+    let param = allParametros.value.find(p => p.Parameter_Schedule_ID === paramId);
+    if (!param) {
+      const res = await fetch(`${API}/parametroHorario/${paramId}`);
+      param = await res.json();
+      allParametros.value.push(param);
     }
-  } catch (err) {
-    console.error('Error al cargar horario presencial:', err);
+
+    turnos.push(param.Parameter_Schedule_Type); // Temprano o Tarde
+    const entrada = param.Parameter_Schedule_Start_Time.slice(0, 5);
+    const salida = param.Parameter_Schedule_End_Time.slice(0, 5);
+    rangos.push(`${entrada} - ${salida}`);
   }
+
+  if (turnos.length > 0) {
+    horarioPresencial.value[dia] = {
+      label: rangos.join(' / '),
+      tipo: turnos.length === 2 ? 'Ambos' : turnos[0],
+      bloqueado: turnos.includes('Temprano') && turnos.includes('Tarde')
+    };
+  }
+}
+} catch (err) {
+console.error('Error al cargar horario presencial:', err);
+}
 }
 
 
@@ -342,11 +406,16 @@ async function cargarHorarioPresencial() {
 async function cargarHorarioVirtual() {
   if (!usuarioXPeriodoId.value) return
   try {
-    const urlHor = `${API}/horarioEstudiantes/completo?periodoId=${periodoSeleccionado.value.Periodo_ID}&area=${encodeURIComponent(areaSeleccionada.value)}`
+    const urlHor = `${API}/horarioEstudiantes/completo?periodId=${periodoSeleccionado.value.Period_ID}&area=${encodeURIComponent(areaSeleccionada.value)}`
     const resHor = await fetch(urlHor)
     const todosHorarios = resHor.ok ? await resHor.json() : []
-    const horEstudiante = todosHorarios.filter((h: any) => h.Internal_ID === estudianteSeleccionado.value.usuario.Internal_ID)
-    const virtual = horEstudiante.find((h: any) => h.Horario_Modalidad === 'Virtual')
+    const horEstudiante = todosHorarios.filter((h: any) => h.Internal_ID === estudianteSeleccionado.value.user.Internal_ID)
+    const virtual = horEstudiante.find(
+      (h: any) =>
+        h.Schedule_Mode === 'Virtual' &&
+        h.Schedule_IsDeleted === 0 // ✅ solo si no está eliminado
+    );
+
     if (virtual) {
       console.log('Horario virtual encontrado:', virtual)
       horarioActual.value = virtual
@@ -360,26 +429,30 @@ async function cargarHorarioVirtual() {
 
 // Asigna en los dropdowns la opción virtual ya guardada (para cada día)
 async function asignarHorarioVirtualActual(virtualData: any) {
-  const dias = ['Lunes', 'Martes', 'Miercoles', 'Jueves', 'Viernes']
-  for (const dia of dias) {
-    const campo = `Horario_Dia_${dia}`
-    const paramId = virtualData[campo]
-    if (!paramId) continue
+  const dias = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
 
-    let paramInfo = allParametros.value.find((p: any) => p.Parametro_Horario_ID === paramId)
+  for (const dia of dias) {
+    const campo = `Schedule_Day_${dia}`;
+    const paramId = virtualData[campo];
+    if (!paramId) continue;
+
+    let paramInfo = allParametros.value.find((p: any) => p.Parameter_Schedule_ID === paramId);
     if (!paramInfo) {
-      paramInfo = await obtenerParametroHorario(paramId)
-      if (!paramInfo) continue
-      allParametros.value.push(paramInfo)
+      paramInfo = await obtenerParametroHorario(paramId);
+      if (!paramInfo) continue;
+      allParametros.value.push(paramInfo);
     }
+
     const op = {
-      label: `${paramInfo.Parametro_Horario_Hora_Entrada.slice(0,5)} - ${paramInfo.Parametro_Horario_Hora_Salida.slice(0,5)}`,
-      value: paramInfo.Parametro_Horario_ID,
-      tipo: paramInfo.Parametro_Horario_Tipo
-    }
-    horariosSeleccionados.value[dia] = op
+      label: `${paramInfo.Parameter_Schedule_Start_Time.slice(0, 5)} - ${paramInfo.Parameter_Schedule_End_Time.slice(0, 5)}`,
+      value: paramInfo.Parameter_Schedule_ID,
+      tipo: paramInfo.Parameter_Schedule_Type
+    };
+
+    horariosSeleccionados.value[dia] = op;
   }
 }
+
 
 // Obtiene un parámetro de horario por ID
 async function obtenerParametroHorario(id: number) {
@@ -396,9 +469,9 @@ async function obtenerParametroHorario(id: number) {
 /** Computed: filtra estudiantes por nombre/cédula */
 const estudiantesFiltrados = computed(() => {
   return estudiantes.value.filter(est => {
-    const nom = est.usuario.Internal_Name?.toLowerCase() || ''
-    const ape = est.usuario.Internal_LastName?.toLowerCase() || ''
-    const ced = est.usuario.Internal_ID || ''
+    const nom = est.user.Internal_Name?.toLowerCase() || ''
+    const ape = est.user.Internal_LastName?.toLowerCase() || ''
+    const ced = est.user.Internal_ID || ''
     return (
       (nom.includes(busquedaNombre.value.toLowerCase()) ||
        ape.includes(busquedaNombre.value.toLowerCase())) &&
@@ -411,9 +484,9 @@ const estudiantesFiltrados = computed(() => {
 function opcionesDropdownDia(dayName: string) {
   if (!allParametros.value.length) return []
   let opciones = allParametros.value.map((p: any) => ({
-    label: `${p.Parametro_Horario_Hora_Entrada.slice(0,5)} - ${p.Parametro_Horario_Hora_Salida.slice(0,5)}`,
-    value: p.Parametro_Horario_ID,
-    tipo: p.Parametro_Horario_Tipo
+    label: `${p.Parameter_Schedule_Start_Time.slice(0,5)} - ${p.Parameter_Schedule_End_Time.slice(0,5)}`,
+    value: p.Parameter_Schedule_ID,
+    tipo: p.Parameter_Schedule_Type
   }))
   const pres = horarioPresencial.value[dayName]
   if (pres && pres.tipo) {
@@ -447,10 +520,11 @@ function calcularHorasTotales(): number {
 // Validar y guardar: se verifica que no supere 8 horas virtuales y que no se solape con presencial
 async function validarYGuardar() {
   if (isGuardando.value) return
-  if (calcularHorasTotales() > 8) {
-    dialogoErrorVisible.value = true
-    return
-  }
+if (calcularHorasTotales() > maxHorasVirtuales.value) {
+  dialogoErrorVisible.value = true;
+  return;
+}
+
   if (await verificarSolapamientoConPresencial()) {
     toast.add({
       severity: 'error',
@@ -488,41 +562,42 @@ async function verificarSolapamientoConPresencial(): Promise<boolean> {
 
 // Guardar el horario virtual (POST, PUT o cambio administrativo)
 async function guardarHorario(esCambioAdministrativo: boolean) {
-  if (isGuardando.value) return
-  isGuardando.value = true
+  if (isGuardando.value) return;
+  isGuardando.value = true;
 
   const nuevoHorario = {
-    Horario_Dia_Lunes: horariosSeleccionados.value['Lunes']?.value || null,
-    Horario_Dia_Martes: horariosSeleccionados.value['Martes']?.value || null,
-    Horario_Dia_Miercoles: horariosSeleccionados.value['Miercoles']?.value || null,
-    Horario_Dia_Jueves: horariosSeleccionados.value['Jueves']?.value || null,
-    Horario_Dia_Viernes: horariosSeleccionados.value['Viernes']?.value || null,
-    Horario_Modalidad: 'Virtual'
-  }
+    Schedule_Day_Monday: horariosSeleccionados.value['Monday']?.value || null,
+    Schedule_Day_Tuesday: horariosSeleccionados.value['Tuesday']?.value || null,
+    Schedule_Day_Wednesday: horariosSeleccionados.value['Wednesday']?.value || null,
+    Schedule_Day_Thursday: horariosSeleccionados.value['Thursday']?.value || null,
+    Schedule_Day_Friday: horariosSeleccionados.value['Friday']?.value || null,
+    Schedule_Mode: 'Virtual'
+  };
 
-  let url = ''
-  let method = 'POST'
-  let body = {}
+  let url = '';
+  let method = 'POST';
+  let body = {};
 
   if (!horarioGuardado.value) {
-    nuevoHorario['UsuarioXPeriodo_ID'] = usuarioXPeriodoId.value
-    url = `${API}/horarioEstudiantes`
-    body = JSON.stringify(nuevoHorario)
+    nuevoHorario['UserXPeriod_ID'] = usuarioXPeriodoId.value;
+    url = `${API}/horarioEstudiantes`;
+    body = JSON.stringify(nuevoHorario);
   } else {
     if (esCambioAdministrativo) {
-      url = `${API}/horarioEstudiantes/cambio-administrativo`
+      url = `${API}/horarioEstudiantes/cambio-administrativo`;
       body = JSON.stringify({
-        usuarioXPeriodoId: usuarioXPeriodoId.value,
-        nuevosHorarios: [nuevoHorario]
-      })
+        userXPeriodId: usuarioXPeriodoId.value,
+        newSchedules: [nuevoHorario]
+      });
     } else {
-      if (horarioActual.value && horarioActual.value.Horario_ID) {
-        url = `${API}/horarioEstudiantes/${horarioActual.value.Horario_ID}`
-        method = 'PUT'
-        body = JSON.stringify(nuevoHorario)
+      if (horarioActual.value && horarioActual.value.Schedule_Students_ID) {
+        url = `${API}/horarioEstudiantes/${horarioActual.value.Schedule_Students_ID}`;
+        method = 'PUT';
+        body = JSON.stringify(nuevoHorario);
       } else {
-        url = `${API}/horarioEstudiantes`
-        body = JSON.stringify(nuevoHorario)
+        nuevoHorario['UserXPeriod_ID'] = usuarioXPeriodoId.value;
+        url = `${API}/horarioEstudiantes`;
+        body = JSON.stringify(nuevoHorario);
       }
     }
   }
@@ -532,30 +607,37 @@ async function guardarHorario(esCambioAdministrativo: boolean) {
       method,
       headers: { 'Content-Type': 'application/json' },
       body
-    })
-    const respJson = await res.json()
+    });
+    const respJson = await res.json();
+
     if (res.ok) {
       toast.add({
         severity: 'success',
         summary: 'Horario Virtual Guardado',
-        detail: 'Se asignó correctamente.'
-      })
+        detail: 'Se asignó correctamente.',
+        life: 5000
+      });
       if (!horarioGuardado.value || method === 'PUT') {
-        horarioGuardado.value = true
+        horarioGuardado.value = true;
         if (method === 'PUT') {
-          horarioActual.value = respJson
+          horarioActual.value = respJson;
         }
       }
     } else {
-      toast.add({ severity: 'error', summary: 'Error', detail: 'No se pudo guardar el horario virtual.' })
+      toast.add({
+        severity: 'error',
+        summary: 'Error',
+        detail: 'No se pudo guardar el horario virtual.'
+      });
     }
   } catch (error) {
-    console.error('Error al guardar horario virtual:', error)
+    console.error('Error al guardar horario virtual:', error);
   } finally {
-    isGuardando.value = false
-    dialogoCambioAdministrativo.value = false
+    isGuardando.value = false;
+    dialogoCambioAdministrativo.value = false;
   }
 }
+
 
 async function crearHorarioEspecial() {
   const entrada = nuevoHorarioEspecial.value.entrada;
@@ -596,9 +678,9 @@ async function crearHorarioEspecial() {
   }
 
   const payload = {
-    Parametro_Horario_Hora_Entrada: entrada,
-    Parametro_Horario_Hora_Salida: salida,
-    Parametro_Horario_Tipo: tipoCalculado
+    Parameter_Schedule_Start_Time: entrada,
+    Parameter_Schedule_End_Time: salida,
+    Parameter_Schedule_Type: tipoCalculado
   };
 
   try {
@@ -643,10 +725,10 @@ async function cargarHorarios() {
   if (!estudianteSeleccionado.value) return;
   try {
     const usuarioRes = await fetch(
-      `${API}/usuarioxperiodo/${periodoSeleccionado.value.Periodo_ID}/${estudianteSeleccionado.value.usuario.Internal_ID}`
+      `${API}/usuarioxperiodo/${periodoSeleccionado.value.Period_ID}/${estudianteSeleccionado.value.user.Internal_ID}`
     );
     const usuarioData = await usuarioRes.json();
-    usuarioXPeriodoId.value = usuarioData.UsuarioXPeriodo_ID;
+    usuarioXPeriodoId.value = usuarioData.UserXPeriod_ID;
   } catch (error) {
     console.error("Error al obtener usuarioXPeriodo", error);
     return;

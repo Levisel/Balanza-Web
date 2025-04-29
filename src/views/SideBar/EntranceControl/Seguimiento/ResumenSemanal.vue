@@ -7,11 +7,24 @@ import Button from "primevue/button";
 import { API } from "@/ApiRoute";
 import { useAuthStore } from "@/stores/auth";
 import { useDarkMode } from "@/components/ThemeSwitcher";
+import Toast from "primevue/toast";
+import { useToast } from "primevue/usetoast";
+import Dialog from 'primevue/dialog';
 
 const { isDarkTheme } = useDarkMode(); // 🔥 usa el modo oscuro global
-
+const toast = useToast(); // 🔥 usa el toast global
 const router = useRouter();
 const route = useRoute();
+
+
+const modalComentarioVisible = ref(false);
+const comentarioSeleccionado = ref("");
+
+const verComentarioCompleto = (comentario: string) => {
+  comentarioSeleccionado.value = comentario;
+  modalComentarioVisible.value = true;
+};
+
 
 const authStore = useAuthStore();
 const usuarioAuth = authStore.user;
@@ -36,10 +49,37 @@ const student = ref({
 
 const totalHoras = computed(() =>
   resumenesSemanales.value.reduce(
-    (acc, item) => acc + parseFloat(item.Horas_Asistencia || "0"),
+    (acc, item) => acc + parseFloat(item.Attendance_Hours || "0"),
     0
   )
 );
+
+const mostrarModalHoras = ref(false)
+const horasExtraordinarias = ref<any[]>([])
+
+const abrirModalHoras = async () => {
+  try {
+    const res = await fetch(`${API}/horasExtraordinariasByUser/${internalId}`);
+    if (!res.ok) throw new Error("Error al obtener horas extraordinarias");
+    const data = await res.json();
+
+    if (!data.length) {
+      return toast.add({
+        severity: "info",
+        summary: "Sin horas extraordinarias",
+        detail: "No se encontraron horas extraordinarias para este usuario.",
+        life: 3000,
+      });
+    }
+
+    horasExtraordinarias.value = data;
+    mostrarModalHoras.value = true;
+  } catch (error) {
+    console.error("Error al cargar horas extraordinarias:", error);
+  }
+};
+
+
 
 const volver = () => {
   router.push({ name: "SeguimientoGeneral" });
@@ -50,24 +90,58 @@ const formatDate = (dateStr: string) => {
 };
 
 const resumenGeneral = ref({
-  Resumen_Horas_Totales: 0,
-  Resumen_Horas_Adicionales: 0,
-  Resumen_Horas_Reducidas: 0,
+  Summary_Total_Hours: 0,
+  Summary_Extra_Hours: 0,
+  Summary_Reduced_Hours: 0,
 });
 
 const fetchResumenGeneral = async () => {
   try {
     const response = await fetch(`${API}/resumenHoras/porCedula/${internalId}`);
-    if (!response.ok) throw new Error("Error al obtener el resumen general");
-    const data = await response.json();
-    resumenGeneral.value = data;
 
-    if (isEstudiante) {
-      resumenId.value = data.Resumen_ID; // aquí lo capturas
-      await fetchResumenSemanales(); // ya puedes llamar a los semanales
+    if (response.status === 404) {
+      // Si el backend responde 404 específicamente
+      toast.add({
+        severity: "warn",
+        summary: "Resumen no encontrado",
+        detail: "Este estudiante no tiene resumen general registrado.",
+        life: 4000
+      });
+      loading.value = false;
+      return;
     }
+
+    if (!response.ok) {
+      throw new Error("Error al obtener el resumen general");
+    }
+
+    const data = await response.json();
+
+    if (!data?.Summary_ID) {
+      // Si el backend responde 200 pero no hay Summary_ID (opcional por seguridad extra)
+      toast.add({
+        severity: "warn",
+        summary: "Resumen no encontrado",
+        detail: "Este estudiante no tiene resumen general registrado.",
+        life: 4000
+      });
+      loading.value = false;
+      return;
+    }
+
+    resumenGeneral.value = data;
+    resumenId.value = data.Summary_ID;
+    await fetchResumenSemanales();
+
   } catch (error: any) {
     console.error("Error al cargar resumen general:", error.message);
+    toast.add({
+      severity: "error",
+      summary: "Error al cargar",
+      detail: "Ocurrió un error inesperado al intentar cargar el resumen general.",
+      life: 4000
+    });
+    loading.value = false;
   }
 };
 
@@ -75,7 +149,10 @@ const fetchResumenGeneral = async () => {
 
 
 
+
+
 const fetchResumenSemanales = async () => {
+  loading.value = true; // siempre iniciar cargando
   try {
     const response = await fetch(`${API}/resumenSemanales/resumenGeneral/${resumenId.value}`);
     if (!response.ok) throw new Error("Error al obtener el resumen semanal");
@@ -83,10 +160,12 @@ const fetchResumenSemanales = async () => {
     resumenesSemanales.value = data;
   } catch (error: any) {
     console.error("Error al cargar el resumen semanal:", error.message);
+    resumenesSemanales.value = []; // ⬅️ 🔥 limpiar si hay error
   } finally {
-    loading.value = false;
+    loading.value = false; // 🔥 aseguramos detener loading pase lo que pase
   }
 };
+
 
 const fetchStudent = async () => {
   try {
@@ -113,6 +192,8 @@ onMounted(() => {
 
 <template>
   <main class="p-8 max-w-5xl mx-auto transition-colors duration-300 min-h-screen">
+       <!-- Toast para mensajes -->
+       <Toast />
    <!-- Encabezado -->
 <div class="flex items-center gap-4 mb-8">
   <Button 
@@ -142,9 +223,9 @@ onMounted(() => {
   'rounded-2xl shadow-md p-6 mb-8 space-y-2',
   isDarkTheme ? 'bg-[#1f1f1f] text-white' : 'bg-white text-gray-900'
 ]">
-  <p class="text-lg"><strong>Total de Horas:</strong> {{ resumenGeneral.Resumen_Horas_Totales }}</p>
-  <p class="text-lg"><strong>Horas Adicionales:</strong> {{ resumenGeneral.Resumen_Horas_Adicionales }}</p>
-  <p class="text-lg"><strong>Horas Reducidas:</strong> {{ resumenGeneral.Resumen_Horas_Reducidas }}</p>
+ <p class="text-lg"><strong>Total de Horas:</strong> {{ resumenGeneral.Summary_Total_Hours }}</p>
+<p class="text-lg"><strong>Horas Adicionales:</strong> {{ resumenGeneral.Summary_Extra_Hours }}</p>
+<p class="text-lg"><strong>Horas Reducidas:</strong> {{ resumenGeneral.Summary_Reduced_Hours }}</p>
 </div>
 
 
@@ -164,25 +245,97 @@ onMounted(() => {
         <p class="text-xl"><strong>Horas de Asistencia Semanales:</strong> {{ totalHoras }}</p>
       </div>
 
+      <Button 
+  icon="pi pi-eye"
+  label="Ver Horas Extraordinarias"
+  class="mb-4 p-button-outlined p-button-secondary"
+  @click="abrirModalHoras"
+/>
+
+
+
       <div :class="[
         'rounded-2xl shadow-md p-4',
         isDarkTheme ? 'bg-[#1f1f1f] text-white' : 'bg-white text-gray-900'
       ]">
         <DataTable :value="resumenesSemanales" paginator rows="10" class="w-full">
-          <Column field="Semana_Numero" header="Semana" sortable />
+          <Column field="Period_Name" header="Período" sortable />
+          <Column field="Week_Number" header="Semana" sortable />
           <Column header="Inicio" sortable>
             <template #body="slotProps">
-              {{ formatDate(slotProps.data.Semana_Inicio) }}
+              {{ formatDate(slotProps.data.Week_Start) }}
             </template>
           </Column>
           <Column header="Fin" sortable>
             <template #body="slotProps">
-              {{ formatDate(slotProps.data.Semana_Fin) }}
+              {{ formatDate(slotProps.data.Week_End) }}
             </template>
           </Column>
-          <Column field="Horas_Asistencia" header="Horas Asistencia" sortable />
+          <Column field="Attendance_Hours" header="Horas Asistencia" sortable />
         </DataTable>
       </div>
     </div>
+
+    <Dialog 
+  v-model:visible="mostrarModalHoras"
+  header="Horas Extraordinarias"
+  modal
+  :style="{ width: '60vw' }"
+  :breakpoints="{ '960px': '95vw' }"
+>
+  <div class="overflow-x-auto">
+    <DataTable :value="horasExtraordinarias" class="w-full">
+
+      <Column field="Horas_Fecha" header="Fecha">
+        <template #body="slotProps">
+          {{ formatDate(slotProps.data.Hours_Date) }}
+        </template>
+      </Column>
+      <Column field="Hours_Type" header="Tipo" />
+      <Column field="Hours_Num" header="Cantidad" />
+      <Column field="Hours_Approved_By" header="Aprobado Por" />
+      <Column header="Comentario">
+  <template #body="slotProps">
+    <div class="flex items-center gap-2">
+      <!-- Truncar solo visualmente, sin limitar el acceso al comentario completo -->
+      <span class="truncate max-w-[200px]">
+        {{ slotProps.data.Hours_Comment || '—' }}
+      </span>
+      <!-- Mostrar botón SIEMPRE que haya comentario -->
+      <Button 
+        v-if="slotProps.data.Hours_Comment"
+        icon="pi pi-comment"
+        class="p-button-text text-blue-500"
+        @click="verComentarioCompleto(slotProps.data.Hours_Comment)"
+        v-tooltip.top="'Ver comentario completo'"
+      />
+    </div>
+  </template>
+</Column>
+
+
+
+    </DataTable>
+  </div>
+</Dialog>
+
+<Dialog
+  v-model:visible="modalComentarioVisible"
+  header="Comentario Completo"
+  modal
+  :style="{ width: '50vw' }"
+  :breakpoints="{ '960px': '90vw' }"
+>
+  <div
+    class="p-4 max-h-[400px] overflow-y-auto break-words whitespace-pre-wrap leading-relaxed text-justify"
+    :class="isDarkTheme ? 'text-white' : 'text-gray-900'"
+  >
+    {{ comentarioSeleccionado }}
+  </div>
+</Dialog>
+
+
+
+
   </main>
 </template>

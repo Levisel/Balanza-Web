@@ -37,6 +37,9 @@ const { isDarkTheme } = useDarkMode();
   
   const fetchHorarioEstudiante = async () => {
     try {
+      if (!user) {
+        throw new Error("Usuario no autenticado");
+      }
       const res = await fetch(`${API}/horarioEstudiantes/porEstudiante/${user.id}`);
       if (!res.ok) throw new Error("Error al obtener horario del estudiante");
       schedules.value = await res.json();

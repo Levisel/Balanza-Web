@@ -24,9 +24,12 @@
           v-model="areaSeleccionada"
           :options="areas"
           optionLabel="label"
+          optionValue="label"
           placeholder="Filtrar por Área"
           class="w-60"
         />
+
+
   
         <!-- Botón para restablecer filtros -->
         <Button
@@ -51,53 +54,78 @@
         removableSort
       >
         <!-- Columna: Cédula -->
-        <Column field="Usuario_Cedula" header="Cédula" sortable>
+        <Column field="Internal_ID" header="Cédula" sortable>
           <template #body="slotProps">
-            {{ slotProps.data.usuarioResumen?.Internal_ID || "N/A" }}
+            {{ slotProps.data.userSummary?.Internal_ID || "N/A" }}
           </template>
         </Column>
   
         <!-- Columna: Nombres -->
-        <Column field="Usuario_Nombres" header="Nombres" sortable>
+        <Column field="Internal_Name" header="Nombres" sortable>
           <template #body="slotProps">
-            {{ slotProps.data.usuarioResumen?.Internal_Name || "N/A" }}
+            {{ slotProps.data.userSummary?.Internal_Name || "N/A" }}
           </template>
         </Column>
   
         <!-- Columna: Apellidos -->
-        <Column field="Usuario_Apellidos" header="Apellidos" sortable>
+        <Column field="Internal_LastName" header="Apellidos" sortable>
           <template #body="slotProps">
-            {{ slotProps.data.usuarioResumen?.Internal_LastName || "N/A" }}
+            {{ slotProps.data.userSummary?.Internal_LastName || "N/A" }}
           </template>
         </Column>
   
-        <!-- Columna: Correo Institucional -->
-        <Column field="Usuario_Correo" header="Correo Institucional" sortable>
+        <!-- Columna: Correo Institucional
+        <Column field="Internal_Email" header="Correo Institucional" sortable>
           <template #body="slotProps">
-            {{ slotProps.data.usuarioResumen?.Internal_Email?.trim() || "N/A" }}
+            {{ slotProps.data.userSummary?.Internal_Email?.trim() || "N/A" }}
           </template>
-        </Column>
+        </Column> -->
   
         <!-- Columna: Área -->
-        <Column field="Usuario_Area" header="Área" sortable>
+        <Column field="Internal_Area" header="Área" sortable>
           <template #body="slotProps">
-            {{ slotProps.data.usuarioResumen?.Internal_Area?.trim() || "N/A" }}
+            {{ slotProps.data.userSummary?.Internal_Area?.trim() || "N/A" }}
           </template>
         </Column>
   
         <!-- Columna: Inicio (Fecha de Inicio) -->
-        <Column field="Resumen_Inicio" header="Inicio" sortable>
+        <Column field="Summary_Start" header="Inicio" sortable>
           <template #body="slotProps">
-            {{ formatDate(slotProps.data.Resumen_Inicio) }}
+            {{ formatDate(slotProps.data.Summary_Start) }}
+          </template>
+        </Column>
+
+        <Column field="Summary_End" header="Fin" sortable>
+          <template #body="slotProps">
+            {{ formatDate(slotProps.data.Summary_End) }}
           </template>
         </Column>
   
         <!-- Columna: Horas Totales -->
-        <Column field="Resumen_Horas_Totales" header="Horas Totales" sortable>
+        <Column field="Summary_Total_Hours" header="Horas Totales" sortable>
           <template #body="slotProps">
-            {{ slotProps.data.Resumen_Horas_Totales || "N/A" }}
+            {{ slotProps.data.Summary_Total_Hours || "N/A" }}
           </template>
         </Column>
+
+        <!-- Columna: ¿Finalizó el proceso? -->
+        <Column field="Summary_IsComplete" header="¿Finalizó el proceso?" sortable>
+          <template #body="slotProps">
+            <span
+              v-if="slotProps.data.Summary_IsComplete"
+              class="text-green-600 font-bold flex items-center gap-2"
+            >
+              <i class="pi pi-check-circle" /> Sí
+            </span>
+            <span
+              v-else
+              class="text-red-600 font-bold flex items-center gap-2"
+            >
+              <i class="pi pi-times-circle" /> No
+            </span>
+          </template>
+        </Column>
+
   
         <!-- Columna de Acciones -->
         <Column header="Acciones">
@@ -114,7 +142,7 @@
       <Button 
         icon="pi pi-arrow-right" 
         class="p-button-rounded p-button-success" 
-         @click="irSeguimientoSemanal(slotProps.data.Resumen_ID, slotProps.data.usuarioResumen.Internal_ID)"
+         @click="irSeguimientoSemanal(slotProps.data.Summary_ID, slotProps.data.userSummary.Internal_ID)"
         v-tooltip.bottom="{ value: 'Ver Seguimiento Semanal', tooltipOptions: { position: 'top', showDelay: 300 } }"
       />
     </div>
@@ -125,24 +153,22 @@
       <!-- Modal para mostrar detalle completo -->
       <Dialog v-model:visible="modalInfoVisible" header="Detalle del Resumen" :modal="true" style="width: 30rem">
         <div class="flex flex-col gap-2">
-          <p><strong>ID:</strong> {{ detalleSeleccionado?.Resumen_ID }}</p>
-          <p><strong>Cédula:</strong> {{ detalleSeleccionado?.usuarioResumen?.Usuario_Cedula }}</p>
+          <p><strong>Cédula:</strong> {{ detalleSeleccionado?.userSummary?.Internal_ID }}</p>
           <p>
             <strong>Nombre Completo:</strong>
-            {{ detalleSeleccionado?.usuarioResumen?.Usuario_Nombres }} {{ detalleSeleccionado?.usuarioResumen?.Usuario_Apellidos }}
+            {{ detalleSeleccionado?.userSummary?.Internal_Name }} {{ detalleSeleccionado?.userSummary?.Internal_LastName }}
           </p>
-          <p><strong>Correo:</strong> {{ detalleSeleccionado?.usuarioResumen?.Usuario_Correo }}</p>
-          <p><strong>Área:</strong> {{ detalleSeleccionado?.usuarioResumen?.Usuario_Area || "N/A" }}</p>
-          <p><strong>Inicio:</strong> {{ formatDate(detalleSeleccionado?.Resumen_Inicio) }}</p>
+          <p><strong>Correo:</strong> {{ detalleSeleccionado?.userSummary?.Internal_Email }}</p>
+          <p><strong>Área:</strong> {{ detalleSeleccionado?.userSummary?.Internal_Area || "N/A" }}</p>
+          <p><strong>Inicio:</strong> {{ formatDate(detalleSeleccionado?.Summary_Start) }}</p>
           <p>
             <strong>Fin:</strong>
-            {{ detalleSeleccionado?.Resumen_Fin ? formatDate(detalleSeleccionado?.Resumen_Fin) : "N/A" }}
+            {{ detalleSeleccionado?.Summary_End ? formatDate(detalleSeleccionado?.Summary_End) : "N/A" }}
           </p>
-          <p><strong>Horas Totales:</strong> {{ detalleSeleccionado?.Resumen_Horas_Totales }}</p>
-          <p><strong>Horas Adicionales:</strong> {{ detalleSeleccionado?.Resumen_Horas_Adicionales }}</p>
-          <p><strong>Horas Reducidas:</strong> {{ detalleSeleccionado?.Resumen_Horas_Reducidas }}</p>
-          <p><strong>Creado:</strong> {{ formatDate(detalleSeleccionado?.createdAt) }}</p>
-          <p><strong>Actualizado:</strong> {{ formatDate(detalleSeleccionado?.updatedAt) }}</p>
+          <p><strong>Horas Totales:</strong> {{ detalleSeleccionado?.Summary_Total_Hours }}</p>
+          <p><strong>Horas Adicionales:</strong> {{ detalleSeleccionado?.Summary_Extra_Hours }}</p>
+          <p><strong>Horas Reducidas:</strong> {{ detalleSeleccionado?.Summary_Reduced_Hours }}</p>
+
         </div>
         <template #footer>
           <Button label="Cerrar" icon="pi pi-times" class="p-button-secondary" @click="modalInfoVisible = false" />
@@ -197,10 +223,10 @@
   // Computed: Filtrar el JSON según cédula, nombre/apellido y área
   const resumenesFiltrados = computed(() => {
     return resumenes.value.filter((item) => {
-      const cedula = item.usuarioResumen?.Internal_ID?.toLowerCase() || "";
-      const nombres = item.usuarioResumen?.Internal_Name?.toLowerCase() || "";
-      const apellidos = item.usuarioResumen?.Internal_LastName?.toLowerCase() || "";
-      const area = item.usuarioResumen?.Internal_Area?.trim() || "";
+      const cedula = item.userSummary?.Internal_ID?.toLowerCase() || "";
+      const nombres = item.userSummary?.Internal_Name?.toLowerCase() || "";
+      const apellidos = item.userSummary?.Internal_LastName?.toLowerCase() || "";
+      const area = item.userSummary?.Internal_Area?.trim() || "";
       const fullName = `${nombres} ${apellidos}`;
   
       const filtroCedula = busquedaCedula.value.trim()
@@ -209,10 +235,10 @@
       const filtroNombre = busquedaNombre.value.trim()
         ? fullName.includes(busquedaNombre.value.toLowerCase().trim())
         : true;
-        const filtroArea =
-  areaSeleccionada.value && areaSeleccionada.value.value !== ""
-    ? area === areaSeleccionada.value.value
-    : true;
+        const filtroArea = areaSeleccionada.value
+  ? area.includes(areaSeleccionada.value.trim())
+  : true;
+
 
 
 

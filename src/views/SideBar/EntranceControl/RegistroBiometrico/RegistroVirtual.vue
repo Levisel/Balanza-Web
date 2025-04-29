@@ -60,7 +60,7 @@
         <!-- Período activo -->
         <div v-if="periodoActual" class="mt-4 text-center">
           <p class="text-lg text-green-600">
-            Estás en el período: {{ periodoActual.periodo.PeriodoNombre }}
+            Estás en el período: {{ periodoActual.period.Period_Name }}
           </p>
         </div>
   
@@ -69,7 +69,7 @@
           <p class="text-lg">
             Hora programada para hoy: <strong>{{ scheduledTimeString }}</strong>
           </p>
-          <p class="text-sm text-gray-600">(Ventana de 30 minutos antes y 30 después)</p>
+          <p class="text-sm text-gray-600">(Ventana de {{ ventanaTexto }})</p>
         </div>
         <div v-else class="mt-6 text-center text-red-600">
           <p>No tienes un horario virtual asignado para hoy ({{ currentDayMessage }}).</p>
@@ -80,9 +80,9 @@
           <p class="text-lg text-blue-600">
             Ya registraste tu asistencia virtual el día de hoy.
             <br />
-            Entrada: {{ formatTime(registroVirtualCompleto.Registro_Entrada) }}
+            Entrada: {{ formatTime(registroVirtualCompleto.Attendance_Entry) }}
             <br />
-            Salida: {{ formatTime(registroVirtualCompleto.Registro_Salida) }}
+            Salida: {{ formatTime(registroVirtualCompleto.Attendance_Exit) }}
           </p>
         </div>
   
@@ -92,7 +92,7 @@
             Aún no has registrado tu asistencia virtual.
           </p>
           <p v-else-if="tipoRegistro === 'salida'" class="text-blue-600">
-            Tienes un registro abierto (Entrada a las {{ formatTime(registroAbierto.Registro_Entrada) }}). Falta registrar la Salida Virtual.
+            Tienes un registro abierto (Entrada a las {{ formatTime(registroAbierto.Attendance_Entry) }}). Falta registrar la Salida Virtual.
           </p>
           <Button
             :label="tipoRegistro === 'entrada' ? 'Registrar Entrada Virtual' : 'Registrar Salida Virtual'"
@@ -159,6 +159,41 @@
   const area = ref("");
   const usuarioXPeriodoId = ref("");
   const periodoActual = ref<any>(null);
+
+  const modoSimulacion = true;
+  const fechaSimulada = new Date("2025-04-22T13:09:00");
+
+  // Constantes de ventana de validación (editable fácilmente)
+const MINUTOS_ANTES = 10;
+const MINUTOS_DESPUES = 10;
+const ventanaTexto = `${MINUTOS_ANTES} minutos antes y ${MINUTOS_DESPUES} después`;
+
+
+// Computed para validar si estamos dentro del rango permitido
+const dentroDeRango = computed(() => {
+  if (!scheduledTimeVirtual.value) return false;
+  const ahora = getAhoraLocal();
+  const inicio = new Date(scheduledTimeVirtual.value.getTime() - MINUTOS_ANTES * 60000);
+  const fin = new Date(scheduledTimeVirtual.value.getTime() + MINUTOS_DESPUES * 60000);
+  return ahora >= inicio && ahora <= fin;
+});
+
+const dentroDeRangoSalida = computed(() => {
+  if (!scheduledTimeVirtual.value || tipoRegistro.value !== "salida") return false;
+  const ahora = getAhoraLocal();
+  const inicio = new Date(scheduledTimeVirtual.value.getTime() - MINUTOS_ANTES * 60000);
+  const fin = new Date(scheduledTimeVirtual.value.getTime() + MINUTOS_DESPUES * 60000);
+  return ahora >= inicio && ahora <= fin;
+});
+
+
+
+
+
+  function getAhoraLocal(): Date {
+    return modoSimulacion ? new Date(fechaSimulada) : new Date();
+  }
+
   
   // VARIABLES PARA HORARIO VIRTUAL Y REGISTRO VIRTUAL
   const horarioVirtualData = ref<any[]>([]);
@@ -166,26 +201,36 @@
   const registroAbierto = ref<any>(null); // Registro abierto (sin salida) virtual, si existe
   const tipoRegistro = ref("entrada"); // "entrada" si no hay registro abierto; "salida" si ya se registró la entrada
   
+
+
   // CÁLCULO DEL HORARIO VIRTUAL PROGRAMADO
   const scheduledTimeVirtual = computed(() => {
-    if (!horarioVirtualData.value || horarioVirtualData.value.length === 0) return null;
-    const dayNames = ["Domingo", "Lunes", "Martes", "Miercoles", "Jueves", "Viernes", "Sabado"];
-    const now = new Date();
-    const localDay = now.getDay();
-    if (localDay < 1 || localDay > 5) return null;
-    const dayName = dayNames[localDay];
-    const record = horarioVirtualData.value.find((r: any) => r[`Horario_Dia_${dayName}`]);
-    if (!record) return null;
-    let timeString = "";
-    if (tipoRegistro.value === "entrada") {
-      timeString = record[`${dayName}_Entrada`];
-    } else {
-      timeString = record[`${dayName}_Salida`];
-    }
-    if (!timeString) return null;
-    const [h, m, s] = timeString.split(":").map(Number);
-    return new Date(now.getFullYear(), now.getMonth(), now.getDate(), h, m, s || 0);
-  });
+  if (!horarioVirtualData.value || horarioVirtualData.value.length === 0) return null;
+
+  const dayKeys = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+  const now = getAhoraLocal();
+  const todayKey = dayKeys[now.getDay()];
+
+  if (todayKey === "Sunday" || todayKey === "Saturday") return null; // No asistencia sábado/domingo
+
+  // Buscar el primer horario válido
+  const schedule = horarioVirtualData.value.find((h: any) => h.Schedule_IsDeleted === false || h.Schedule_IsDeleted === 0);
+  if (!schedule) return null;
+
+  let timeString = "";
+
+  if (tipoRegistro.value === "entrada") {
+    timeString = schedule[`${todayKey}_Start`]; // ejemplo: Monday_Start
+  } else {
+    timeString = schedule[`${todayKey}_End`];   // ejemplo: Monday_End
+  }
+
+  if (!timeString) return null;
+
+  const [hours, minutes, seconds] = timeString.split(":").map(Number);
+  return new Date(now.getFullYear(), now.getMonth(), now.getDate(), hours, minutes, seconds || 0);
+});
+
   
   const scheduledTimeString = computed(() => {
     if (!scheduledTimeVirtual.value) return "No asignado";
@@ -193,18 +238,31 @@
   });
   
   // Si no existe horario virtual asignado, mostrar mensaje con el día y hora actual en EC
-  const currentDayMessage = computed(() => {
-    const days = ["Domingo", "Lunes", "Martes", "Miercoles", "Jueves", "Viernes", "Sabado"];
-    const now = new Date();
-    const dayName = days[now.getDay()];
-    const currentTime = now.toLocaleTimeString("es-EC", { timeZone: "America/Guayaquil", hour: "2-digit", minute: "2-digit" });
-    return `${dayName} a las ${currentTime}`;
-  });
+const currentDayMessage = computed(() => {
+  const dayKeys = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+  const dayLabels = {
+    Sunday: "Domingo",
+    Monday: "Lunes",
+    Tuesday: "Martes",
+    Wednesday: "Miércoles",
+    Thursday: "Jueves",
+    Friday: "Viernes",
+    Saturday: "Sábado",
+  };
+
+  const now = getAhoraLocal();
+  const todayKey = dayKeys[now.getDay()];
+  const dayLabel = dayLabels[todayKey] || todayKey;
+  const currentTime = now.toLocaleTimeString("es-EC", { timeZone: "America/Guayaquil", hour: "2-digit", minute: "2-digit" });
+
+  return `${dayLabel} a las ${currentTime}`;
+});
+
   
   // Determinar si es atraso (para registro de entrada)
   const esAtraso = computed(() => {
     if (!scheduledTimeVirtual.value || tipoRegistro.value !== "entrada") return false;
-    const now = new Date();
+    const now = getAhoraLocal();
     const diffMinutes = (now.getTime() - scheduledTimeVirtual.value.getTime()) / 60000;
     return diffMinutes > 30;
   });
@@ -256,10 +314,10 @@
     const res = await fetch(`${API}/usuarioXPeriodo/usuario/${cedula.value}`);
     const data = await res.json();
 
-    const hoy = new Date();
+    const hoy = getAhoraLocal();
     const periodoAct = data.find((p: any) => {
-      const inicio = new Date(p.periodo.Periodo_Inicio);
-      const fin = new Date(p.periodo.Periodo_Fin);
+      const inicio = new Date(p.period.Period_Start);
+      const fin = new Date(p.period.Period_End);
       return hoy >= inicio && hoy <= fin;
     });
 
@@ -275,22 +333,23 @@
 
     // Guardar periodo activo
     periodoActual.value = periodoAct;
-    usuarioXPeriodoId.value = periodoAct.UsuarioXPeriodo_ID;
+    usuarioXPeriodoId.value = periodoAct.UserXPeriod_ID;
 
     // Cargar horario virtual asignado
-    const horarioRes = await fetch(`${API}/horarioEstudiantes/completo/usuarioxperiodo/${usuarioXPeriodoId.value}?modalidad=Virtual`);
+    const horarioRes = await fetch(`${API}/horarioEstudiantes/completo/usuarioxperiodo/${usuarioXPeriodoId.value}?mode=Virtual`);
     horarioVirtualData.value = horarioRes.ok ? await horarioRes.json() : [];
 
     // Verificar registros de asistencia del día
-    const today = new Date().toISOString().split("T")[0];
+    const today = getAhoraLocal().toISOString().split("T")[0];
+
 
     // Registro completo (entrada y salida)
-    const regCompletoRes = await fetch(`${API}/registros/virtual/completo?usuarioxPeriodoId=${usuarioXPeriodoId.value}&fecha=${today}`);
+    const regCompletoRes = await fetch(`${API}/registros/virtual/completo?userXPeriodId=${usuarioXPeriodoId.value}&date=${today}`);
     if (regCompletoRes.ok) {
       registroVirtualCompleto.value = await regCompletoRes.json();
     } else {
       // Si no hay completo, busca abierto (solo entrada)
-      const regAbiertoRes = await fetch(`${API}/registros/abierto?usuarioxPeriodoId=${usuarioXPeriodoId.value}&fecha=${today}&modalidad=Virtual`);
+      const regAbiertoRes = await fetch(`${API}/registros/abierto?userXPeriodId=${usuarioXPeriodoId.value}&date=${today}&mode=Virtual`);
       if (regAbiertoRes.ok) {
         registroAbierto.value = await regAbiertoRes.json();
         tipoRegistro.value = "salida";
@@ -320,18 +379,30 @@
   });
   
   // Función para guardar la asistencia virtual
-  async function guardarAsistenciaVirtual() {
-  const now = new Date();
+// Función para guardar la asistencia virtual (actualizada con validación)
+async function guardarAsistenciaVirtual() {
+  const now = getAhoraLocal();
 
   try {
     if (tipoRegistro.value === "entrada") {
+      // ✅ Validación de rango para entrada
+      if (!dentroDeRango.value) {
+        toast.add({
+          severity: "warn",
+          summary: "Fuera de Rango",
+          detail: `Debes registrar la entrada dentro de los ${MINUTOS_ANTES} minutos antes o ${MINUTOS_DESPUES} después de la hora programada.`,
+          life: 4000,
+        });
+        return;
+      }
+
       const payloadEntrada: any = {
-        UsuarioXPeriodo_ID: usuarioXPeriodoId.value,
-        Registro_Tipo: "Virtual",
-        Registro_fecha: now,
-        Registro_Entrada: now,
-        Registro_Atraso: esAtraso.value, // Solo en entrada
-        Registro_IsDeleted: false,
+        UserXPeriod_ID: usuarioXPeriodoId.value,
+        Attendance_Type: "Virtual",
+        Attendance_Date: now,
+        Attendance_Entry: now,
+        Attendance_Late: esAtraso.value,
+        Attendance_IsDeleted: false,
       };
 
       const res = await fetch(`${API}/registros`, {
@@ -345,11 +416,11 @@
       toast.add({
         severity: "success",
         summary: "Entrada Registrada",
-        detail: "Registro de entrada virtual creado.",
+        detail: "Registro de entrada virtual creado correctamente.",
         life: 3000,
       });
 
-      await nextTick(); // Dale chance al DOM y a PrimeVue de mostrar el toast antes de recargar
+      await nextTick();
       tipoRegistro.value = "salida";
 
     } else if (tipoRegistro.value === "salida") {
@@ -363,15 +434,26 @@
         return;
       }
 
+      // ✅ Validación de rango para salida
+      if (!dentroDeRangoSalida.value) {
+        toast.add({
+          severity: "warn",
+          summary: "Fuera de Rango",
+          detail: `Debes registrar la salida dentro de los ${MINUTOS_ANTES} minutos antes o ${MINUTOS_DESPUES} después de la hora programada.`,
+          life: 4000,
+        });
+        return;
+      }
+
       const payloadSalida: any = {
-        UsuarioXPeriodo_ID: usuarioXPeriodoId.value,
-        Registro_Tipo: "Virtual",
-        Registro_fecha: now,
-        Registro_Salida: now,
-        Registro_IsDeleted: false,
+        UserXPeriod_ID: usuarioXPeriodoId.value,
+        Attendance_Type: "Virtual",
+        Attendance_Date: now,
+        Attendance_Exit: now,
+        Attendance_IsDeleted: false,
       };
 
-      const registroId = registroAbierto.value.Registro_ID;
+      const registroId = registroAbierto.value.Attendance_ID;
 
       const res = await fetch(`${API}/registros/${registroId}/salida`, {
         method: "PUT",
@@ -384,7 +466,7 @@
       toast.add({
         severity: "success",
         summary: "Salida Registrada",
-        detail: "Registro de salida virtual actualizado.",
+        detail: "Registro de salida virtual actualizado correctamente.",
         life: 3000,
       });
 
@@ -405,11 +487,28 @@
   }
 }
 
+
   
   // Función para abrir el diálogo de confirmación
   function confirmarRegistro() {
-    dialogoConfirmacion.value = true;
+  // Validación previa al abrir el modal
+  if (
+    (tipoRegistro.value === "entrada" && !dentroDeRango.value) ||
+    (tipoRegistro.value === "salida" && !dentroDeRangoSalida.value)
+  ) {
+    toast.add({
+      severity: "warn",
+      summary: "Fuera de Rango",
+      detail: `Debes registrar la ${tipoRegistro.value} dentro de los ${MINUTOS_ANTES} minutos antes o ${MINUTOS_DESPUES} después de la hora programada.`,
+      life: 4000,
+    });
+    return;
   }
+
+  // Solo si está en rango se muestra el modal
+  dialogoConfirmacion.value = true;
+}
+
   
   // Función de navegación
   function volver() {

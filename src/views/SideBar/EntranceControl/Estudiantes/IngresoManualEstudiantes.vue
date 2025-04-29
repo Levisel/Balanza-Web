@@ -237,7 +237,8 @@ const onFormSubmit = async () => {
 
 
   try {
-    const response = await fetch(`${API}/usuarioInternoBulk`, {
+    const periodId = "sin-periodo"; 
+    const response = await fetch(`${API}/usuariointernoBulk/${periodId}`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -362,6 +363,7 @@ const onFormSubmit = async () => {
             <FloatLabel variant="on" class="w-full md:w-80">
               <InputText
                 id="name"
+                 maxlength="50"
                 v-model="internalUser.Internal_Name"
                 size="large"
                 class="w-full"
@@ -373,6 +375,7 @@ const onFormSubmit = async () => {
             <FloatLabel variant="on" class="w-full md:w-80">
               <InputText
                 id="lastName"
+                 maxlength="50"
                 v-model="internalUser.Internal_LastName"
                 size="large"
                 class="w-full"
@@ -424,6 +427,7 @@ const onFormSubmit = async () => {
             <FloatLabel variant="on" class="w-full md:w-80">
               <InputText
                 id="email"
+                 maxlength="50"
                 v-model="internalUser.Internal_Email"
                 size="large"
                 class="w-full"

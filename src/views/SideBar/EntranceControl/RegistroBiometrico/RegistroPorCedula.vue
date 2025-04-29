@@ -39,7 +39,9 @@
         type="text"
         placeholder="Ingrese su cédula"
         class="w-full p-3 border rounded-lg"
+        @keyup.enter="buscarEstudiante"
       />
+
       <Button label="Buscar" class="mt-4" @click="buscarEstudiante" />
     </div>
 
@@ -72,17 +74,21 @@
       <!-- Información del período actual -->
       <div v-if="periodoActual" class="mt-4 text-center">
         <p class="text-lg text-green-600">
-          Estás en el período: {{ periodoActual.periodo.PeriodoNombre }}
+          Estás en el período: {{ periodoActual.period.Period_Name }}
         </p>
       </div>
 
-      <!-- Horario programado -->
-      <div class="mt-6 text-center" v-if="scheduledTimeUTC">
-        <p class="text-lg">
-          Hora programada para hoy: <strong>{{ scheduledTimeUTC.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }}</strong>
-        </p>
-        <p class="text-sm text-gray-600">(Ventana de 30 minutos antes y 30 después)</p>
-      </div>
+    <!-- Horario programado -->
+        <div class="mt-6 text-center" v-if="scheduledTimeUTC">
+          <p class="text-lg">
+            Tu hora de {{ tipoRegistro === 'entrada' ? 'entrada' : 'salida' }} es: 
+            <strong>{{ scheduledTimeUTC.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }}</strong>
+          </p>
+          <p v-if="tipoRegistro === 'entrada'" class="text-sm text-gray-600">
+            (Ventana de 10 minutos antes y 10 después)
+          </p>
+        </div>
+
 
       <!-- Si ya existe registro de entrada, mostrar la hora convertida a local -->
       <div v-if="tipoRegistro === 'salida' && registroEntradaLocal" class="mt-4 text-center">
@@ -104,26 +110,27 @@
 
     <!-- Modal para Captura de Huella con Spinner -->
     <Dialog
-      v-model:visible="dialogoActivo"
-      header="Capturar Huella"
-      :modal="true"
-      :closable="false"
-      style="width: 30rem"
-    >
-      <div class="flex flex-col items-center">
-        <p class="mb-4 text-center">
-          Por favor, coloca tu dedo en el lector para capturar la huella.
-        </p>
-        <ProgressSpinner
-          style="width:50px; height:50px;"
-          strokeWidth="8"
-          animationDuration=".8s"
-        />
-        <div class="flex gap-4 mt-4">
-          <Button label="Cancelar" class="p-button-danger" @click="cancelarCaptura" />
-        </div>
-      </div>
-    </Dialog>
+  v-model:visible="dialogoActivo"
+  :header="`Capturar Huella (${tipoRegistro === 'entrada' ? 'Ingreso' : 'Salida'})`"
+  :modal="true"
+  :closable="false"
+  style="width: 30rem"
+>
+  <div class="flex flex-col items-center">
+    <p class="mb-4 text-center text-lg font-medium">
+      {{ tipoRegistro === 'entrada' ? 'Ingreso' : 'Salida' }} - Coloca tu dedo en el lector
+    </p>
+    <ProgressSpinner
+      style="width:50px; height:50px;"
+      strokeWidth="8"
+      animationDuration=".8s"
+    />
+    <div class="flex gap-4 mt-4">
+      <Button label="Cancelar" class="p-button-danger" @click="cancelarCaptura" />
+    </div>
+  </div>
+</Dialog>
+
   </main>
 </template>
 
@@ -183,10 +190,20 @@ const dialogoActivo = ref(false);
 const capturando = ref(false);
 
 
+// 🧪 SIMULACIÓN DE FECHA Y HORA
+// SIMULACIÓN DE FECHA Y HORA ACTUAL
+const modoSimulacion = true; // ⚠️ Cambia a false para usar la hora real
+const fechaSimulada = new Date("2025-04-23T13:51:00"); // Lunes 8:49 AM
+
+function getAhoraLocal(): Date {
+  return modoSimulacion ? new Date(fechaSimulada) : new Date();
+}
+
+
 // Mostrar hora de entrada (convertida a local) si ya existe registro de asistencia
 const registroEntradaLocal = computed(() => {
-  if (registroAbierto.value && registroAbierto.value.Registro_Entrada) {
-    return new Date(registroAbierto.value.Registro_Entrada).toLocaleTimeString("es-EC", {
+  if (registroAbierto.value && registroAbierto.value.Attendance_Entry) {
+    return new Date(registroAbierto.value.Attendance_Entry).toLocaleTimeString("es-EC", {
       timeZone: "America/Guayaquil",
       hour: "2-digit",
       minute: "2-digit",
@@ -195,6 +212,35 @@ const registroEntradaLocal = computed(() => {
   }
   return "";
 });
+
+const horaEntradaProgramada = computed(() => {
+  const ahora = getAhoraLocal();
+  return horarioDelDia.value?.find(h => {
+    const entradaDesde = new Date(h.entrada.getTime() - 10 * 60000);
+    const salidaHasta = h.salida;
+    return ahora >= entradaDesde && ahora <= salidaHasta;
+  })?.entrada || null;
+});
+
+const horaSalidaProgramada = computed(() => {
+  const ahora = getAhoraLocal();
+  const posiblesHorarios = horarioDelDia.value || [];
+
+  // Filtrar solo los horarios cuyo turno ya haya empezado (es decir, estamos dentro o después del turno)
+  const horariosValidos = posiblesHorarios.filter(h => ahora >= h.entrada);
+
+  // De esos, tomar el que esté más cerca a la hora actual (último que aplica)
+  if (horariosValidos.length > 0) {
+    return horariosValidos[horariosValidos.length - 1].salida;
+  }
+
+  return null;
+});
+
+
+
+
+
 
 // Clases para dark mode
 const cardClass = computed(() =>
@@ -209,13 +255,50 @@ const inputClass = computed(() =>
 // Variables para el horario completo del estudiante (se obtiene vía backend)
 const horarioCompleto = ref<any[]>([]);
 
-// BOTÓN DE EXPORTAR A EXCEL (opcional en otra vista)
-// Aquí se podría incluir la funcionalidad de exportar a Excel usando xlsx y file-saver
+const horarioDelDia = computed(() => {
+  if (!horarioCompleto.value || horarioCompleto.value.length === 0) return null;
+
+  const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+  const now = getAhoraLocal();
+  const dayKey = days[now.getDay()];
+
+  // Evitamos los fines de semana
+  if (dayKey === "Sunday" || now.getDay() === 0 || now.getDay() > 5) return null;
+
+  return horarioCompleto.value
+    .map((schedule: any) => {
+      const entryKey = `${dayKey}_Start`;
+      const exitKey = `${dayKey}_End`;
+      const entryStr = schedule[entryKey];
+      const exitStr = schedule[exitKey];
+
+      if (!entryStr || !exitStr) return null;
+
+      const [eh, em, es] = entryStr.split(":").map(Number);
+      const entry = new Date(now);
+      entry.setHours(eh, em, es || 0, 0);
+
+      const [sh, sm, ss] = exitStr.split(":").map(Number);
+      const exit = new Date(now);
+      exit.setHours(sh, sm, ss || 0, 0);
+
+      console.log("Horario del día:", entry, exit);
+      return { entrada: entry, salida: exit };
+    })
+    .filter((h: any) => h !== null);
+});
+
+
 
 /* CICLO DE VIDA: Cargar datos al montar */
 onMounted(() => {
-  // No se carga nada hasta que el usuario ingrese su cédula.
+  console.log(
+    modoSimulacion
+      ? `🧪 Modo Simulación ACTIVADO - Fecha simulada: ${fechaSimulada.toLocaleString()}`
+      : "⏱️ Modo Real ACTIVADO - Usando hora del sistema"
+  );
 });
+
 
 /* FUNCIONES DE BÚSQUEDA Y CARGA DE ESTUDIANTE */
 const buscarEstudiante = async () => {
@@ -250,16 +333,16 @@ const buscarEstudiante = async () => {
     if (!resPeriodos.ok) throw new Error("Error al obtener los períodos del estudiante");
     const periodosData = await resPeriodos.json();
     console.log("Períodos del estudiante:", periodosData);
-    const hoy = new Date();
+    const hoy = getAhoraLocal();
     periodoActual.value = periodosData.find((p: any) => {
-      const inicio = new Date(p.periodo.Periodo_Inicio);
-      const fin = new Date(p.periodo.Periodo_Fin);
+      const inicio = new Date(p.period.Period_Start);
+      const fin = new Date(p.period.Period_End);
       return hoy >= inicio && hoy <= fin;
     });
     if (!periodoActual.value) {
       throw new Error("No se encontró un período activo para el estudiante");
     }
-    usuarioXPeriodoId.value = periodoActual.value.UsuarioXPeriodo_ID;
+    usuarioXPeriodoId.value = periodoActual.value.UserXPeriod_ID;
     console.log("Periodo actual:", periodoActual.value);
     console.log("usuarioXPeriodoId:", usuarioXPeriodoId.value);
     // Cargar el registro de asistencia abierto (si lo hay)
@@ -267,9 +350,76 @@ const buscarEstudiante = async () => {
     estudianteCargado.value = true;
     // Cargar el horario completo del estudiante (GET /horarioEstudiantes/completo/usuarioxperiodo/:usuarioXPeriodoId?modalidad=Presencial)
     await cargarHorarioCompleto();
+    // ✅ Verificar que tenga horario para hoy antes de capturar huella
+    if (!scheduledTimeUTC.value) {
+  if (horarioDelDia.value && horarioDelDia.value.length > 0) {
+    const ahora = getAhoraLocal();
+    let turnoProximo: any = null;
+
+    for (const h of horarioDelDia.value) {
+      const entradaDesde = new Date(h.entrada.getTime() - 10 * 60000);
+      const salidaHasta = new Date(h.salida.getTime() + 10 * 60000);
+
+      if (
+        tipoRegistro.value === "entrada" &&
+        ahora < h.entrada
+      ) {
+        turnoProximo = h.entrada;
+        break;
+      }
+
+      if (
+        tipoRegistro.value === "salida" &&
+        ahora < salidaHasta
+      ) {
+        turnoProximo = h.salida;
+        break;
+      }
+    }
+
+    if (turnoProximo) {
+      const diffMin = Math.ceil((turnoProximo.getTime() - ahora.getTime()) / 60000);
+      toast.add({
+        severity: "info",
+        summary: `Aún no puedes registrar ${tipoRegistro.value}`,
+        detail: `Tu horario ${tipoRegistro.value === "entrada" ? 'inicia' : 'termina'} a las ${turnoProximo.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}. Faltan ${diffMin} minutos.`,
+        life: 6000,
+      });
+    } else {
+      toast.add({
+        severity: "warn",
+        summary: "Fuera de rango",
+        detail: `Ya no estás en un horario válido para registrar ${tipoRegistro.value}.`,
+        life: 4000,
+      });
+    }
+  } else {
+    toast.add({
+      severity: "warn",
+      summary: "Sin horario para hoy",
+      detail: "No tienes un horario asignado para hoy.",
+      life: 4000,
+    });
+  }
+  return;
+}
+
+
     // Iniciar la captura de huella
-    dialogoActivo.value = true;
-    iniciarCaptura();
+    if (!huellaGuardada.value) {
+  toast.add({
+    severity: "warn",
+    summary: "Huella no encontrada",
+    detail: "Este estudiante no tiene huella registrada. No se puede realizar el registro automático.",
+    life: 4000,
+  });
+  return;
+}
+
+// Iniciar la captura si tiene huella
+dialogoActivo.value = true;
+iniciarCaptura();
+
   } catch (error: any) {
     console.error("Error al cargar el estudiante:", error);
     errorModalMessage.value = error.message || "Error al cargar los datos del estudiante.";
@@ -283,11 +433,13 @@ const buscarEstudiante = async () => {
 const cargarRegistroAsistenciaAbierto = async () => {
   if (!cedula.value) return;
   try {
-    const hoy = new Date();
+    const hoy = getAhoraLocal();
+
     // Se envía la fecha en formato ISO (considerando UTC)
     const response = await fetch(
-  `${API}/registros/abierto?usuarioxPeriodoId=${usuarioXPeriodoId.value}&fecha=${hoy.toISOString()}&modalidad=Presencial`
+  `${API}/registros/abierto?userXPeriodId=${usuarioXPeriodoId.value}&date=${hoy.toISOString()}&mode=Presencial`
 );
+
 
     console.log("Registro abierto:", response);
     if (response.ok) {
@@ -314,13 +466,18 @@ const cargarRegistroAsistenciaAbierto = async () => {
 async function cargarHorarioCompleto() {
   if (!usuarioXPeriodoId.value) return;
   try {
-    const url = `${API}/horarioEstudiantes/completo/usuarioxperiodo/${usuarioXPeriodoId.value}?modalidad=Presencial`;
+    const url = `${API}/horarioEstudiantes/completo/usuarioxperiodo/${usuarioXPeriodoId.value}?mode=Presencial`;
     const res = await fetch(url);
     if (!res.ok) {
       console.error("No se pudieron cargar los horarios completos");
       return;
     }
-    horarioCompleto.value = await res.json();
+
+    const horarios = await res.json();
+
+    // Filtrar los horarios activos (Schedule_IsDeleted === 0)
+    horarioCompleto.value = horarios.filter((h: any) => h.Schedule_IsDeleted === 0);
+
     console.log("Horario completo cargado:", horarioCompleto.value);
   } catch (error) {
     console.error("Error al cargar el horario completo:", error);
@@ -328,42 +485,17 @@ async function cargarHorarioCompleto() {
 }
 
 
+
 /* CALCULAR HORARIO PROGRAMADO: Computed que usa el horario completo y el día actual */
 const scheduledTimeUTC = computed(() => {
-  if (!horarioCompleto.value || !horarioCompleto.value.length) return null;
-
-  const dayNames = ["Domingo", "Lunes", "Martes", "Miercoles", "Jueves", "Viernes", "Sabado"];
-  const now = new Date();
-  const localDay = now.getDay(); // Día local
-  if (localDay < 1 || localDay > 5) return null;
-
-  const dayName = dayNames[localDay];
-  const record = horarioCompleto.value.find((r: any) => r[`Horario_Dia_${dayName}`]);
-  if (!record) return null;
-
-  let timeString = "";
-  if (tipoRegistro.value === "entrada") {
-    timeString = record[`${dayName}_Entrada`];
-  } else {
-    timeString = record[`${dayName}_Salida`];
-  }
-
-  if (!timeString) return null;
-
-  const [h, m, s] = timeString.split(":").map(Number);
-
-  // ✅ Construir fecha y hora en local (sin usar Date.UTC)
-  const localDate = new Date(
-    now.getFullYear(),
-    now.getMonth(),
-    now.getDate(),
-    h,
-    m,
-    s || 0
-  );
-
-  return localDate;
+  return tipoRegistro.value === "salida"
+    ? horaSalidaProgramada.value
+    : horaEntradaProgramada.value;
 });
+
+
+
+
 
 
 /* Mostrar la hora programada en pantalla (convertida a local) */
@@ -379,7 +511,7 @@ const scheduledTimeString = computed(() => {
 const esAtraso = computed(() => {
   if (!scheduledTimeUTC.value || tipoRegistro.value !== "entrada") return false;
 
-  const ahoraLocal = new Date();
+  const ahoraLocal = getAhoraLocal();
   const programado = scheduledTimeUTC.value;
 
   const diffMinutos = (ahoraLocal.getTime() - programado.getTime()) / 60000;
@@ -390,6 +522,11 @@ const esAtraso = computed(() => {
 
 /* GUARDAR ASISTENCIA: Usaremos el endpoint de registros para crear/actualizar asistencia */
 const guardarAsistencia = async () => {
+
+  console.log("Scheduled:", scheduledTimeUTC.value?.toLocaleTimeString());
+console.log("Ahora:", getAhoraLocal().toLocaleTimeString());
+console.log("¿Es atraso?:", esAtraso.value);
+
 
   if (!scheduledTimeUTC.value) {
   toast.add({
@@ -404,27 +541,34 @@ const guardarAsistencia = async () => {
 
   try {
     // Preparar el payload del registro de asistencia
-    const nowUTC = new Date();
+    const nowUTC = modoSimulacion
+  ? new Date(fechaSimulada)
+  : new Date();
+
+const fechaSimuladaSalida = new Date("2025-04-23T17:59:00");
+
 
 let payload: any = {
-  UsuarioXPeriodo_ID: usuarioXPeriodoId.value,
-  Registro_Tipo: "Presencial",
-  Registro_Observaciones: null,
-  Registro_fecha: nowUTC,
-  Registro_Atraso: esAtraso.value,
-  Registro_IsDeleted: false
+  UserXPeriod_ID: usuarioXPeriodoId.value,
+  Attendance_Type: "Presencial",
+  Attendance_Comment: null,
+  Attendance_Date: nowUTC,
+  Attendance_Late: esAtraso.value,
+  Attendance_IsDeleted: false
 };
 
 if (tipoRegistro.value === "entrada") {
-  payload.Registro_Entrada = nowUTC;
+  payload.Attendance_Entry = nowUTC;
 } else if (tipoRegistro.value === "salida") {
-  payload.Registro_Salida = nowUTC;
+  payload.Attendance_Exit = modoSimulacion ? fechaSimuladaSalida : nowUTC;
 }
+
+
 
 
     if (registroAbierto.value && tipoRegistro.value === "salida") {
       // Actualizar el registro de salida (PUT)
-      const registroId = registroAbierto.value.Registro_ID;
+      const registroId = registroAbierto.value.Attendance_ID;
       if (!registroId) {
         toast.add({
           severity: "error",
@@ -504,19 +648,72 @@ const iniciarCaptura = async () => {
     clearTimeout(timeoutId);
     if (!response.ok) throw new Error(`Respuesta HTTP inválida: ${response.status}`);
     const data = await response.json();
+  
     if (data.ErrorCode === 0 && data.TemplateBase64) {
-      huellaBase64.value = data.TemplateBase64;
-      huellaCapturada.value = true;
+  huellaBase64.value = data.TemplateBase64;
+  huellaCapturada.value = true;
+
+  // Comparar con la huella almacenada
+    // Comparar huellas
+    const params = new URLSearchParams();
+    params.append("Template1", huellaGuardada.value);
+    params.append("Template2", huellaBase64.value);
+    params.append("Licstr", "");
+    params.append("TemplateFormat", "ISO");
+
+    const resMatch = await fetch("/SGIMatchScore", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        Accept: "*/*"
+      },
+      body: params
+    });
+
+    if (!resMatch.ok) throw new Error("Error al comparar las huellas.");
+    const matchData = await resMatch.json();
+
+    if (matchData.ErrorCode !== 0 || matchData.MatchingScore < 70) {
       toast.add({
-        severity: "success",
-        summary: "Huella Capturada",
-        detail: "La huella digital fue escaneada correctamente.",
-        life: 3000
+        severity: "error",
+        summary: "Huella no válida",
+        detail: `No coincide la huella (score: ${matchData.MatchingScore}).`,
+        life: 4000
       });
       dialogoActivo.value = false;
-      // Llamar a guardar la asistencia luego de una captura exitosa
-      await guardarAsistencia();
-    } else {
+      huellaBase64.value = "";
+      huellaCapturada.value = false;
+      return;
+    }
+
+    toast.add({
+      severity: "success",
+      summary: "Huella Validada",
+      detail: `Coincidencia aceptada. Score: ${matchData.MatchingScore}`,
+      life: 3000
+    });
+  
+
+  // ✅ Actualizar la huella después de coincidencia
+  try {
+    const actualizarHuella = await fetch(`${API}/usuarios/actualizar-huella`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        usuarioCedula: cedula.value,
+        template: huellaBase64.value
+      })
+    });
+    if (!actualizarHuella.ok) throw new Error("No se pudo actualizar la huella.");
+    console.log("Huella actualizada correctamente.");
+  } catch (err) {
+    console.error("Error actualizando la huella del estudiante:", err);
+  }
+
+  dialogoActivo.value = false;
+  await guardarAsistencia();
+}
+else {
       throw new Error(`Error en la captura. Código: ${data.ErrorCode}`);
     }
   } catch (error: any) {
