@@ -175,7 +175,7 @@ const uploadProfilePicture = async () => {
   } catch (error: any) {
     const msg =
       error.response?.data?.message ||
-      "Error al subir la imagen. Inténtalo de nuevo.";
+      "Error al subir la imagen. Porfavor, inténtalo de nuevo..";
     toast.add({ severity: "error", summary: "Error", detail: msg, life: 5000 });
   } finally {
     uploadLoading.value = false;

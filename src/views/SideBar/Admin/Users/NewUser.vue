@@ -38,7 +38,13 @@ axios.get(`${API}/profile`).then((response) => {
   }));
 });
 
-const { subjects: opcionesAreas, fetchSubjects } = useSubjects();
+const opcionesAreas = ref<{ name: string; value: string }[]>([]);
+axios.get(`${API}/subjects`).then((response) => {;
+    opcionesAreas.value = response.data.map((area: any) => ({
+      label: area.Subject_Name,
+      value: area.Subject_Name,
+    }));
+  });
 
 const status = ref([
   { label: "Activo", value: "Activo" },
@@ -382,10 +388,6 @@ const createPassword = () => {
     Math.floor(Math.random() * 100);
   internalUser.value.Internal_Password = password;
 };
-
-onMounted(() => {
-  fetchSubjects();
-});
 </script>
 
 <template>
