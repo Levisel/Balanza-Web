@@ -675,7 +675,6 @@ const seguimientoHorasClass = computed(() => [
                   >
                     <i class="pi pi-clock mr-2"></i>
                     <span class="font-medium text-lg">Gestión de Horarios</span>
-                    <span class="font-medium text-lg">Gestión de Horarios</span>
                     <i class="pi pi-chevron-down ml-auto"></i>
                   </a>
                   <ul class="submenu closed list-none p-0 m-0">

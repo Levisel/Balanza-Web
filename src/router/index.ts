@@ -67,7 +67,6 @@ import VistaHorarios from '@/views/SideBar/EntranceControl/Horario/VistaHorarios
 // FingerPrint
 import AsignacionHuella from '@/views/SideBar/EntranceControl/RegistroBiometrico/AsignacionHuella.vue';
 import RegistroHuella from '@/views/SideBar/EntranceControl/RegistroBiometrico/RegistroHuella.vue';
-import RegistroAsistencia from '@/views/SideBar/EntranceControl/RegistroBiometrico/RegistroAsistencia.vue';
 import RegistroPorCedula from "@/views/SideBar/EntranceControl/RegistroBiometrico/RegistroPorCedula.vue";
 import SeguimientoGeneral from "@/views/SideBar/EntranceControl/ControlAsistencia/SeguimientoGeneral.vue";
 import SeguimientoSemanal from "@/views/SideBar/EntranceControl/Cronograma/SeguimientoSemanal.vue";
@@ -261,11 +260,6 @@ const routes: Array<RouteRecordRaw> = [
         path: 'RegistroHuella/:id?',
         name: 'RegistroHuella',
         component: RegistroHuella,
-      },
-      {
-        path: 'RegistroAsistencia/:id/periodo/:periodoId',
-        name: 'RegistroAsistencia',
-        component: RegistroAsistencia,
       },
       {
         path: 'RegistroPorCedula',

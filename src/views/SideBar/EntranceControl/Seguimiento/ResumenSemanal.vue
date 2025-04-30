@@ -10,6 +10,8 @@ import { useDarkMode } from "@/components/ThemeSwitcher";
 import Toast from "primevue/toast";
 import { useToast } from "primevue/usetoast";
 import Dialog from 'primevue/dialog';
+import axios from "axios";
+
 
 const { isDarkTheme } = useDarkMode(); // 🔥 usa el modo oscuro global
 const toast = useToast(); // 🔥 usa el toast global
@@ -59,9 +61,9 @@ const horasExtraordinarias = ref<any[]>([])
 
 const abrirModalHoras = async () => {
   try {
-    const res = await fetch(`${API}/horasExtraordinariasByUser/${internalId}`);
-    if (!res.ok) throw new Error("Error al obtener horas extraordinarias");
-    const data = await res.json();
+    const { data } = await axios.get(`${API}/horasExtraordinariasByUser/${internalId}`, {
+      withCredentials: true,
+    });
 
     if (!data.length) {
       return toast.add({
@@ -81,6 +83,7 @@ const abrirModalHoras = async () => {
 
 
 
+
 const volver = () => {
   router.push({ name: "SeguimientoGeneral" });
 };
@@ -97,33 +100,16 @@ const resumenGeneral = ref({
 
 const fetchResumenGeneral = async () => {
   try {
-    const response = await fetch(`${API}/resumenHoras/porCedula/${internalId}`);
-
-    if (response.status === 404) {
-      // Si el backend responde 404 específicamente
-      toast.add({
-        severity: "warn",
-        summary: "Resumen no encontrado",
-        detail: "Este estudiante no tiene resumen general registrado.",
-        life: 4000
-      });
-      loading.value = false;
-      return;
-    }
-
-    if (!response.ok) {
-      throw new Error("Error al obtener el resumen general");
-    }
-
-    const data = await response.json();
+    const { data } = await axios.get(`${API}/resumenHoras/porCedula/${internalId}`, {
+      withCredentials: true,
+    });
 
     if (!data?.Summary_ID) {
-      // Si el backend responde 200 pero no hay Summary_ID (opcional por seguridad extra)
       toast.add({
         severity: "warn",
         summary: "Resumen no encontrado",
         detail: "Este estudiante no tiene resumen general registrado.",
-        life: 4000
+        life: 4000,
       });
       loading.value = false;
       return;
@@ -132,15 +118,22 @@ const fetchResumenGeneral = async () => {
     resumenGeneral.value = data;
     resumenId.value = data.Summary_ID;
     await fetchResumenSemanales();
-
   } catch (error: any) {
-    console.error("Error al cargar resumen general:", error.message);
-    toast.add({
-      severity: "error",
-      summary: "Error al cargar",
-      detail: "Ocurrió un error inesperado al intentar cargar el resumen general.",
-      life: 4000
-    });
+    if (error.response?.status === 404) {
+      toast.add({
+        severity: "warn",
+        summary: "Resumen no encontrado",
+        detail: "Este estudiante no tiene resumen general registrado.",
+        life: 4000,
+      });
+    } else {
+      toast.add({
+        severity: "error",
+        summary: "Error al cargar",
+        detail: "Ocurrió un error inesperado al intentar cargar el resumen general.",
+        life: 4000,
+      });
+    }
     loading.value = false;
   }
 };
@@ -151,32 +144,35 @@ const fetchResumenGeneral = async () => {
 
 
 
+
 const fetchResumenSemanales = async () => {
-  loading.value = true; // siempre iniciar cargando
+  loading.value = true;
   try {
-    const response = await fetch(`${API}/resumenSemanales/resumenGeneral/${resumenId.value}`);
-    if (!response.ok) throw new Error("Error al obtener el resumen semanal");
-    const data = await response.json();
+    const { data } = await axios.get(`${API}/resumenSemanales/resumenGeneral/${resumenId.value}`, {
+      withCredentials: true,
+    });
     resumenesSemanales.value = data;
   } catch (error: any) {
     console.error("Error al cargar el resumen semanal:", error.message);
-    resumenesSemanales.value = []; // ⬅️ 🔥 limpiar si hay error
+    resumenesSemanales.value = [];
   } finally {
-    loading.value = false; // 🔥 aseguramos detener loading pase lo que pase
+    loading.value = false;
   }
 };
 
 
+
 const fetchStudent = async () => {
   try {
-    const response = await fetch(`${API}/internal-user/${internalId}`);
-    if (!response.ok) throw new Error("Error al obtener la información del estudiante");
-    const data = await response.json();
+    const { data } = await axios.get(`${API}/internal-user/${internalId}`, {
+      withCredentials: true,
+    });
     student.value = data;
   } catch (error: any) {
     console.error("Error al cargar la información del estudiante:", error.message);
   }
 };
+
 
 
 onMounted(() => {

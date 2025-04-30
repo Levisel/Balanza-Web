@@ -101,7 +101,7 @@ import Message from 'primevue/message';
 import Dialog from 'primevue/dialog';
 import { useToast } from 'primevue/usetoast';
 import { useSubjects } from '@/useSubjects';
-
+import axios from 'axios'; // Asegúrate de importar axios
 
 const toast = useToast();
 
@@ -122,8 +122,8 @@ const areaSeleccionada = ref<string | null>(null);
 // 🔹 Cargar períodos
 const fetchPeriodos = async () => {
   try {
-    const res = await fetch(`${API}/periodos`);
-    periodos.value = await res.json();
+    const res = await axios.get(`${API}/periodos`);
+    periodos.value = res.data;
     console.log('periodos.value', periodos.value);
   } catch (error) {
     errorMensaje.value = 'Error al cargar períodos.';
@@ -134,18 +134,18 @@ const fetchPeriodos = async () => {
 const fetchEstudiantesDelPeriodo = async (periodId: number) => {
   console.log('periodId', periodId);
   try {
-    const res = await fetch(`${API}/usuarioxPeriodo/periodo/${periodId}`);
-    const data = await res.json();
+    const res = await axios.get(`${API}/usuarioxPeriodo/periodo/${periodId}`);
+    const data = res.data;
 
     usuariosXPeriodoDVM.value = data.map((rel: any) => ({
-        Internal_ID: rel.user.Internal_ID,
-        Internal_Name: rel.user.Internal_Name,
-        Internal_LastName: rel.user.Internal_LastName,
-        Internal_Email: rel.user.Internal_Email,
-        Internal_Area: rel.user.Internal_Area || 'N/A',
-        Period_ID: rel.period.Period_ID,
-        Period_Name: rel.period.Period_Name,
-      }));
+      Internal_ID: rel.user.Internal_ID,
+      Internal_Name: rel.user.Internal_Name,
+      Internal_LastName: rel.user.Internal_LastName,
+      Internal_Email: rel.user.Internal_Email,
+      Internal_Area: rel.user.Internal_Area || 'N/A',
+      Period_ID: rel.period.Period_ID,
+      Period_Name: rel.period.Period_Name,
+    }));
 
   } catch (error) {
     errorMensaje.value = 'Error al cargar estudiantes.';
@@ -191,9 +191,7 @@ const removerEstudiantes = async () => {
 
   try {
     for (const estudiante of estudiantesSeleccionados.value) {
-      await fetch(`${API}/usuarioxPeriodo/${periodoSeleccionado.value?.Period_ID}/${estudiante.Internal_ID}`, {
-        method: 'DELETE',
-      });
+      await axios.delete(`${API}/usuarioxPeriodo/${periodoSeleccionado.value?.Period_ID}/${estudiante.Internal_ID}`);
     }
 
     toast.add({

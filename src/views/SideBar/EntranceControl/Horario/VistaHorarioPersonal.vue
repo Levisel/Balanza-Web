@@ -26,7 +26,8 @@
   import { useAuthStore } from "@/stores/auth";
   import CuadriculaHorario from "@/components/CuadriculaHorario.vue";
   import { useDarkMode } from "@/components/ThemeSwitcher";
-const { isDarkTheme } = useDarkMode();
+  import axios from "axios";
+  const { isDarkTheme } = useDarkMode();
   
 
   const authStore = useAuthStore();
@@ -36,19 +37,18 @@ const { isDarkTheme } = useDarkMode();
   const loading = ref(true);
   
   const fetchHorarioEstudiante = async () => {
-    try {
-      if (!user) {
-        throw new Error("Usuario no autenticado");
-      }
-      const res = await fetch(`${API}/horarioEstudiantes/porEstudiante/${user.id}`);
-      if (!res.ok) throw new Error("Error al obtener horario del estudiante");
-      schedules.value = await res.json();
-    } catch (error) {
-      console.error("❌ Error al cargar horario:", error);
-    } finally {
-      loading.value = false;
+  try {
+    if (!user) {
+      throw new Error("Usuario no autenticado");
     }
-  };
+    const res = await axios.get(`${API}/horarioEstudiantes/porEstudiante/${user.id}`);
+    schedules.value = res.data;
+  } catch (error) {
+    console.error("❌ Error al cargar horario:", error);
+  } finally {
+    loading.value = false;
+  }
+};
   
   onMounted(() => {
     fetchHorarioEstudiante();

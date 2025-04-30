@@ -15,7 +15,9 @@ export function useSubjects() {
     loadingSubjects.value = true;
     errorSubjects.value = "";
     try {
-      const response = await fetch(`${API}/subjects`);
+      const response = await fetch(`${API}/subjects`, {
+        credentials: 'include', // 🔥 agregado aquí
+      });
       if (!response.ok) throw new Error("Error al obtener áreas");
       const data = await response.json();
       // Filtramos y mapeamos solo las áreas activas

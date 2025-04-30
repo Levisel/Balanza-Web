@@ -37,7 +37,7 @@
       <Button
         label="Restablecer filtros"
         icon="pi pi-filter-slash"
-        class="p-button-outlined p-button-secondary"
+        class="p-button-outlined p-button-secondarQy"
         @click="limpiarFiltros"
       />
     </div>
@@ -145,7 +145,7 @@ import Toast from "primevue/toast";
 import { useToast } from "primevue/usetoast";
 import EditStudentsModal from "@/components/EditStudentsModal.vue";
 import { API, type UserXPeriodDVM, type Period } from "@/ApiRoute";
-
+import axios from "axios";
 import { useSubjects } from "@/useSubjects";
 
 const { subjects, loadingSubjects, errorSubjects } = useSubjects();
@@ -168,37 +168,28 @@ const errorMensaje = ref("");
 // Función para obtener períodos
 const fetchPeriodos = async () => {
   try {
-    const res = await fetch(`${API}/periodos`);
-    if (!res.ok) throw new Error("Error al obtener períodos");
-    periods.value = await res.json();
-  } catch (error) {
+    const { data } = await axios.get(`${API}/periodos`);
+    periods.value = data;
+  } catch (error: any) {
     console.error("Error cargando períodos:", error);
     errorMensaje.value = "Error al cargar los períodos.";
   }
 };
 
+
 // Función para cargar todos los datos (fusionados) cuando no se filtra por período
 const fetchAllUsersXPeriod = async () => {
   try {
-    // Obtener estudiantes base
-    const resEst = await fetch(`${API}/usuariointerno/estudiantes`);
-    if (!resEst.ok) throw new Error("Error al obtener estudiantes");
-    const dataEst = await resEst.json();
+    const { data: estudiantes } = await axios.get(`${API}/usuariointerno/estudiantes`);
 
     let dataRel = [];
     try {
-      // Intentar obtener relaciones usuario-período
-      const resRel = await fetch(`${API}/usuarioxPeriodo/all`);
-      if (resRel.ok) {
-        dataRel = await resRel.json();
-      } else {
-        console.warn("No se pudieron obtener relaciones usuarioxPeriodo. Continuando solo con estudiantes.");
-      }
+      const { data: relaciones } = await axios.get(`${API}/usuarioxPeriodo/all`);
+      dataRel = relaciones;
     } catch (error) {
-      console.warn("Error en usuarioxPeriodo/all:", error);
+      console.warn("No se pudieron obtener relaciones usuarioxPeriodo, continuando solo con estudiantes.");
     }
 
-    // Armar mapa de relaciones
     const userPeriodsMap = new Map();
     dataRel.forEach((rel: any) => {
       const userId = rel.user.Internal_ID;
@@ -214,16 +205,14 @@ const fetchAllUsersXPeriod = async () => {
       }
     });
 
-    // Mezclar estudiantes con relaciones
     const mergedMap = new Map();
-    dataEst.forEach((student: any) => {
+    estudiantes.forEach((student: any) => {
       mergedMap.set(student.Internal_ID, {
         ...student,
         periodos: userPeriodsMap.get(student.Internal_ID) || [],
       });
     });
 
-    // Agregar los que solo vienen desde relaciones
     dataRel.forEach((rel: any) => {
       const userId = rel.user.Internal_ID;
       if (!mergedMap.has(userId)) {
@@ -238,20 +227,16 @@ const fetchAllUsersXPeriod = async () => {
     });
 
     usersXPeriod.value = Array.from(mergedMap.values());
-
   } catch (error) {
     console.error("Error general al cargar estudiantes:", error);
     errorMensaje.value = "No se pudieron cargar los estudiantes.";
   }
 };
 
-// Función para cargar asignaciones para un período específico
+// Función para cargar usuarios de un período
 const fetchUsersByPeriod = async (periodoId: string) => {
   try {
-    const res = await fetch(`${API}/usuarioxPeriodo/periodo/${periodoId}`);
-    if (!res.ok) throw new Error("Error al obtener asignaciones del período");
-    const data = await res.json();
-    // Mapear los datos para que cada registro tenga la información del usuario y un array con el período
+    const { data } = await axios.get(`${API}/usuarioxPeriodo/periodo/${periodoId}`);
     usersXPeriod.value = data.map((rel: any) => ({
       ...rel.user,
       periodos: [{
@@ -264,7 +249,6 @@ const fetchUsersByPeriod = async (periodoId: string) => {
     errorMensaje.value = "Error al cargar asignaciones del período.";
   }
 };
-
 
 
 // Computed para filtrar estudiantes según los filtros aplicados
@@ -318,11 +302,7 @@ const limpiarFiltros = () => {
 // Función para eliminar un estudiante
 const eliminarEstudiante = async (cedula: string) => {
   try {
-    const response = await fetch(`${API}/internal-user/${cedula}`, {
-      method: "DELETE",
-    });
-    if (!response.ok) throw new Error("Error al eliminar estudiante");
-
+    await axios.delete(`${API}/internal-user/${cedula}`);
     toast.add({
       severity: "success",
       summary: "Eliminado",
@@ -342,6 +322,7 @@ const eliminarEstudiante = async (cedula: string) => {
 };
 
 // Función para abrir el modal de edición
+
 const editarEstudiante = (cedula: string) => {
   const estudiante = usersXPeriod.value.find(e => e.Internal_ID === cedula);
   if (estudiante) {

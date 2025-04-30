@@ -133,6 +133,7 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from "vue";
 import { useRouter } from "vue-router";
+import axios from "axios"; // Asegúrate de tenerlo importado arriba
 import InputText from "primevue/inputtext";
 import Dropdown from "primevue/dropdown";
 import Button from "primevue/button";
@@ -172,13 +173,13 @@ const confirmDelete = (periodo: Period) => {
 const eliminarPeriodoConfirmado = async () => {
   if (!periodoAEliminar.value) return;
   try {
-    const res = await fetch(`${API}/periodos/${periodoAEliminar.value.Period_ID}`, {
-      method: "DELETE",
-    });
-    if (!res.ok) throw new Error("Error al eliminar el período");
-    periods.value = periods.value.filter(
-      (p) => p.Period_ID !== periodoAEliminar.value?.Period_ID
-    );
+    await axios.delete(`${API}/periodos/${periodoAEliminar.value.Period_ID}`, {
+        withCredentials: true,
+      });
+      periods.value = periods.value.filter(
+        (p) => p.Period_ID !== periodoAEliminar.value?.Period_ID
+      );
+
     toast.add({
       severity: "success",
       summary: "Eliminado",
@@ -202,13 +203,17 @@ const eliminarPeriodoConfirmado = async () => {
 // Función para obtener períodos de la API
 const fetchPeriodos = async () => {
   try {
-    const res = await fetch(`${API}/periodos`);
-    if (!res.ok) throw new Error("Error fetching periods");
-    periods.value = await res.json();
+    const { data } = await axios.get(`${API}/periodos`);
+    periods.value = data;
   } catch (error: any) {
-    toast.add({ severity: "error", summary: "Error", detail: error.message });
+    toast.add({
+      severity: "error",
+      summary: "Error",
+      detail: error.response?.data?.message || error.message,
+    });
   }
 };
+
 
 // Función para formatear fecha
 const formatDate = (dateStr: string): string => {
@@ -253,28 +258,7 @@ const editPeriod = (id: number) => {
   router.push(`/IngresoCronograma/${id}`);
 };
 
-// Función para eliminar un período con confirmación
-const eliminarPeriodo = (id: number) => {
-  if (!confirm("¿Estás seguro de que deseas eliminar este período?")) return;
-  fetch(`${API}/periodos/${id}`, { method: "DELETE" })
-    .then((res) => {
-      if (!res.ok) throw new Error("Error al eliminar el período");
-      periods.value = periods.value.filter((p) => p.Period_ID !== id);
-      toast.add({
-        severity: "success",
-        summary: "Eliminado",
-        detail: "Período eliminado correctamente",
-      });
-    })
-    .catch((error) => {
-      console.error("Error eliminando el período:", error);
-      toast.add({
-        severity: "error",
-        summary: "Error",
-        detail: "No se pudo eliminar el período",
-      });
-    });
-};
+
 
 // Función para restablecer filtros
 const limpiarFiltros = () => {

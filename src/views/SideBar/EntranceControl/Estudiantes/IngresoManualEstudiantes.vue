@@ -233,80 +233,47 @@ const onFormSubmit = async () => {
     return;
   }
 
-  loading.value = true; // Inhabilitar el botón y mostrar el spinner
-
+  loading.value = true; // Mostrar loading
 
   try {
-    const periodId = "sin-periodo"; 
-    const response = await fetch(`${API}/usuariointernoBulk/${periodId}`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        Internal_ID: internalUser.value.Internal_ID,
-        Internal_Name: internalUser.value.Internal_Name,
-        Internal_LastName: internalUser.value.Internal_LastName,
-        Internal_Email: internalUser.value.Internal_Email,
-        Internal_Password: internalUser.value.Internal_Password,
-        Internal_Type: "Estudiante",
-        Internal_Area: internalUser.value.Internal_Area,
-        Internal_Phone: internalUser.value.Internal_Phone.replace(/\D/g, ""),
-        Internal_Status: "Activo",
-      }),
-    });
+    const periodId = "sin-periodo";
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      if (response.status === 400) {
-        toast.add({
-          severity: "error",
-          summary: "Campos Incompletos",
-          detail: errorData.message,
-          life: 3000,
-        });
-      } else if (response.status === 401) {
-        toast.add({
-          severity: "error",
-          summary: "Datos Incorrectos",
-          detail: errorData.message,
-          life: 3000,
-        });
-      } else {
-        toast.add({
-          severity: "error",
-          summary: "Error del servidor",
-          detail:
-            "Ha ocurrido un error en el servidor. Por favor intenta más tarde.",
-          life: 3000,
-        });
-      }
-      return;
-    }
+    const payload = {
+      Internal_ID: internalUser.value.Internal_ID,
+      Internal_Name: internalUser.value.Internal_Name,
+      Internal_LastName: internalUser.value.Internal_LastName,
+      Internal_Email: internalUser.value.Internal_Email,
+      Internal_Password: internalUser.value.Internal_Password,
+      Internal_Type: "Estudiante",
+      Internal_Area: internalUser.value.Internal_Area,
+      Internal_Phone: internalUser.value.Internal_Phone.replace(/\D/g, ""),
+      Internal_Status: "Activo",
+    };
 
-    // Si la respuesta es exitosa
-    const data = await response.json();
-    if (data) {
-      toast.add({
-        severity: "success",
-        summary: "Usuario creado",
-        detail: "El usuario ha sido creado exitosamente.",
-        life: 3000,
-      });
-      resetLabels();
-    }
-  } catch (error) {
-    console.error("Error en la petición fetch:", error);
+    const { data } = await axios.post(`${API}/usuariointernoBulk/${periodId}`, payload);
+
     toast.add({
-      severity: "error",
-      summary: "Error del servidor",
-      detail: "Ha ocurrido un error en el servidor. Por favor intenta más tarde.",
+      severity: "success",
+      summary: "Usuario creado",
+      detail: "El usuario ha sido creado exitosamente.",
       life: 3000,
     });
+
+    resetLabels(); // Limpiar formulario
+  } catch (error: any) {
+    console.error("Error en la creación del usuario:", error);
+    const mensajeError = error.response?.data?.message || "Ha ocurrido un error en el servidor. Por favor intenta más tarde.";
+    toast.add({
+      severity: "error",
+      summary: "Error",
+      detail: mensajeError,
+      life: 4000,
+    });
   } finally {
-    loading.value = false; // Habilitar el botón nuevamente
+    loading.value = false; // Ocultar loading
   }
 };
+
 
 
 </script>

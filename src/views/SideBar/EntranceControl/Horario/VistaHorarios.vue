@@ -100,7 +100,7 @@ import Column from 'primevue/column'
 import Toast from 'primevue/toast'
 import CuadriculaHorario from '@/components/CuadriculaHorario.vue'
 import {useSubjects} from '@/useSubjects' // ajusta la ruta si es necesario
-
+import axios from 'axios'
 
 // Importar XLSX y FileSaver
 import * as XLSX from 'xlsx'
@@ -173,52 +173,49 @@ watch(estudianteSeleccionado, async newEst => {
 /* ===== FUNCIONES DE CARGA ===== */
 async function cargarPeriodos() {
   try {
-    const res = await fetch(`${API}/periodos`)
-    periodos.value = await res.json()
+    const res = await axios.get(`${API}/periodos`);
+    periodos.value = res.data;
   } catch (error) {
-    console.error('Error al cargar periodos:', error)
-    useToast().add({ severity: 'error', summary: 'Error', detail: 'No se pudieron cargar los períodos' })
+    console.error('Error al cargar periodos:', error);
+    toast.add({ severity: 'error', summary: 'Error', detail: 'No se pudieron cargar los períodos' });
   }
 }
 
 async function fetchEstudiantes() {
-  if (!periodoSeleccionado.value || !areaSeleccionada.value) return
+  if (!periodoSeleccionado.value || !areaSeleccionada.value) return;
   try {
-    const url = `${API}/usuarioXPeriodo/periodo/${periodoSeleccionado.value.Period_ID}/area/${areaSeleccionada.value}`
-    const res = await fetch(url)
-    estudiantes.value = await res.json()
-    console.log('Estudiantes cargados:', estudiantes.value)
+    const url = `${API}/usuarioXPeriodo/periodo/${periodoSeleccionado.value.Period_ID}/area/${areaSeleccionada.value}`;
+    const res = await axios.get(url);
+    estudiantes.value = res.data;
+    console.log('Estudiantes cargados:', estudiantes.value);
   } catch (error) {
-    console.error('Error al cargar estudiantes:', error)
-    useToast().add({ severity: 'error', summary: 'Error', detail: 'No se pudieron cargar los estudiantes' })
+    console.error('Error al cargar estudiantes:', error);
+    toast.add({ severity: 'error', summary: 'Error', detail: 'No se pudieron cargar los estudiantes' });
   }
 }
 
 async function cargarHorariosCompletos(soloActivos = true) {
   try {
-    const pid = periodoSeleccionado.value.Period_ID
-    const areaParam = areaSeleccionada.value ? encodeURIComponent(areaSeleccionada.value) : ''
-    let url = ''
-    if (areaParam) {
-      url = `${API}/horarioEstudiantes/completo-extraccion?periodId=${pid}&area=${areaParam}`
-    } else {
-      url = `${API}/horarioEstudiantes/completo-extraccion?periodId=${pid}`
-    }
+    const pid = periodoSeleccionado.value.Period_ID;
+    const areaParam = areaSeleccionada.value ? encodeURIComponent(areaSeleccionada.value) : '';
+    let url = areaParam
+      ? `${API}/horarioEstudiantes/completo-extraccion?periodId=${pid}&area=${areaParam}`
+      : `${API}/horarioEstudiantes/completo-extraccion?periodId=${pid}`;
 
-    const res = await fetch(url)
-    const todosLosHorarios = await res.json()
-    console.log("Respuesta completa de horarios:", todosLosHorarios)
+    const res = await axios.get(url);
+    const todosLosHorarios = res.data;
+    console.log("Respuesta completa de horarios:", todosLosHorarios);
 
-    // ✅ Si se requiere solo los activos, se filtra aquí
     horariosCompletos.value = soloActivos
       ? todosLosHorarios.filter((h: any) => h.Schedule_IsDeleted === 0)
-      : todosLosHorarios
-
-    console.log('Horarios cargados:', horariosCompletos.value)
+      : todosLosHorarios;
+    
+    console.log('Horarios cargados:', horariosCompletos.value);
   } catch (error) {
-    console.error('Error al cargar horarios completos:', error)
+    console.error('Error al cargar horarios completos:', error);
   }
 }
+
 
 
 
@@ -226,7 +223,6 @@ async function cargarHorariosCompletos(soloActivos = true) {
 async function exportarAExcel() {
   if (!periodoSeleccionado.value) return;
 
-  // Cargar los horarios completos (incluyendo eliminados) en una variable temporal
   const pid = periodoSeleccionado.value.Period_ID;
   const areaParam = areaSeleccionada.value ? encodeURIComponent(areaSeleccionada.value) : '';
   let url = areaParam
@@ -234,8 +230,8 @@ async function exportarAExcel() {
     : `${API}/horarioEstudiantes/completo-extraccion?periodId=${pid}`;
 
   try {
-    const res = await fetch(url);
-    const dataParaExportar = await res.json(); // <- SIN tocar horariosCompletos.value
+    const res = await axios.get(url);
+    const dataParaExportar = res.data;
 
     if (dataParaExportar.length === 0) {
       const mensaje = areaSeleccionada.value

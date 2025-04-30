@@ -132,7 +132,7 @@ const saveChanges = async () => {
   v-model="editedUser.Internal_Area"
   :options="areas"
   optionLabel="label"
-  optionValue="value"
+  optionValue="label"
   class="w-full rounded border-gray-300 focus:ring-blue-500 bg-gray-100"
   size="large"
 />

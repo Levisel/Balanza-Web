@@ -136,7 +136,9 @@
   import { useToast } from "primevue/usetoast";
   import { API, type Usuario } from "@/ApiRoute";
   import { useDarkMode } from "@/components/ThemeSwitcher";
-  
+  import axios from "axios";
+
+
   const router = useRouter();
   const toast = useToast();
   const { isDarkTheme } = useDarkMode();
@@ -190,47 +192,46 @@
 
   // Función para buscar y cargar datos del estudiante y sus períodos
   const buscarEstudiante = async () => {
-    if (!cedulaInput.value) {
-      toast.add({
-        severity: "warn",
-        summary: "Falta cédula",
-        detail: "Ingrese una cédula para buscar.",
-        life: 3000,
-      });
-      return;
+  if (!cedulaInput.value) {
+    toast.add({
+      severity: "warn",
+      summary: "Falta cédula",
+      detail: "Ingrese una cédula para buscar.",
+      life: 3000,
+    });
+    return;
+  }
+  try {
+    // 📥 Obtener datos del estudiante
+    const { data } = await axios.get(`${API}/internal-user/${cedulaInput.value}`);
+    cedula.value = data.Internal_ID;
+    nombres.value = `${data.Internal_Name} ${data.Internal_LastName}`;
+    apellidos.value = data.Internal_LastName;
+    correo.value = data.Internal_Email;
+    area.value = data.Internal_Area || "";
+
+    // 📥 Obtener períodos del estudiante
+    const { data: periodosData } = await axios.get(`${API}/usuarioXPeriodo/usuario/${cedula.value}`);
+    const hoy = new Date();
+    periodoActual.value = periodosData.find((p: any) => {
+      const inicio = new Date(p.period.Period_Start);
+      const fin = new Date(p.period.Period_End);
+      return hoy >= inicio && hoy <= fin;
+    });
+
+    if (!periodoActual.value) {
+      throw new Error("No se encontró un período activo para el estudiante");
     }
-    try {
-      // Obtener datos del estudiante
-      const response = await fetch(`${API}/internal-user/${cedulaInput.value}`);
-      if (!response.ok) throw new Error("Estudiante no encontrado");
-      const data: Usuario = await response.json();
-      cedula.value = data.Internal_ID;
-      nombres.value = data.Internal_Name + " " + data.Internal_LastName;
-      apellidos.value = data.Internal_LastName;
-      correo.value = data.Internal_Email;
-      area.value = data.Internal_Area || "";
-      
-      // Consultar los períodos del estudiante
-      const resPeriodos = await fetch(`${API}/usuarioXPeriodo/usuario/${cedula.value}`);
-      if (!resPeriodos.ok) throw new Error("Error al obtener los períodos del estudiante");
-      const periodosData = await resPeriodos.json();
-      const hoy = new Date();
-      periodoActual.value = periodosData.find((p: any) => {
-        const inicio = new Date(p.period.Period_Start);
-        const fin = new Date(p.period.Period_End);
-        return hoy >= inicio && hoy <= fin;
-      });
-      if (!periodoActual.value) {
-        throw new Error("No se encontró un período activo para el estudiante");
-      }
-      usuarioXPeriodoId.value = periodoActual.value.UserXPeriod_ID;
-      estudianteCargado.value = true;
-    } catch (error: any) {
-      console.error("Error al cargar el estudiante:", error);
-      errorModalMessage.value = error.message || "Error al cargar los datos del estudiante.";
-      showErrorModal.value = true;
-    }
-  };
+
+    usuarioXPeriodoId.value = periodoActual.value.UserXPeriod_ID;
+    estudianteCargado.value = true;
+  } catch (error: any) {
+    console.error("Error al cargar el estudiante:", error);
+    errorModalMessage.value = error.response?.data?.message || error.message || "Error al cargar los datos del estudiante.";
+    showErrorModal.value = true;
+  }
+};
+
 
   const periodoInicio = computed(() => {
   return periodoActual.value ? new Date(periodoActual.value.period.Period_Start) : null;
@@ -333,44 +334,43 @@ if (new Date(manualSalida.value) > periodoFinAdjusted) {
   
   // Función para guardar la asistencia manual usando el endpoint especializado
   const confirmGuardarAsistencia = async () => {
-    confirmDialogVisible.value = false;
-   
-    try {
-      const registroData = {
-          UserXPeriod_ID: usuarioXPeriodoId.value,
-          Attendance_Entry: new Date(manualEntrada.value),
-          Attendance_Exit: new Date(manualSalida.value),
-          Attendance_Type: attendanceTypeSelected.value,
-          Attendance_Comment: null,
-          Attendance_Date: new Date(manualEntrada.value),
-          Attendance_IsDeleted: false
-        };
-      // Usar el endpoint especializado para crear el registro y actualizar el resumen
-      const response = await fetch(`${API}/registros/createConResumen`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(registroData)
-      });
-      if (!response.ok) throw new Error("No se pudo crear el registro de asistencia.");
-      toast.add({
-        severity: "success",
-        summary: "Registrado",
-        detail: "La asistencia fue registrada correctamente.",
-        life: 3000,
-      });
-      setTimeout(() => {
-        router.push("/AsignacionHuella");
-      }, 3000);
-    } catch (error: any) {
-      console.error("Error al guardar la asistencia manual:", error);
-      toast.add({
-        severity: "error",
-        summary: "Error",
-        detail: error.message || "No se pudo guardar la asistencia.",
-        life: 5000,
-      });
-    }
-  };
+  confirmDialogVisible.value = false;
+
+  try {
+    const registroData = {
+      UserXPeriod_ID: usuarioXPeriodoId.value,
+      Attendance_Entry: new Date(manualEntrada.value),
+      Attendance_Exit: new Date(manualSalida.value),
+      Attendance_Type: attendanceTypeSelected.value,
+      Attendance_Comment: null,
+      Attendance_Date: new Date(manualEntrada.value),
+      Attendance_IsDeleted: false
+    };
+
+    // POST con axios
+    await axios.post(`${API}/registros/createConResumen`, registroData);
+
+    toast.add({
+      severity: "success",
+      summary: "Registrado",
+      detail: "La asistencia fue registrada correctamente.",
+      life: 3000,
+    });
+
+    setTimeout(() => {
+      router.push("/AsignacionHuella");
+    }, 3000);
+  } catch (error: any) {
+    console.error("Error al guardar la asistencia manual:", error);
+    toast.add({
+      severity: "error",
+      summary: "Error",
+      detail: error.response?.data?.message || error.message || "No se pudo guardar la asistencia.",
+      life: 5000,
+    });
+  }
+};
+
   
   // Función para volver a la vista anterior
   const volver = () => {

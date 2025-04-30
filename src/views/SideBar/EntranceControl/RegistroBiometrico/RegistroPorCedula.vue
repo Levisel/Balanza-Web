@@ -139,16 +139,12 @@ import { ref, computed, onMounted, watch, nextTick } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import Button from "primevue/button";
 import Dialog from "primevue/dialog";
-import InputText from "primevue/inputtext";
 import ProgressSpinner from "primevue/progressspinner";
-import Dropdown from "primevue/dropdown";
-import DataTable from "primevue/datatable";
-import Column from "primevue/column";
 import Toast from "primevue/toast";
 import { useToast } from "primevue/usetoast";
 import { API, type Usuario } from "@/ApiRoute";
 import { useDarkMode } from "@/components/ThemeSwitcher";
-
+import axios from "axios";
 // Router
 const router = useRouter();
 
@@ -311,114 +307,112 @@ const buscarEstudiante = async () => {
     });
     return;
   }
+
   cargando.value = true;
   try {
     // Obtener datos del estudiante
-    const response = await fetch(`${API}/internal-user/${cedulaInput.value}`);
-    if (!response.ok) throw new Error("Estudiante no encontrado");
-    const data: Usuario = await response.json();
+    const { data } = await axios.get(`${API}/internal-user/${cedulaInput.value}`, {
+      withCredentials: true,
+    });
     cedula.value = data.Internal_ID;
     nombres.value = data.Internal_Name;
     apellidos.value = data.Internal_LastName;
     correo.value = data.Internal_Email;
     area.value = data.Internal_Area || "";
-    // Opcional: obtener la huella almacenada
-    const resHuella = await fetch(`${API}/usuarios/obtener-huella/${data.Internal_ID}`);
-    if (resHuella.ok) {
-      const huellaData = await resHuella.json();
-      huellaGuardada.value = huellaData.huella || "";
-    }
-    // Consultar los períodos del estudiante
-    const resPeriodos = await fetch(`${API}/usuarioXPeriodo/usuario/${cedula.value}`);
-    if (!resPeriodos.ok) throw new Error("Error al obtener los períodos del estudiante");
-    const periodosData = await resPeriodos.json();
-    console.log("Períodos del estudiante:", periodosData);
+
+    // Obtener huella guardada
+    const { data: huellaData } = await axios.get(`${API}/usuarios/obtener-huella/${data.Internal_ID}`, {
+      withCredentials: true,
+    });
+    huellaGuardada.value = huellaData.huella || "";
+
+    // Obtener períodos del estudiante
+    const { data: periodosData } = await axios.get(`${API}/usuarioXPeriodo/usuario/${cedula.value}`, {
+      withCredentials: true,
+    });
     const hoy = getAhoraLocal();
     periodoActual.value = periodosData.find((p: any) => {
       const inicio = new Date(p.period.Period_Start);
       const fin = new Date(p.period.Period_End);
       return hoy >= inicio && hoy <= fin;
     });
+
     if (!periodoActual.value) {
       throw new Error("No se encontró un período activo para el estudiante");
     }
+
     usuarioXPeriodoId.value = periodoActual.value.UserXPeriod_ID;
-    console.log("Periodo actual:", periodoActual.value);
-    console.log("usuarioXPeriodoId:", usuarioXPeriodoId.value);
-    // Cargar el registro de asistencia abierto (si lo hay)
+
+    // Cargar asistencia y horario
     await cargarRegistroAsistenciaAbierto();
-    estudianteCargado.value = true;
-    // Cargar el horario completo del estudiante (GET /horarioEstudiantes/completo/usuarioxperiodo/:usuarioXPeriodoId?modalidad=Presencial)
     await cargarHorarioCompleto();
-    // ✅ Verificar que tenga horario para hoy antes de capturar huella
+
+    estudianteCargado.value = true;
+
+    // Validar horario antes de capturar
     if (!scheduledTimeUTC.value) {
-  if (horarioDelDia.value && horarioDelDia.value.length > 0) {
-    const ahora = getAhoraLocal();
-    let turnoProximo: any = null;
+      if (horarioDelDia.value && horarioDelDia.value.length > 0) {
+        const ahora = getAhoraLocal();
+        let turnoProximo: any = null;
 
-    for (const h of horarioDelDia.value) {
-      const entradaDesde = new Date(h.entrada.getTime() - 10 * 60000);
-      const salidaHasta = new Date(h.salida.getTime() + 10 * 60000);
+        for (const h of horarioDelDia.value) {
+          const entradaDesde = new Date(h.entrada.getTime() - 10 * 60000);
+          const salidaHasta = new Date(h.salida.getTime() + 10 * 60000);
 
-      if (
-        tipoRegistro.value === "entrada" &&
-        ahora < h.entrada
-      ) {
-        turnoProximo = h.entrada;
-        break;
+          if (tipoRegistro.value === "entrada" && ahora < h.entrada) {
+            turnoProximo = h.entrada;
+            break;
+          }
+
+          if (tipoRegistro.value === "salida" && ahora < salidaHasta) {
+            turnoProximo = h.salida;
+            break;
+          }
+        }
+
+        if (turnoProximo) {
+          const diffMin = Math.ceil((turnoProximo.getTime() - ahora.getTime()) / 60000);
+          toast.add({
+            severity: "info",
+            summary: `Aún no puedes registrar ${tipoRegistro.value}`,
+            detail: `Tu horario ${tipoRegistro.value === "entrada" ? 'inicia' : 'termina'} a las ${turnoProximo.toLocaleTimeString([], {
+              hour: '2-digit',
+              minute: '2-digit'
+            })}. Faltan ${diffMin} minutos.`,
+            life: 6000,
+          });
+        } else {
+          toast.add({
+            severity: "warn",
+            summary: "Fuera de rango",
+            detail: `Ya no estás en un horario válido para registrar ${tipoRegistro.value}.`,
+            life: 4000,
+          });
+        }
+      } else {
+        toast.add({
+          severity: "warn",
+          summary: "Sin horario para hoy",
+          detail: "No tienes un horario asignado para hoy.",
+          life: 4000,
+        });
       }
-
-      if (
-        tipoRegistro.value === "salida" &&
-        ahora < salidaHasta
-      ) {
-        turnoProximo = h.salida;
-        break;
-      }
+      return;
     }
 
-    if (turnoProximo) {
-      const diffMin = Math.ceil((turnoProximo.getTime() - ahora.getTime()) / 60000);
-      toast.add({
-        severity: "info",
-        summary: `Aún no puedes registrar ${tipoRegistro.value}`,
-        detail: `Tu horario ${tipoRegistro.value === "entrada" ? 'inicia' : 'termina'} a las ${turnoProximo.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}. Faltan ${diffMin} minutos.`,
-        life: 6000,
-      });
-    } else {
+    // Validar huella antes de captura
+    if (!huellaGuardada.value) {
       toast.add({
         severity: "warn",
-        summary: "Fuera de rango",
-        detail: `Ya no estás en un horario válido para registrar ${tipoRegistro.value}.`,
+        summary: "Huella no encontrada",
+        detail: "Este estudiante no tiene huella registrada. No se puede realizar el registro automático.",
         life: 4000,
       });
+      return;
     }
-  } else {
-    toast.add({
-      severity: "warn",
-      summary: "Sin horario para hoy",
-      detail: "No tienes un horario asignado para hoy.",
-      life: 4000,
-    });
-  }
-  return;
-}
 
-
-    // Iniciar la captura de huella
-    if (!huellaGuardada.value) {
-  toast.add({
-    severity: "warn",
-    summary: "Huella no encontrada",
-    detail: "Este estudiante no tiene huella registrada. No se puede realizar el registro automático.",
-    life: 4000,
-  });
-  return;
-}
-
-// Iniciar la captura si tiene huella
-dialogoActivo.value = true;
-iniciarCaptura();
+    dialogoActivo.value = true;
+    iniciarCaptura();
 
   } catch (error: any) {
     console.error("Error al cargar el estudiante:", error);
@@ -433,24 +427,14 @@ iniciarCaptura();
 const cargarRegistroAsistenciaAbierto = async () => {
   if (!cedula.value) return;
   try {
-    const hoy = getAhoraLocal();
+    const hoy = getAhoraLocal().toISOString();
+    const url = `${API}/registros/abierto?userXPeriodId=${usuarioXPeriodoId.value}&date=${hoy}&mode=Presencial`;
 
-    // Se envía la fecha en formato ISO (considerando UTC)
-    const response = await fetch(
-  `${API}/registros/abierto?userXPeriodId=${usuarioXPeriodoId.value}&date=${hoy.toISOString()}&mode=Presencial`
-);
+    const response = await axios.get(url, { withCredentials: true });
 
-
-    console.log("Registro abierto:", response);
-    if (response.ok) {
-      const data = await response.json();
-      if (data) {
-        registroAbierto.value = data;
-        tipoRegistro.value = "salida";
-      } else {
-        registroAbierto.value = null;
-        tipoRegistro.value = "entrada";
-      }
+    if (response.data) {
+      registroAbierto.value = response.data;
+      tipoRegistro.value = "salida";
     } else {
       registroAbierto.value = null;
       tipoRegistro.value = "entrada";
@@ -463,26 +447,22 @@ const cargarRegistroAsistenciaAbierto = async () => {
 };
 
 /* Cargar el horario completo asignado al estudiante */
-async function cargarHorarioCompleto() {
+const cargarHorarioCompleto = async () => {
   if (!usuarioXPeriodoId.value) return;
   try {
     const url = `${API}/horarioEstudiantes/completo/usuarioxperiodo/${usuarioXPeriodoId.value}?mode=Presencial`;
-    const res = await fetch(url);
-    if (!res.ok) {
-      console.error("No se pudieron cargar los horarios completos");
-      return;
-    }
 
-    const horarios = await res.json();
+    const response = await axios.get(url, { withCredentials: true });
 
     // Filtrar los horarios activos (Schedule_IsDeleted === 0)
-    horarioCompleto.value = horarios.filter((h: any) => h.Schedule_IsDeleted === 0);
+    horarioCompleto.value = response.data.filter((h: any) => h.Schedule_IsDeleted === 0);
 
     console.log("Horario completo cargado:", horarioCompleto.value);
   } catch (error) {
     console.error("Error al cargar el horario completo:", error);
   }
-}
+};
+
 
 
 
@@ -522,103 +502,95 @@ const esAtraso = computed(() => {
 
 /* GUARDAR ASISTENCIA: Usaremos el endpoint de registros para crear/actualizar asistencia */
 const guardarAsistencia = async () => {
-
   console.log("Scheduled:", scheduledTimeUTC.value?.toLocaleTimeString());
-console.log("Ahora:", getAhoraLocal().toLocaleTimeString());
-console.log("¿Es atraso?:", esAtraso.value);
-
+  console.log("Ahora:", getAhoraLocal().toLocaleTimeString());
+  console.log("¿Es atraso?:", esAtraso.value);
 
   if (!scheduledTimeUTC.value) {
-  toast.add({
-    severity: "warn",
-    summary: "Horario no asignado",
-    detail: "No tienes un horario asignado para hoy. No se puede registrar la asistencia.",
-    life: 4000
-  });
-  return;
-}
-
+    toast.add({
+      severity: "warn",
+      summary: "Horario no asignado",
+      detail: "No tienes un horario asignado para hoy. No se puede registrar la asistencia.",
+      life: 4000,
+    });
+    return;
+  }
 
   try {
-    // Preparar el payload del registro de asistencia
-    const nowUTC = modoSimulacion
-  ? new Date(fechaSimulada)
-  : new Date();
+    const nowUTC = modoSimulacion ? new Date(fechaSimulada) : new Date();
+    const fechaSimuladaSalida = new Date("2025-04-23T17:59:00");
 
-const fechaSimuladaSalida = new Date("2025-04-23T17:59:00");
+    let payload: any = {
+      UserXPeriod_ID: usuarioXPeriodoId.value,
+      Attendance_Type: "Presencial",
+      Attendance_Comment: null,
+      Attendance_Date: nowUTC,
+      Attendance_Late: esAtraso.value,
+      Attendance_IsDeleted: false,
+    };
 
-
-let payload: any = {
-  UserXPeriod_ID: usuarioXPeriodoId.value,
-  Attendance_Type: "Presencial",
-  Attendance_Comment: null,
-  Attendance_Date: nowUTC,
-  Attendance_Late: esAtraso.value,
-  Attendance_IsDeleted: false
-};
-
-if (tipoRegistro.value === "entrada") {
-  payload.Attendance_Entry = nowUTC;
-} else if (tipoRegistro.value === "salida") {
-  payload.Attendance_Exit = modoSimulacion ? fechaSimuladaSalida : nowUTC;
-}
-
-
-
+    if (tipoRegistro.value === "entrada") {
+      payload.Attendance_Entry = nowUTC;
+    } else if (tipoRegistro.value === "salida") {
+      payload.Attendance_Exit = modoSimulacion ? fechaSimuladaSalida : nowUTC;
+    }
 
     if (registroAbierto.value && tipoRegistro.value === "salida") {
-      // Actualizar el registro de salida (PUT)
+      // 🔵 Actualizar registro de salida (axios.put)
       const registroId = registroAbierto.value.Attendance_ID;
       if (!registroId) {
         toast.add({
           severity: "error",
           summary: "Error",
           detail: "No se encontró el registro de entrada para actualizar la salida.",
-          life: 5000
+          life: 5000,
         });
         return;
       }
-      const res = await fetch(`${API}/registros/${registroId}/salida`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
-      });
-      if (!res.ok) throw new Error("No se pudo actualizar el registro de asistencia (salida).");
+
+      await axios.put(
+        `${API}/registros/${registroId}/salida`,
+        payload,
+        { withCredentials: true }
+      );
+
       toast.add({
         severity: "success",
         summary: "Salida Registrada",
         detail: "Registro de salida actualizado correctamente.",
-        life: 3000
+        life: 3000,
       });
     } else {
-      // Crear un nuevo registro de asistencia (entrada)
-      const res = await fetch(`${API}/registros`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
-      });
-      if (!res.ok) throw new Error("No se pudo crear el registro de asistencia (entrada).");
+      // 🔵 Crear nuevo registro de entrada (axios.post)
+      await axios.post(
+        `${API}/registros`,
+        payload,
+        { withCredentials: true }
+      );
+
       toast.add({
         severity: "success",
         summary: "Entrada Registrada",
         detail: "Registro de entrada creado correctamente.",
-        life: 3000
+        life: 3000,
       });
     }
-    // Después de registrar asistencia, redirigir o actualizar la vista según se requiera
+
     setTimeout(() => {
       router.push("/AsignacionHuella");
     }, 3000);
+
   } catch (error: any) {
     console.error("Error al guardar la asistencia:", error);
     toast.add({
       severity: "error",
       summary: "Error",
-      detail: error.message || "No se pudo guardar la asistencia.",
-      life: 5000
+      detail: error.response?.data?.message || error.message || "No se pudo guardar la asistencia.",
+      life: 5000,
     });
   }
 };
+
 
 /* FUNCIONES PARA CAPTURA DE HUELLA */
 const iniciarCaptura = async () => {
@@ -627,6 +599,8 @@ const iniciarCaptura = async () => {
   try {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 15000);
+
+    // ⬇️ SGIFPCapture sigue con fetch (lector local)
     const response = await fetch("/SGIFPCapture", {
       method: "POST",
       mode: "cors",
@@ -634,86 +608,84 @@ const iniciarCaptura = async () => {
         "Content-Type": "application/json",
         Accept: "*/*",
         Origin: "http://localhost:5173",
-        "Access-Control-Allow-Origin": "*"
+        "Access-Control-Allow-Origin": "*",
       },
       body: JSON.stringify({
         Licstr: "",
         FakeDetection: 1,
         Timeout: 15000,
         TemplateFormat: "ISO",
-        ImageWSQRate: 2.25
+        ImageWSQRate: 2.25,
       }),
-      signal: controller.signal
+      signal: controller.signal,
     });
+
     clearTimeout(timeoutId);
+
     if (!response.ok) throw new Error(`Respuesta HTTP inválida: ${response.status}`);
     const data = await response.json();
-  
+
     if (data.ErrorCode === 0 && data.TemplateBase64) {
-  huellaBase64.value = data.TemplateBase64;
-  huellaCapturada.value = true;
+      huellaBase64.value = data.TemplateBase64;
+      huellaCapturada.value = true;
 
-  // Comparar con la huella almacenada
-    // Comparar huellas
-    const params = new URLSearchParams();
-    params.append("Template1", huellaGuardada.value);
-    params.append("Template2", huellaBase64.value);
-    params.append("Licstr", "");
-    params.append("TemplateFormat", "ISO");
+      // ⬇️ SGIMatchScore sigue con fetch (comparación local)
+      const params = new URLSearchParams();
+      params.append("Template1", huellaGuardada.value);
+      params.append("Template2", huellaBase64.value);
+      params.append("Licstr", "");
+      params.append("TemplateFormat", "ISO");
 
-    const resMatch = await fetch("/SGIMatchScore", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-        Accept: "*/*"
-      },
-      body: params
-    });
-
-    if (!resMatch.ok) throw new Error("Error al comparar las huellas.");
-    const matchData = await resMatch.json();
-
-    if (matchData.ErrorCode !== 0 || matchData.MatchingScore < 70) {
-      toast.add({
-        severity: "error",
-        summary: "Huella no válida",
-        detail: `No coincide la huella (score: ${matchData.MatchingScore}).`,
-        life: 4000
+      const resMatch = await fetch("/SGIMatchScore", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+          Accept: "*/*",
+        },
+        body: params,
       });
+
+      if (!resMatch.ok) throw new Error("Error al comparar las huellas.");
+      const matchData = await resMatch.json();
+
+      if (matchData.ErrorCode !== 0 || matchData.MatchingScore < 70) {
+        toast.add({
+          severity: "error",
+          summary: "Huella no válida",
+          detail: `No coincide la huella (score: ${matchData.MatchingScore}).`,
+          life: 4000,
+        });
+        dialogoActivo.value = false;
+        huellaBase64.value = "";
+        huellaCapturada.value = false;
+        return;
+      }
+
+      toast.add({
+        severity: "success",
+        summary: "Huella Validada",
+        detail: `Coincidencia aceptada. Score: ${matchData.MatchingScore}`,
+        life: 3000,
+      });
+
+      // ⬇️ Aquí sí usamos axios para actualizar tu backend
+      try {
+        await axios.put(
+          `${API}/usuarios/actualizar-huella`,
+          {
+            usuarioCedula: cedula.value,
+            template: huellaBase64.value,
+          },
+          { withCredentials: true }
+        );
+        console.log("Huella actualizada correctamente.");
+      } catch (err) {
+        console.error("Error actualizando la huella en backend:", err);
+      }
+
       dialogoActivo.value = false;
-      huellaBase64.value = "";
-      huellaCapturada.value = false;
-      return;
-    }
-
-    toast.add({
-      severity: "success",
-      summary: "Huella Validada",
-      detail: `Coincidencia aceptada. Score: ${matchData.MatchingScore}`,
-      life: 3000
-    });
-  
-
-  // ✅ Actualizar la huella después de coincidencia
-  try {
-    const actualizarHuella = await fetch(`${API}/usuarios/actualizar-huella`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        usuarioCedula: cedula.value,
-        template: huellaBase64.value
-      })
-    });
-    if (!actualizarHuella.ok) throw new Error("No se pudo actualizar la huella.");
-    console.log("Huella actualizada correctamente.");
-  } catch (err) {
-    console.error("Error actualizando la huella del estudiante:", err);
-  }
-
-  dialogoActivo.value = false;
-  await guardarAsistencia();
-}
-else {
+      await guardarAsistencia();
+    } else {
       throw new Error(`Error en la captura. Código: ${data.ErrorCode}`);
     }
   } catch (error: any) {
@@ -722,12 +694,13 @@ else {
       severity: "error",
       summary: "Error",
       detail: "No se pudo capturar la huella. Verifica la conexión con el lector.",
-      life: 5000
+      life: 5000,
     });
   } finally {
     capturando.value = false;
   }
 };
+
 
 const cancelarCaptura = () => {
   dialogoActivo.value = false;

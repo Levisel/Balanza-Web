@@ -145,6 +145,8 @@
   import { useAuthStore } from "@/stores/auth";
   import { useDarkMode } from "@/components/ThemeSwitcher";
   import { nextTick } from 'vue'
+  import axios from 'axios'; // Asegúrate que esté importado arriba
+
   const router = useRouter();
   const toast = useToast();
   const { isDarkTheme } = useDarkMode();
@@ -288,7 +290,7 @@ const currentDayMessage = computed(() => {
   }
   
   // Función para cargar los datos del estudiante desde el auth store
-  async function cargarDatosEstudiante() {
+async function cargarDatosEstudiante() {
   const user = authStore.user;
 
   if (!user) {
@@ -311,8 +313,10 @@ const currentDayMessage = computed(() => {
 
   try {
     // Obtener usuarioXPeriodo
-    const res = await fetch(`${API}/usuarioXPeriodo/usuario/${cedula.value}`);
-    const data = await res.json();
+    const res = await axios.get(`${API}/usuarioXPeriodo/usuario/${cedula.value}`, {
+      withCredentials: true,
+    });
+    const data = res.data;
 
     const hoy = getAhoraLocal();
     const periodoAct = data.find((p: any) => {
@@ -331,27 +335,33 @@ const currentDayMessage = computed(() => {
       return;
     }
 
-    // Guardar periodo activo
     periodoActual.value = periodoAct;
     usuarioXPeriodoId.value = periodoAct.UserXPeriod_ID;
 
     // Cargar horario virtual asignado
-    const horarioRes = await fetch(`${API}/horarioEstudiantes/completo/usuarioxperiodo/${usuarioXPeriodoId.value}?mode=Virtual`);
-    horarioVirtualData.value = horarioRes.ok ? await horarioRes.json() : [];
+    const horarioRes = await axios.get(`${API}/horarioEstudiantes/completo/usuarioxperiodo/${usuarioXPeriodoId.value}?mode=Virtual`, {
+      withCredentials: true,
+    });
+    horarioVirtualData.value = horarioRes.data || [];
 
     // Verificar registros de asistencia del día
     const today = getAhoraLocal().toISOString().split("T")[0];
 
-
     // Registro completo (entrada y salida)
-    const regCompletoRes = await fetch(`${API}/registros/virtual/completo?userXPeriodId=${usuarioXPeriodoId.value}&date=${today}`);
-    if (regCompletoRes.ok) {
-      registroVirtualCompleto.value = await regCompletoRes.json();
+    const regCompletoRes = await axios.get(`${API}/registros/virtual/completo?userXPeriodId=${usuarioXPeriodoId.value}&date=${today}`, {
+      withCredentials: true,
+    }).catch(() => null);
+
+    if (regCompletoRes && regCompletoRes.data) {
+      registroVirtualCompleto.value = regCompletoRes.data;
     } else {
-      // Si no hay completo, busca abierto (solo entrada)
-      const regAbiertoRes = await fetch(`${API}/registros/abierto?userXPeriodId=${usuarioXPeriodoId.value}&date=${today}&mode=Virtual`);
-      if (regAbiertoRes.ok) {
-        registroAbierto.value = await regAbiertoRes.json();
+      // Si no hay completo, busca abierto
+      const regAbiertoRes = await axios.get(`${API}/registros/abierto?userXPeriodId=${usuarioXPeriodoId.value}&date=${today}&mode=Virtual`, {
+        withCredentials: true,
+      }).catch(() => null);
+
+      if (regAbiertoRes && regAbiertoRes.data) {
+        registroAbierto.value = regAbiertoRes.data;
         tipoRegistro.value = "salida";
       } else {
         tipoRegistro.value = "entrada";
@@ -372,6 +382,7 @@ const currentDayMessage = computed(() => {
   cargando.value = false;
 }
 
+
   
   // Al montar la vista, cargar los datos del estudiante
   onMounted(() => {
@@ -385,7 +396,6 @@ async function guardarAsistenciaVirtual() {
 
   try {
     if (tipoRegistro.value === "entrada") {
-      // ✅ Validación de rango para entrada
       if (!dentroDeRango.value) {
         toast.add({
           severity: "warn",
@@ -396,7 +406,7 @@ async function guardarAsistenciaVirtual() {
         return;
       }
 
-      const payloadEntrada: any = {
+      const payloadEntrada = {
         UserXPeriod_ID: usuarioXPeriodoId.value,
         Attendance_Type: "Virtual",
         Attendance_Date: now,
@@ -405,13 +415,9 @@ async function guardarAsistenciaVirtual() {
         Attendance_IsDeleted: false,
       };
 
-      const res = await fetch(`${API}/registros`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payloadEntrada),
+      await axios.post(`${API}/registros`, payloadEntrada, {
+        withCredentials: true,
       });
-
-      if (!res.ok) throw new Error("No se pudo crear el registro de asistencia virtual (entrada).");
 
       toast.add({
         severity: "success",
@@ -434,7 +440,6 @@ async function guardarAsistenciaVirtual() {
         return;
       }
 
-      // ✅ Validación de rango para salida
       if (!dentroDeRangoSalida.value) {
         toast.add({
           severity: "warn",
@@ -445,7 +450,7 @@ async function guardarAsistenciaVirtual() {
         return;
       }
 
-      const payloadSalida: any = {
+      const payloadSalida = {
         UserXPeriod_ID: usuarioXPeriodoId.value,
         Attendance_Type: "Virtual",
         Attendance_Date: now,
@@ -455,13 +460,9 @@ async function guardarAsistenciaVirtual() {
 
       const registroId = registroAbierto.value.Attendance_ID;
 
-      const res = await fetch(`${API}/registros/${registroId}/salida`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payloadSalida),
+      await axios.put(`${API}/registros/${registroId}/salida`, payloadSalida, {
+        withCredentials: true,
       });
-
-      if (!res.ok) throw new Error("No se pudo actualizar el registro de asistencia virtual (salida).");
 
       toast.add({
         severity: "success",
@@ -470,7 +471,7 @@ async function guardarAsistenciaVirtual() {
         life: 3000,
       });
 
-      registroVirtualCompleto.value = await res.json();
+      registroVirtualCompleto.value = payloadSalida;
     }
 
     dialogoConfirmacion.value = false;
@@ -481,11 +482,12 @@ async function guardarAsistenciaVirtual() {
     toast.add({
       severity: "error",
       summary: "Error",
-      detail: error.message || "No se pudo guardar la asistencia virtual.",
+      detail: error.response?.data?.message || error.message || "No se pudo guardar la asistencia virtual.",
       life: 5000,
     });
   }
 }
+
 
 
   

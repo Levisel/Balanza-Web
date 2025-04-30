@@ -192,6 +192,7 @@
   import Toast from "primevue/toast";
   import Dialog from "primevue/dialog";
   import {useSubjects} from '@/useSubjects' // ajusta la ruta si está en otra carpeta
+  import axios from "axios";
 
   
   // Importa la constante de API según tu proyecto
@@ -262,16 +263,16 @@
   
   // Función para cargar datos desde la API
   const fetchResumenes = async () => {
-    try {
-      const res = await fetch(`${API}/resumenHoras/completo`);
-      if (!res.ok) throw new Error("Error al obtener el resumen de horas");
-      const data = await res.json();
-      resumenes.value = data;
-    } catch (error) {
-      console.error("Error cargando resumenes:", error);
-      errorMensaje.value = "Error al cargar el resumen de horas.";
-    }
-  };
+  try {
+    const { data } = await axios.get(`${API}/resumenHoras/completo`, {
+      withCredentials: true,
+    });
+    resumenes.value = data;
+  } catch (error: any) {
+    console.error("Error cargando resumenes:", error);
+    errorMensaje.value = "Error al cargar el resumen de horas.";
+  }
+};
 
 
 const irSeguimientoSemanal = (resumenId: number, internalId: number) => {

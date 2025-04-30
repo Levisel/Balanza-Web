@@ -11,6 +11,7 @@ import Toast from "primevue/toast";
 import { useToast } from "primevue/usetoast";
 import Dialog from "primevue/dialog";
 import InputText from "primevue/inputtext";
+import axios from "axios";
 
 import { API } from "@/ApiRoute";
 import { useDarkMode } from "@/components/ThemeSwitcher";
@@ -61,13 +62,13 @@ const rowClass = (data: Internal_User) => {
 // Obtiene los períodos desde la API
 const fetchPeriodos = async () => {
   try {
-    const response = await fetch(`${API}/periodos`);
-    if (!response.ok) throw new Error("Error al obtener períodos");
-    periodos.value = await response.json();
+    const { data } = await axios.get(`${API}/periodos`);
+    periodos.value = data;
   } catch (err: any) {
-    errorMensaje.value = err.message;
+    errorMensaje.value = err.response?.data?.message || err.message;
   }
 };
+
 
 onMounted(() => {
   fetchPeriodos();
@@ -189,7 +190,6 @@ async function forzarCargaSinCorreo() {
     errorMensaje.value = "No hay estudiantes cargados.";
     return;
   }
-  // Actualiza la propiedad "completo" sin validar el correo
   estudiantes.value.forEach((est) => {
     est.completo = !!(
       est.Internal_ID &&
@@ -198,55 +198,43 @@ async function forzarCargaSinCorreo() {
       est.Internal_Area
     );
   });
+
   const incompletos = estudiantes.value.filter((est) => !est.completo);
   if (incompletos.length > 0) {
     errorMensaje.value = `Aún hay ${incompletos.length} registros incompletos.`;
     return;
   }
+
   try {
     loading.value = true;
     errorMensaje.value = "";
-    console.log("Enviando estudiantes (sin correo) al backend:", estudiantes.value);
-    const responseUsuarios = await fetch(`${API}/usuariointernoBulk/${periodoSeleccionado.value.Period_ID}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(estudiantes.value),
-    });
-    console.log("Response:", responseUsuarios);
-    if (!responseUsuarios.ok) {
-      const errorResponse = await responseUsuarios.json();
-      throw new Error(`Error al guardar estudiantes: ${errorResponse.message}`);
-    }
-    if (periodoSeleccionado.value) {
-      const usuariosXPeriodo = estudiantes.value.map((est) => ({
-        Period_ID: periodoSeleccionado.value.Period_ID,
-        Internal_ID: est.Internal_ID,
-      }));
-      const responseAsignacion = await fetch(`${API}/usuarioXPeriodo`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(usuariosXPeriodo),
-      });
-      if (!responseAsignacion.ok) {
-        const errorResponse = await responseAsignacion.json();
-        throw new Error(
-          `Error al asignar estudiantes al período: ${errorResponse.message}`
-        );
-      }
-    }
+
+    // 1. Guardar estudiantes
+    await axios.post(`${API}/usuariointernoBulk/${periodoSeleccionado.value.Period_ID}`, estudiantes.value);
+
+    // 2. Asignarlos al período
+    const usuariosXPeriodo = estudiantes.value.map((est) => ({
+      Period_ID: periodoSeleccionado.value.Period_ID,
+      Internal_ID: est.Internal_ID,
+    }));
+
+    await axios.post(`${API}/usuarioXPeriodo`, usuariosXPeriodo);
+
     toast.add({
       severity: "success",
       summary: "Carga sin correo exitosa",
       detail: "Estudiantes enviados correctamente.",
       life: 4000,
     });
+
     estudiantes.value = [];
   } catch (error: any) {
-    toast.add({ severity: "error", summary: "Error", detail: error.message, life: 5000 });
+    toast.add({ severity: "error", summary: "Error", detail: error.response?.data?.message || error.message, life: 5000 });
   } finally {
     loading.value = false;
   }
 }
+
 
 async function guardarEstudiantes() {
   if (estudiantes.value.length === 0) {
@@ -254,38 +242,32 @@ async function guardarEstudiantes() {
     return;
   }
   if (estudiantes.value.some((est) => !est.completo)) {
-    errorMensaje.value = "No se puede guardar. Hay estudiantes con datos incompletos. Corrige antes de guardar.";
+    errorMensaje.value = "No se puede guardar. Hay estudiantes con datos incompletos.";
     return;
   }
+
   try {
     loading.value = true;
     errorMensaje.value = "";
-    console.log("Guardando estudiantes:", estudiantes.value);
-    const responseUsuarios = await fetch(`${API}/usuariointernoBulk/${periodoSeleccionado.value.Period_ID}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(estudiantes.value),
-    });
 
-    const data = await responseUsuarios.json();
-    console.log("Data:", data);
-    if (!responseUsuarios.ok) {
-      const errorResponse = await responseUsuarios.json();
-      throw new Error(`Error al guardar estudiantes: ${errorResponse.message}`);
-    }
+    // Guardar estudiantes
+    await axios.post(`${API}/usuariointernoBulk/${periodoSeleccionado.value.Period_ID}`, estudiantes.value);
+
     toast.add({
       severity: "success",
       summary: "Éxito",
       detail: "Estudiantes guardados correctamente.",
       life: 3000,
     });
+
     estudiantes.value = [];
   } catch (error: any) {
-    toast.add({ severity: "error", summary: "Error", detail: error.message, life: 5000 });
+    toast.add({ severity: "error", summary: "Error", detail: error.response?.data?.message || error.message, life: 5000 });
   } finally {
     loading.value = false;
   }
 }
+
 
 const isGuardarDisabled = computed(() => {
   const noEstudiantes = estudiantes.value.length === 0;

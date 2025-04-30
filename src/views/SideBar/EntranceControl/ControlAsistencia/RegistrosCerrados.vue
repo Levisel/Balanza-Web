@@ -173,6 +173,7 @@
   import Toast from "primevue/toast";
   import { useToast } from "primevue/usetoast";
   import { API } from "@/ApiRoute";
+  import axios from "axios";
   
   const router = useRouter();
   const toast = useToast();
@@ -188,26 +189,26 @@
   
   // Cargar registros cerrados (GET /registrosCerrados)
   const loadRegistros = async () => {
-    try {
-      const response = await fetch(`${API}/registrosCerrados`);
-      if (!response.ok) throw new Error("Error al cargar registros cerrados");
-      registros.value = await response.json();
-    } catch (error: any) {
-      toast.add({ severity: "error", summary: "Error", detail: error.message, life: 3000 });
-    }
-  };
+  try {
+    const { data } = await axios.get(`${API}/registrosCerrados`, { withCredentials: true });
+    registros.value = data;
+  } catch (error: any) {
+    toast.add({ severity: "error", summary: "Error", detail: error.message, life: 3000 });
+  }
+};
+
   
   // Cargar períodos (GET /periodos)
   const periodos = ref([]);
   const loadPeriodos = async () => {
-    try {
-      const response = await fetch(`${API}/periodos`);
-      if (!response.ok) throw new Error("Error al cargar períodos");
-      periodos.value = await response.json();
-    } catch (error: any) {
-      toast.add({ severity: "error", summary: "Error", detail: error.message, life: 3000 });
-    }
-  };
+  try {
+    const { data } = await axios.get(`${API}/periodos`, { withCredentials: true });
+    periodos.value = data;
+  } catch (error: any) {
+    toast.add({ severity: "error", summary: "Error", detail: error.message, life: 3000 });
+  }
+};
+
   
   onMounted(() => {
     loadRegistros();
@@ -274,47 +275,44 @@
   
   // Guardar edición (PUT /registrosCerrados/:id)
   const saveEdit = async () => {
-    if (!selectedRegistro.value) {
-      toast.add({ severity: "error", summary: "Error", detail: "No se seleccionó registro", life: 3000 });
-      return;
-    }
-    const entrada = new Date(selectedRegistro.value.Attendance_Entry);
-    const nuevaSalida = new Date(editSalida.value);
-    if (nuevaSalida <= entrada) {
-      toast.add({ severity: "error", summary: "Error", detail: "La hora de salida debe ser posterior a la entrada.", life: 3000 });
-      return;
-    }
-    const mismoDia = (
-        entrada.getFullYear() === nuevaSalida.getFullYear() &&
-        entrada.getMonth() === nuevaSalida.getMonth() &&
-        entrada.getDate() === nuevaSalida.getDate()
-      );
+  if (!selectedRegistro.value) {
+    toast.add({ severity: "error", summary: "Error", detail: "No se seleccionó registro", life: 3000 });
+    return;
+  }
 
-      if (!mismoDia) {
-        toast.add({
-          severity: "error",
-          summary: "Error",
-          detail: "La hora de salida debe ser del mismo día que la entrada.",
-          life: 3000,
-        });
-        return;
-      }
+  const entrada = new Date(selectedRegistro.value.Attendance_Entry);
+  const nuevaSalida = new Date(editSalida.value);
 
-    try {
-      const registroId = selectedRegistro.value.Attendance_ID;
-      const response = await fetch(`${API}/registrosCerrados/${registroId}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ Attendance_Exit: editSalida.value })
-      });
-      if (!response.ok) throw new Error("No se pudo actualizar el registro");
-      toast.add({ severity: "success", summary: "Actualizado", detail: "Registro actualizado correctamente", life: 3000 });
-      closeEditModal();
-      await loadRegistros();
-    } catch (error: any) {
-      toast.add({ severity: "error", summary: "Error", detail: error.message, life: 3000 });
-    }
-  };
+  if (nuevaSalida <= entrada) {
+    toast.add({ severity: "error", summary: "Error", detail: "La hora de salida debe ser posterior a la entrada.", life: 3000 });
+    return;
+  }
+
+  const mismoDia =
+    entrada.getFullYear() === nuevaSalida.getFullYear() &&
+    entrada.getMonth() === nuevaSalida.getMonth() &&
+    entrada.getDate() === nuevaSalida.getDate();
+
+  if (!mismoDia) {
+    toast.add({ severity: "error", summary: "Error", detail: "La hora de salida debe ser del mismo día que la entrada.", life: 3000 });
+    return;
+  }
+
+  try {
+    const registroId = selectedRegistro.value.Attendance_ID;
+    await axios.put(
+      `${API}/registrosCerrados/${registroId}`,
+      { Attendance_Exit: editSalida.value },
+      { withCredentials: true }
+    );
+    toast.add({ severity: "success", summary: "Actualizado", detail: "Registro actualizado correctamente", life: 3000 });
+    closeEditModal();
+    await loadRegistros();
+  } catch (error: any) {
+    toast.add({ severity: "error", summary: "Error", detail: error.message, life: 3000 });
+  }
+};
+
   
   // Abrir modal de confirmación para eliminar
   const openDeleteConfirm = (registro: any) => {
@@ -328,20 +326,19 @@
   
   // Confirmar eliminación (DELETE /registrosCerrados/:id/ajuste)
   const confirmDelete = async () => {
-    if (!registroToDelete.value) return;
-    try {
-      const registroId = registroToDelete.value.Attendance_ID;
-      const response = await fetch(`${API}/registrosCerrados/${registroId}/ajuste`, {
-        method: "DELETE"
-      });
-      if (!response.ok) throw new Error("No se pudo eliminar el registro");
-      toast.add({ severity: "success", summary: "Eliminado", detail: "Registro eliminado y resumen ajustado", life: 3000 });
-      deleteDialogVisible.value = false;
-      await loadRegistros();
-    } catch (error: any) {
-      toast.add({ severity: "error", summary: "Error", detail: error.message, life: 3000 });
-    }
-  };
+  if (!registroToDelete.value) return;
+
+  try {
+    const registroId = registroToDelete.value.Attendance_ID;
+    await axios.delete(`${API}/registrosCerrados/${registroId}/ajuste`, { withCredentials: true });
+    toast.add({ severity: "success", summary: "Eliminado", detail: "Registro eliminado y resumen ajustado", life: 3000 });
+    deleteDialogVisible.value = false;
+    await loadRegistros();
+  } catch (error: any) {
+    toast.add({ severity: "error", summary: "Error", detail: error.message, life: 3000 });
+  }
+};
+
   
   // Función para limpiar filtros
   const limpiarFiltros = () => {

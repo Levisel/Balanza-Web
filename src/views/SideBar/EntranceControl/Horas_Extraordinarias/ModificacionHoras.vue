@@ -140,7 +140,7 @@ import { useToast } from "primevue/usetoast";
 import { API, type Usuario } from "@/ApiRoute";
 import { useDarkMode } from "@/components/ThemeSwitcher";
 import { useAuthStore } from "@/stores/auth";
-
+import axios from "axios";
 
 const router = useRouter();
 const toast = useToast();
@@ -205,40 +205,36 @@ const cardClass = computed(() =>
 // Función para buscar y cargar el resumen con datos del estudiante
 const buscarEstudiante = async () => {
   if (!cedulaInput.value) {
-    toast.add({
-      severity: "warn",
-      summary: "Falta cédula",
-      detail: "Ingrese una cédula para buscar.",
-      life: 3000,
-    });
+    toast.add({ severity: "warn", summary: "Falta cédula", detail: "Ingrese una cédula para buscar.", life: 3000 });
     return;
   }
   try {
-    // Obtener datos del estudiante
-    const response = await fetch(`${API}/internal-user/${cedulaInput.value}`);
-    if (!response.ok) throw new Error("Estudiante no encontrado");
-    const usuario: Usuario = await response.json();
+    // Primero buscar los datos del estudiante
+    const { data: usuario } = await axios.get(`${API}/internal-user/${cedulaInput.value}`);
     usuarioData.value = usuario;
-    
-    // Consultar el resumen con datos básicos usando la ruta que devuelve usuarioResumen
-    const resResumen = await fetch(`${API}/resumenHoras/conDatos/${usuario.Internal_ID}`);
-    // Si no se encuentra el resumen, dejamos resumenData en null para usar el valor por defecto en resumenDisplay
-    if (resResumen.ok) {
-      const resumen = await resResumen.json();
-      resumenData.value = resumen;
-    } else {
-      resumenData.value = null;
+
+    // Luego intentar obtener el resumen
+    try {
+      const resResumen = await axios.get(`${API}/resumenHoras/conDatos/${usuario.Internal_ID}`);
+      resumenData.value = resResumen.data;
+    } catch (errorResumen: any) {
+      console.warn('No se encontró resumen, usando valores por defecto');
+      resumenData.value = null;  // Esto hará que use el computed con valores 0
     }
+
     estudianteCargado.value = true;
+
   } catch (error: any) {
     toast.add({
       severity: "error",
       summary: "Error",
-      detail: error.message || "Error al buscar el estudiante.",
+      detail: error.response?.data?.message || error.message || "Error al buscar el estudiante.",
       life: 5000,
     });
+    estudianteCargado.value = false;
   }
 };
+
 
 // Función para abrir el modal de confirmación
 const openConfirmDialog = () => {
@@ -280,27 +276,23 @@ const guardarAjuste = async () => {
   confirmDialogVisible.value = false;
   try {
     const ajusteData = {
-          Internal_ID: resumenDisplay.value.userSummary.Internal_ID,
-          Hours_Num: ajusteHoras.value,
-          Hours_Type: ajusteTipo.value,           // "adicional" o "reducida"
-          Hours_Date: new Date(),                 // Fecha del ajuste
-          Hours_Comment: ajusteComentario.value,   // Comentario opcional
-          Hours_Approved_By: authStore.user?.name || null  // 👈 Aquí se agrega el campo aprobado por
-        };
+      Internal_ID: resumenDisplay.value.userSummary.Internal_ID,
+      Hours_Num: ajusteHoras.value,
+      Hours_Type: ajusteTipo.value,
+      Hours_Date: new Date(),
+      Hours_Comment: ajusteComentario.value,
+      Hours_Approved_By: authStore.user?.name || null
+    };
 
+    await axios.post(`${API}/horasExtraordinarias/createConResumen`, ajusteData);
 
-    const response = await fetch(`${API}/horasExtraordinarias/createConResumen`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(ajusteData)
-    });
-    if (!response.ok) throw new Error("No se pudo registrar el ajuste de horas extraordinarias.");
     toast.add({
       severity: "success",
       summary: "Registrado",
       detail: "El ajuste fue registrado correctamente.",
       life: 3000,
     });
+
     setTimeout(() => {
       router.push("/SeguimientoGeneral");
     }, 3000);
@@ -308,11 +300,12 @@ const guardarAjuste = async () => {
     toast.add({
       severity: "error",
       summary: "Error",
-      detail: error.message || "Error al guardar el ajuste.",
+      detail: error.response?.data?.message || error.message || "Error al guardar el ajuste.",
       life: 5000,
     });
   }
 };
+
   
 // Función para volver
 const volver = () => {

@@ -209,6 +209,7 @@ import Column from 'primevue/column';
 import Dropdown from 'primevue/dropdown';
 import Dialog from 'primevue/dialog';
 import Toast from 'primevue/toast';
+import axios from 'axios';
 import { useToast } from 'primevue/usetoast';
 import { API, type Period } from '@/ApiRoute';
 import { useDarkMode } from "@/components/ThemeSwitcher";
@@ -244,27 +245,35 @@ const cerrarModalVista = () => {
 // Función para cargar períodos
 const fetchPeriodos = async () => {
   try {
-    const res = await fetch(`${API}/periodos`);
-    if (!res.ok) throw new Error("Error al obtener los períodos");
-    periodos.value = await res.json();
+    const { data } = await axios.get(`${API}/periodos`);
+    periodos.value = data;
   } catch (error: any) {
-    toast.add({ severity: "error", summary: "Error", detail: error.message });
+    toast.add({
+      severity: "error",
+      summary: "Error",
+      detail: error.response?.data?.message || error.message,
+    });
   }
 };
+
 
 // Función para cargar el período con sus seguimientos
 const cargarPeriodoConSemanas = async () => {
   if (!selectedPeriodoId.value) return;
   console.log("Cargando período con ID:", selectedPeriodoId.value);
   try {
-    const res = await fetch(`${API}/periodos/${selectedPeriodoId.value}/seguimientos`);
-    if (!res.ok) throw new Error("Error al obtener el período con seguimientos");
-    selectedPeriodo.value = await res.json();
+    const { data } = await axios.get(`${API}/periodos/${selectedPeriodoId.value}/seguimientos`);
+    selectedPeriodo.value = data;
     console.log("Período cargado:", selectedPeriodo.value);
   } catch (error: any) {
-    toast.add({ severity: "error", summary: "Error", detail: error.message });
+    toast.add({
+      severity: "error",
+      summary: "Error",
+      detail: error.response?.data?.message || error.message,
+    });
   }
 };
+
 
 // Computed: filtrar las semanas según los filtros opcionales
 const semanasFiltradas = computed(() => {
@@ -347,7 +356,6 @@ const cerrarModalEdicion = () => {
 
 const guardarEdicion = async () => {
   try {
-
     if (
       form.value.Week_Hours === null ||
       form.value.Week_Hours === undefined ||
@@ -373,31 +381,34 @@ const guardarEdicion = async () => {
     }
 
     const payload = {
-        Week_Start: form.value.Week_Start.toISOString(),
-        Week_End: form.value.Week_End.toISOString(),
-        Week_Hours: form.value.Week_Hours,
-        Week_Holiday: form.value.Week_Holiday,
-        Week_Comment: form.value.Week_Comment
-      };
+      Week_Start: form.value.Week_Start.toISOString(),
+      Week_End: form.value.Week_End.toISOString(),
+      Week_Hours: form.value.Week_Hours,
+      Week_Holiday: form.value.Week_Holiday,
+      Week_Comment: form.value.Week_Comment
+    };
 
-      const res = await fetch(`${API}/seguimientos/${form.value.Week_ID}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload)
-    });
-    if (!res.ok) throw new Error("Error al actualizar la semana");
+    await axios.put(`${API}/seguimientos/${form.value.Week_ID}`, payload);
+
     toast.add({
       severity: "success",
       summary: "Actualizado",
       detail: "Semana actualizada correctamente",
       life: 3000
     });
+
     await cargarPeriodoConSemanas();
     cerrarModalEdicion();
+
   } catch (error: any) {
-    toast.add({ severity: "error", summary: "Error", detail: error.message });
+    toast.add({
+      severity: "error",
+      summary: "Error",
+      detail: error.response?.data?.message || error.message,
+    });
   }
 };
+
 
 
 onMounted(() => {

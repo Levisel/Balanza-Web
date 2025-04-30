@@ -108,6 +108,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
+import axios from 'axios';
 import InputText from "primevue/inputtext";
 import Calendar from "primevue/calendar";
 import Button from "primevue/button";
@@ -160,9 +161,8 @@ const cargarPeriodo = async () => {
   if (!periodoId) return;
   cargando.value = true;
   try {
-    const response = await fetch(`${API}/periodos/${periodoId}`);
-    if (!response.ok) throw new Error("Error al obtener el período");
-    const data: Period = await response.json();
+    const response = await axios.get(`${API}/periodos/${periodoId}`, { withCredentials: true });
+    const data: Period = response.data;
     periodName.value = data.Period_Name;
     periodStart.value = new Date(data.Period_Start);
     periodEnd.value = new Date(data.Period_End);
@@ -224,6 +224,7 @@ function calcularSemanas(periodoId: number, inicio: Date, fin: Date) {
 // Función para validar y guardar (crear o editar)
 const validarYGuardar = async () => {
   errorMensaje.value = "";
+  
   if (!periodName.value.trim()) {
     errorMensaje.value = "Debe ingresar el nombre del período.";
     return;
@@ -244,127 +245,103 @@ const validarYGuardar = async () => {
     errorMensaje.value = "Debe seleccionar el tipo de período.";
     return;
   }
+
   cargando.value = true;
+
   const periodoData = {
-  Period_Name: periodName.value.trim(),
-  Period_Start: periodStart.value.toISOString(),
-  Period_End: periodEnd.value.toISOString(),
-  Period_Type: periodType.value,
-};
+    Period_Name: periodName.value.trim(),
+    Period_Start: periodStart.value.toISOString(),
+    Period_End: periodEnd.value.toISOString(),
+    Period_Type: periodType.value,
+  };
+
   try {
     let response;
     let nuevoPeriodo;
+
     if (periodoId) {
-      // Modo edición: actualizamos el período
-      response = await fetch(`${API}/periodos/${periodoId}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(periodoData),
+      // 🛠 Edición de período
+      response = await axios.put(`${API}/periodos/${periodoId}`, periodoData, {
+        withCredentials: true
       });
-      nuevoPeriodo = await response.json();
-      
-      // Verificar extensión al final (si periodEnd se extendió)
-      const seguimientoRes = await fetch(`${API}/seguimientos/last/${periodoId}`);
-      if (seguimientoRes.ok) {
-        const lastSeguimiento = await seguimientoRes.json();
-        const lastWeekEnd = new Date(lastSeguimiento.Semana_Fin);
-        if (periodEnd.value > lastWeekEnd) {
-          const nextDay = new Date(lastWeekEnd);
-          nextDay.setDate(nextDay.getDate() + 1);
-          const nuevasSemanas = calcularSemanas(periodoId, nextDay, periodEnd.value);
-          const semanasResponse = await fetch(`${API}/seguimientos/bulk`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(nuevasSemanas),
-          });
-          if (!semanasResponse.ok) {
-            throw new Error("Error al guardar el seguimiento semanal adicional (extensión fin)");
-          }
-        }
+      nuevoPeriodo = response.data;
+
+      // 🔵 Verificar extensión final
+      const seguimientoRes = await axios.get(`${API}/seguimientos/last/${periodoId}`, {
+        withCredentials: true
+      });
+
+      const lastSeguimiento = seguimientoRes.data;
+      const lastWeekEnd = new Date(lastSeguimiento.Semana_Fin);
+
+      if (periodEnd.value > lastWeekEnd) {
+        const nextDay = new Date(lastWeekEnd);
+        nextDay.setDate(nextDay.getDate() + 1);
+        const nuevasSemanas = calcularSemanas(periodoId, nextDay, periodEnd.value);
+
+        await axios.post(`${API}/seguimientos/bulk`, nuevasSemanas, {
+          withCredentials: true
+        });
       }
-      
-      // Si la nueva periodStart es anterior a la original, recalcular semanas al inicio
+
+      // 🔵 Verificar extensión al inicio
       if (originalFechaInicio.value && periodStart.value < originalFechaInicio.value) {
         const nuevasSemanasInicio = calcularSemanas(periodoId, periodStart.value, originalFechaInicio.value);
-        const semanasInicioResponse = await fetch(`${API}/seguimientos/bulk`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(nuevasSemanasInicio),
+        await axios.post(`${API}/seguimientos/bulk`, nuevasSemanasInicio, {
+          withCredentials: true
         });
-        if (!semanasInicioResponse.ok) {
-          throw new Error("Error al guardar el seguimiento semanal adicional (extensión inicio)");
-        }
       }
-      
-      // Reordenar todas las semanas: llamar al endpoint de reordenamiento
-      const reorderResponse = await fetch(`${API}/seguimientos/reorder/${periodoId}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          newStartDate: periodStart.value.toISOString(),
-          newEndDate: periodEnd.value.toISOString()
-        }),
-      });
-      if (!reorderResponse.ok) {
-        throw new Error("Error al reordenar las semanas del seguimiento");
-      }
-      
+
+      // 🔵 Reordenar todas las semanas
+      await axios.put(`${API}/seguimientos/reorder/${periodoId}`, {
+        newStartDate: periodStart.value.toISOString(),
+        newEndDate: periodEnd.value.toISOString()
+      }, { withCredentials: true });
+
     } else {
-      // Creación de un nuevo período
-      response = await fetch(`${API}/periodos`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(periodoData),
+      // 🛠 Creación de período
+      response = await axios.post(`${API}/periodos`, periodoData, {
+        withCredentials: true
       });
-      nuevoPeriodo = await response.json();
+      nuevoPeriodo = response.data;
+
       const semanas = calcularSemanas(
         nuevoPeriodo.Period_ID,
         new Date(nuevoPeriodo.Period_Start),
         new Date(nuevoPeriodo.Period_End)
       );
 
-      const semanasResponse = await fetch(`${API}/seguimientos/bulk`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(semanas),
+      await axios.post(`${API}/seguimientos/bulk`, semanas, {
+        withCredentials: true
       });
-      if (!semanasResponse.ok) {
-        throw new Error("Error al guardar el seguimiento semanal");
-      }
     }
-    if (response.status === 400) {
-  errorMensaje.value = "Ya existe un período en esas fechas.";
-  return;
-} else if (!response.ok) {
-  throw new Error("Error al guardar los datos");
-}
 
+    // ✅ Si llega aquí todo bien
     toast.add({
       severity: "success",
       summary: "Éxito",
       detail: "Período guardado correctamente.",
       life: 3000,
     });
+
     router.push("/Cronograma");
+
   } catch (error: any) {
     console.error("Error guardando el período:", error);
-  // Si es un objeto Response (de fetch fallido)
-  if (error?.name === "FetchError" || error instanceof Response) {
-    try {
-      const errorData = await error.json();
-      errorMensaje.value = errorData?.error || "Ocurrió un error al guardar.";
-    } catch {
-      errorMensaje.value = "Ocurrió un error inesperado al procesar la respuesta.";
+    if (error.response) {
+      if (error.response.status === 400) {
+        errorMensaje.value = "Ya existe un período en esas fechas.";
+      } else {
+        errorMensaje.value = error.response.data?.error || "Ocurrió un error inesperado.";
+      }
+    } else {
+      errorMensaje.value = "Error de conexión con el servidor.";
     }
-  } else if (error instanceof Error) {
-    errorMensaje.value = error.message;
-  } else {
-    errorMensaje.value = "Ocurrió un error al guardar.";
-  }
   } finally {
     cargando.value = false;
   }
 };
+
 
 const volverListado = () => {
   router.push("/Cronograma");

@@ -185,6 +185,7 @@
 import { ref, onMounted, computed } from "vue";
 import { useRouter } from "vue-router";
 import { useToast } from "primevue/usetoast";
+import axios from "axios";
 
 // Componentes PrimeVue
 import Dropdown from "primevue/dropdown";
@@ -269,9 +270,8 @@ const limpiarFiltros = () => {
 // Función para obtener períodos desde la API
 const fetchPeriodos = async () => {
   try {
-    const res = await fetch(`${API}/periodos`);
-    if (!res.ok) throw new Error("Error al obtener períodos");
-    periodos.value = await res.json();
+    const { data } = await axios.get(`${API}/periodos`);
+    periodos.value = data;
   } catch (error) {
     console.error("Error cargando períodos:", error);
     errorMensaje.value = "Error al cargar los períodos.";
@@ -279,20 +279,13 @@ const fetchPeriodos = async () => {
 };
 
 
+
 // Función para obtener la relación usuario-período
 const fetchUsuariosXPeriodo = async () => {
   try {
-    // Obtener estudiantes base
-    const resEst = await fetch(`${API}/usuariointerno/estudiantes`);
-    if (!resEst.ok) throw new Error("Error al obtener estudiantes");
-    const dataEst = await resEst.json();
+    const { data: dataEst } = await axios.get(`${API}/usuariointerno/estudiantes`);
+    const { data: dataRel } = await axios.get(`${API}/usuarioxPeriodo/all`);
 
-    // Obtener relaciones usuario-período
-    const resRel = await fetch(`${API}/usuarioxPeriodo/all`);
-    if (!resRel.ok) throw new Error("Error al obtener usuarioxPeriodo");
-    const dataRel = await resRel.json();
-
-    // Mapa por Internal_ID con info del período
     const periodMap = new Map();
     dataRel.forEach((rel: any) => {
       periodMap.set(rel.user.Internal_ID, {
@@ -301,7 +294,6 @@ const fetchUsuariosXPeriodo = async () => {
       });
     });
 
-    // Fusionar estudiantes con período si existe
     const merged = dataEst.map((student: any) => {
       const periodData = periodMap.get(student.Internal_ID) || {
         Period_ID: null,
@@ -313,7 +305,6 @@ const fetchUsuariosXPeriodo = async () => {
       };
     });
 
-    // Agregar estudiantes que solo están en la relación
     dataRel.forEach((rel: any) => {
       if (!merged.find((s: any) => s.Internal_ID === rel.user.Internal_ID)) {
         merged.push({
@@ -330,6 +321,7 @@ const fetchUsuariosXPeriodo = async () => {
     errorMensaje.value = "Error al cargar la relación usuario-período.";
   }
 };
+
 
 
 // Cargar datos al montar
@@ -350,16 +342,10 @@ const borrarHuella = async () => {
   if (!estudianteSeleccionado.value) return;
   try {
     const cedula = estudianteSeleccionado.value.Internal_ID;
-    const response = await fetch(`${API}/internal-user/${cedula}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        Internal_Huella: null,
-      }),
+    await axios.put(`${API}/internal-user/${cedula}`, {
+      Internal_Huella: null
     });
-    if (!response.ok) throw new Error("No se pudo borrar la huella.");
 
-    // Actualizar localmente: quitar la huella del usuario en la lista
     const index = usuariosXPeriodoDVM.value.findIndex(
       (u) => u.Internal_ID === estudianteSeleccionado.value?.Internal_ID
     );
@@ -384,6 +370,7 @@ const borrarHuella = async () => {
     });
   }
 };
+
 
 // Función para redirigir a RegistroAsistencia.vue pasando la cédula y el id del período seleccionado
 const irRegistroAsistencia = (cedula: string) => {

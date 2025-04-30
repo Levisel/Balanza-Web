@@ -145,6 +145,7 @@ import DataTable from "primevue/datatable";
 import Column from "primevue/column";
 import { useToast } from "primevue/usetoast";
 import { API } from "@/ApiRoute";
+import axios from "axios";
 
 const router = useRouter();
 const toast = useToast();
@@ -165,17 +166,12 @@ const limpiarFiltros = () => {
 // Método para cargar registros abiertos
 const loadRecords = async () => {
   try {
-    const response = await fetch(`${API}/registrosAbiertos`);
-    // Si se recibe un 404, significa que no hay registros abiertos; se limpia la tabla
-    if (response.status === 404) {
-      records.value = [];
-      return;
-    }
-    if (!response.ok) throw new Error("Error al cargar registros abiertos");
-    records.value = await response.json();
+    const response = await axios.get(`${API}/registrosAbiertos`, {
+      withCredentials: true,
+    });
+    records.value = response.data;
   } catch (error: any) {
-    // Si el error es 404, se limpia la lista
-    if (error.status === 404) {
+    if (error.response?.status === 404) {
       records.value = [];
     } else {
       toast.add({ severity: "error", summary: "Error", detail: error.message, life: 3000 });
@@ -265,21 +261,22 @@ const saveSalida = async () => {
     return;
   }
   if (!validarSalida()) return;
+
   try {
     const registroId = selectedRegistro.value.Attendance_ID;
-    const response = await fetch(`${API}/registros/${registroId}/salida`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ Attendance_Exit: editSalida.value })
-    });
-    if (!response.ok) throw new Error("No se pudo actualizar la hora de salida");
+    await axios.put(
+      `${API}/registros/${registroId}/salida`,
+      { Attendance_Exit: editSalida.value },
+      { withCredentials: true }
+    );
     toast.add({ severity: "success", summary: "Actualizado", detail: "Registro actualizado correctamente", life: 3000 });
     closeEditModal();
-    await loadRecords(); // Recargar registros para refrescar la tabla (si no hay registros, se limpia)
+    await loadRecords();
   } catch (error: any) {
     toast.add({ severity: "error", summary: "Error", detail: error.message, life: 3000 });
   }
 };
+
 
 // Modal de confirmación para eliminar registro
 const deleteDialogVisible = ref(false);
@@ -296,11 +293,12 @@ const cancelDelete = () => {
 
 const confirmDelete = async () => {
   if (!registroToDelete.value) return;
+
   try {
-    const response = await fetch(`${API}/registros/${registroToDelete.value.Attendance_ID}`, {
-      method: "DELETE"
+    const registroId = registroToDelete.value.Attendance_ID;
+    await axios.delete(`${API}/registros/${registroId}`, {
+      withCredentials: true,
     });
-    if (!response.ok) throw new Error("No se pudo eliminar el registro");
     toast.add({ severity: "success", summary: "Eliminado", detail: "Registro eliminado", life: 3000 });
     deleteDialogVisible.value = false;
     await loadRecords();
@@ -308,6 +306,7 @@ const confirmDelete = async () => {
     toast.add({ severity: "error", summary: "Error", detail: error.message, life: 3000 });
   }
 };
+
 
 // Función para volver
 const volver = () => {
