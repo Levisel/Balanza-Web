@@ -173,10 +173,7 @@ const uploadProfilePicture = async () => {
     selectedFile.value = null;
     fileUploadKey.value++;
   } catch (error: any) {
-    const msg =
-      error.response?.data?.message ||
-      "Error al subir la imagen. Inténtalo de nuevo.";
-    toast.add({ severity: "error", summary: "Error", detail: msg, life: 5000 });
+    toast.add({ severity: "error", summary: "Error", detail: "Error al subir la imagen. Porfavor, inténtalo de nuevo..", life: 5000 });
   } finally {
     uploadLoading.value = false;
   }

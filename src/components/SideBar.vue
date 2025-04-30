@@ -18,9 +18,7 @@ const menu = ref();
 
 const userAvatar = computed(() => {
    const defaultAvatar = '/src/components/icons/default-user.png'; 
-   console.log("User Avatar:", authStore.user?.picture);
    return authStore.user?.picture || defaultAvatar;
-   
 });
 
 //User Menu Items
