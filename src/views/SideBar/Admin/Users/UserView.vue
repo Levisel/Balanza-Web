@@ -8,15 +8,20 @@ import Column from "primevue/column";
 import InputText from "primevue/inputtext";
 import Button from "primevue/button";
 import Dialog from "primevue/dialog";
-import Select from "primevue/dropdown";
+import Select from "primevue/select";
 import Tag from "primevue/tag";
 import { useToast } from "primevue/usetoast";
 import { type Internal_User } from "@/ApiRoute";
 import { API } from "@/ApiRoute";
 import { useSubjects } from "@/useSubjects";
 
+import ProgressSpinner from 'primevue/progressspinner';
+
+import ProgressBar from 'primevue/progressbar';
+
 // PrimeVue Toast para notificaciones
 const toast = useToast();
+const isLoading = ref(false); // Add loading state
 
 // Usuarios cargados desde la API
 const internalUser = ref<Internal_User[]>([]);
@@ -79,10 +84,14 @@ const fetchUsers = async () => {
 
 // Guardar cambios en la API
 const saveUser = async () => {
+  isLoading.value = true;
+
   if (selectedInternalUser.value) {
     try {
       selectedInternalUser.value.Internal_Phone =
         selectedInternalUser.value.Internal_Phone.replace(/\D/g, ""); // Eliminar caracteres no numéricos
+
+      selectedInternalUser.value.Internal_Email = selectedInternalUser.value.Internal_Email.toLowerCase().trim(); // Convertir a minúsculas
       await axios.put(
         `${API}/internal-user/${selectedInternalUser.value.Internal_ID}`,
         selectedInternalUser.value
@@ -97,13 +106,33 @@ const saveUser = async () => {
       await fetchUsers();
       editDialogVisible.value = false;
       console.log(selectedInternalUser.value);
-    } catch (error) {
-      toast.add({
-        severity: "error",
-        summary: "Error",
-        detail: "No se ha podido actualizar al usuario.",
-        life: 3000,
-      });
+    } catch (error: any) {
+      if(error.response.status === 409) {
+        toast.add({
+          severity: "warn",
+          summary: "Advertencia",
+          detail: "El correo ingresado ya está registrado en otro usuario.",
+          life: 3000,
+        });
+      } else if (error.response.status === 404) {
+        toast.add({
+          severity: "warn",
+          summary: "Advertencia",
+          detail: "Verifica que hiciste cambios en el usuario para actualizar.",
+          life: 3000,
+        });
+      } 
+      else {
+          toast.add({
+          severity: "error",
+          summary: "Error",
+          detail: "No se ha podido actualizar al usuario.",
+          life: 3000,
+        });
+      }
+
+    } finally {
+      isLoading.value = false; // Reset loading state
     }
   }
 };
@@ -518,7 +547,8 @@ onMounted(() => {
       :blockScroll="true"
     >
 
-    <Avatar 
+
+      <Avatar 
     :image="selectedInternalUser.Internal_Picture || defaultAvatar"
     shape="circle"
     class="absolute shadow-lg ml-70 -mt-10"
@@ -629,20 +659,29 @@ onMounted(() => {
       </div>
 
       <template #footer>
-        <div class="flex justify-end gap-3 pt-4">
+        <!-- Show buttons when not loading -->
+        <div v-if="!isLoading" class="flex justify-end gap-3 pt-4">
           <Button
             label="Cancelar"
             icon="pi pi-times"
             class="p-button-text text-gray-600 hover:text-gray-800"
             severity="contrast"
             @click="editDialogVisible = false"
+            :disabled="isLoading" 
           />
           <Button
             label="Guardar"
             icon="pi pi-check"
             class="p-button-info"
             @click="saveUser()"
+            :disabled="isLoading" 
           />
+        </div>
+        <!-- Show progress bar when loading -->
+        <div v-if="isLoading" class="flex justify-center"> <!-- Add padding top to match button container -->
+          <ProgressSpinner style="width: 30px; height: 30px" strokeWidth="8" fill="transparent"
+              animationDuration=".5s" aria-label="Custom ProgressSpinner" />
+              <h4 class="text-gray-600 text-sm font-semibold ml-2 mt-2">Guardando...</h4>
         </div>
       </template>
     </Dialog>

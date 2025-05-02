@@ -21,6 +21,8 @@ import HomeView from "@/views/SideBar/HomeView.vue";
 import CaseAssign from "@/views/SideBar/Admin/CaseManagement/CaseAssign.vue";
 import CaseReview from "@/views/SideBar/Admin/CaseManagement/CaseReview.vue";
 import Configuration from "@/views/SideBar/Admin/Configuration.vue";
+import AssignedCases from "@/views/SideBar/Admin/CaseManagement/AssignedCases.vue";
+import AllCases from "@/views/SideBar/Admin/CaseManagement/AllCases.vue";
 
 //-- Admin -> (Parameter Management)
 import ParameterView from "@/views/SideBar/Admin/ParameterManagement/ParameterView.vue";
@@ -39,6 +41,7 @@ import NewCase from "@/views/SideBar/Cases/NewCase.vue";
 import MyCases from "@/views/SideBar/Cases/MyCases.vue";
 import CaseNotifications from "@/views/SideBar/Cases/CaseNotifications.vue";
 import CreateActivities from "@/views/SideBar/Cases/CreateActivities.vue";
+
 
 //Cases -> Reports
 import FeasibilityReport from "@/views/SideBar/Cases/Reports/FeasibilityReport.vue";
@@ -100,6 +103,16 @@ const routes: Array<RouteRecordRaw> = [
         path: "AsignacionDeCasos",
         name: "CaseAssign",
         component: CaseAssign,
+      },
+      {
+        path: "VerCasosAsignados",
+        name: "AssignedCases",
+        component: AssignedCases,
+      },
+      {
+        path: "VerCasos",
+        name: "AllCases",
+        component: AllCases,
       },
       // Admin -> Parameter Management
       {
