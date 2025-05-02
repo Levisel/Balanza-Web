@@ -818,10 +818,6 @@ const guardarNuevaActividad = async () => {
         </div>
         <div class="flex gap-4">
           <div class="flex-1">
-            <label class="block text-sm font-semibold">Documentos de Apoyo</label>
-            <p>{{ usuarioDetalles.User_SupportingDocuments }}</p>
-          </div>
-          <div class="flex-1">
             <label class="block text-sm font-semibold">Documentos de Salud</label>
             <p>{{ usuarioDetalles.User_HealthDocuments }}</p>
           </div>
