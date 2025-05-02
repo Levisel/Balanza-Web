@@ -10,6 +10,7 @@ declare module 'vue' {
   export interface GlobalComponents {
     AuthLayout: typeof import('./src/components/layouts/AuthLayout.vue')['default']
     Button: typeof import('primevue/button')['default']
+    Calendar: typeof import('primevue/calendar')['default']
     Card: typeof import('primevue/card')['default']
     CuadriculaHorario: typeof import('./src/components/CuadriculaHorario.vue')['default']
     DefaultLayout: typeof import('./src/components/layouts/DefaultLayout.vue')['default']
