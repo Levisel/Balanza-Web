@@ -30,11 +30,13 @@ import Knob from "primevue/knob";
 import Editor from "primevue/editor";
 import ConfirmDialog from "primevue/confirmdialog";
 import ProgressSpinner from "primevue/progressspinner";
-import ToggleSwitch from 'primevue/toggleswitch';
+import ToggleSwitch from "primevue/toggleswitch";
 import axios from "axios";
 
 const route = useRoute();
 const authStore = useAuthStore();
+
+const secretaryUser = authStore.user?.type == 'Secretaria'; 
 
 onMounted(async () => {
   if (route.query.userID) {
@@ -65,6 +67,7 @@ const searchIDInput = ref<string>("");
 const selectedUser = ref<User>({} as User);
 const selectedEvidence = ref<Evidence>({} as Evidence);
 const selectedActivity = ref<Activity[]>([]);
+const selectedStudent = ref<string>("");
 
 const referenceDialog = ref(false);
 const healthDocumentDialog = ref(false);
@@ -98,6 +101,7 @@ const deleteDocument = () => {
             "internal-id": internalID,
           },
         });
+        healthDocumentDialog.value = false; // Cerrar el diálogo después de eliminar el documento
         toast.add({
           severity: "info",
           summary: "Eliminado",
@@ -531,18 +535,24 @@ const loadActivityDocument = async (activityID: number) => {
       const contentType = response.headers["content-type"] || "application/pdf"; // Tipo de archivo
       const blob = new Blob([response.data], { type: contentType }); // Crear un blob a partir del buffer
       urlDocument.value = URL.createObjectURL(blob); // Crear una URL para visualizar el archivo
-      watchAttentionSheetDialog.value = true; // Mostrar el diálogo con el documento
-    } else {
-      throw new Error(`Error al obtener el documento: ${response.statusText}`);
+      watchActivityDocumentDialog.value = true; // Mostrar el diálogo con el documento
     }
-  } catch (error) {
-    toast.add({
-      severity: "error",
-      summary: "Error",
-      detail: "No se pudo cargar el documento PDF.",
-      life: 3000,
-    });
-    console.error("Error al cargar el documento PDF:", error);
+  } catch (error: any) {
+    if (error.response.status === 404) {
+      toast.add({
+        severity: "warn",
+        summary: "Atención",
+        detail: "La actividad no tiene documento registrado.",
+        life: 3000,
+      });
+    } else {
+      toast.add({
+        severity: "error",
+        summary: "Error",
+        detail: "No se pudo cargar el documento PDF.",
+        life: 3000,
+      });
+    }
   }
 };
 
@@ -598,223 +608,222 @@ const userBirthDate = ref<Date | null>(null);
 const userNationality = ref<{ name: string; value: string } | null>(null);
 const countriesList = ref<{ name: string; value: string }[]>([]);
 const originalCountries = ref([
-{ name: "Ecuador", code: "EC" },
-    { name: "Afganistán", code: "AF" },
-    { name: "Albania", code: "AL" },
-    { name: "Alemania", code: "DE" },
-    { name: "Andorra", code: "AD" },
-    { name: "Angola", code: "AO" },
-    { name: "Antigua y Barbuda", code: "AG" },
-    { name: "Arabia Saudita", code: "SA" },
-    { name: "Argelia", code: "DZ" },
-    { name: "Argentina", code: "AR" },
-    { name: "Armenia", code: "AM" },
-    { name: "Aruba", code: "AW" },
-    { name: "Australia", code: "AU" },
-    { name: "Austria", code: "AT" },
-    { name: "Azerbaiyán", code: "AZ" },
-  
-    { name: "Bahamas", code: "BS" },
-    { name: "Baréin", code: "BH" },
-    { name: "Bangladesh", code: "BD" },
-    { name: "Birmania", code: "MM" },
-    { name: "Barbados", code: "BB" },
-    { name: "Bielorrusia", code: "BY" },
-    { name: "Bélgica", code: "BE" },
-    { name: "Belice", code: "BZ" },
-    { name: "Bermudas", code: "BM" },
-    { name: "Bután", code: "BT" },
-    { name: "Bolivia", code: "BO" },
-    { name: "Bosnia y Herzegovina", code: "BA" },
-    { name: "Botsuana", code: "BW" },
-    { name: "Brasil", code: "BR" },
-    { name: "Brunéi", code: "BN" },
-    { name: "Bulgaria", code: "BG" },
-    { name: "Burkina Faso", code: "BF" },
-    { name: "Burundi", code: "BI" },
-  
-    { name: "Cabo Verde", code: "CV" },
-    { name: "Camboya", code: "KH" },
-    { name: "Camerún", code: "CM" },
-    { name: "Canadá", code: "CA" },
-    { name: "Catar", code: "QA" },
-    { name: "Chad", code: "TD" },
-    { name: "Chile", code: "CL" },
-    { name: "China", code: "CN" },
-    { name: "Chipre", code: "CY" },
-    { name: "Colombia", code: "CO" },
-    { name: "Comoras", code: "KM" },
-    { name: "Costa de Marfil", code: "CI" },
-    { name: "Costa Rica", code: "CR" },
-    { name: "Croacia", code: "HR" },
-    { name: "Cuba", code: "CU" },
-    { name: "Curazao", code: "CW" },
-  
-    { name: "Dinamarca", code: "DK" },
-    { name: "Dominica", code: "DM" },
-    { name: "República Dominicana", code: "DO" },
-  
+  { name: "Ecuador", code: "EC" },
+  { name: "Afganistán", code: "AF" },
+  { name: "Albania", code: "AL" },
+  { name: "Alemania", code: "DE" },
+  { name: "Andorra", code: "AD" },
+  { name: "Angola", code: "AO" },
+  { name: "Antigua y Barbuda", code: "AG" },
+  { name: "Arabia Saudita", code: "SA" },
+  { name: "Argelia", code: "DZ" },
+  { name: "Argentina", code: "AR" },
+  { name: "Armenia", code: "AM" },
+  { name: "Aruba", code: "AW" },
+  { name: "Australia", code: "AU" },
+  { name: "Austria", code: "AT" },
+  { name: "Azerbaiyán", code: "AZ" },
 
-    { name: "Egipto", code: "EG" },
-    { name: "El Salvador", code: "SV" },
-    { name: "Emiratos Árabes Unidos", code: "AE" },
-    { name: "Eritrea", code: "ER" },
-    { name: "Eslovaquia", code: "SK" },
-    { name: "Eslovenia", code: "SI" },
-    { name: "España", code: "ES" },
-    { name: "Estados Unidos", code: "US" },
-    { name: "Estonia", code: "EE" },
-    { name: "Esuatini", code: "SZ" },
-    { name: "Etiopía", code: "ET" },
-  
-    { name: "Filipinas", code: "PH" },
-    { name: "Finlandia", code: "FI" },
-    { name: "Francia", code: "FR" },
-  
-    { name: "Gabón", code: "GA" },
-    { name: "Gambia", code: "GM" },
-    { name: "Georgia", code: "GE" },
-    { name: "Ghana", code: "GH" },
-    { name: "Granada", code: "GD" },
-    { name: "Guatemala", code: "GT" },
-    { name: "Guayana", code: "GY" },
-    { name: "Guinea", code: "GN" },
-    { name: "Guinea-Bisáu", code: "GW" },
-    { name: "Guinea Ecuatorial", code: "GQ" },
-  
-    { name: "Haití", code: "HT" },
-    { name: "Honduras", code: "HN" },
-    { name: "Hungría", code: "HU" },
-  
-    { name: "India", code: "IN" },
-    { name: "Indonesia", code: "ID" },
-    { name: "Inglaterra", code: "GB" },
-    { name: "Irán", code: "IR" },
-    { name: "Irak", code: "IQ" },
-    { name: "Irlanda", code: "IE" },
-    { name: "Islandia", code: "IS" },
-    { name: "Israel", code: "IL" },
-    { name: "Italia", code: "IT" },
-  
-    { name: "Jamaica", code: "JM" },
-    { name: "Japón", code: "JP" },
-    { name: "Jordania", code: "JO" },
-  
-    { name: "Kazajistán", code: "KZ" },
-    { name: "Kenia", code: "KE" },
-    { name: "Kirguistán", code: "KG" },
-    { name: "Kiribati", code: "KI" },
-    { name: "Corea del Norte", code: "KP" },
-    { name: "Corea del Sur", code: "KR" },
-    { name: "Kuwait", code: "KW" },
-  
-    { name: "Laos", code: "LA" },
-    { name: "Letonia", code: "LV" },
-    { name: "Líbano", code: "LB" },
-    { name: "Liberia", code: "LR" },
-    { name: "Libia", code: "LY" },
-    { name: "Liechtenstein", code: "LI" },
-    { name: "Lituania", code: "LT" },
-    { name: "Luxemburgo", code: "LU" },
-  
-    { name: "Macedonia del Norte", code: "MK" },
-    { name: "Madagascar", code: "MG" },
-    { name: "Malaui", code: "MW" },
-    { name: "Malasia", code: "MY" },
-    { name: "Maldivas", code: "MV" },
-    { name: "Malí", code: "ML" },
-    { name: "Malta", code: "MT" },
-    { name: "Islas Marshall", code: "MH" },
-    { name: "Mauritania", code: "MR" },
-    { name: "Mauricio", code: "MU" },
-    { name: "México", code: "MX" },
-    { name: "Micronesia", code: "FM" },
-    { name: "Moldavia", code: "MD" },
-    { name: "Mónaco", code: "MC" },
-    { name: "Mongolia", code: "MN" },
-    { name: "Montenegro", code: "ME" },
-    { name: "Marruecos", code: "MA" },
-    { name: "Mozambique", code: "MZ" },
-  
-    { name: "Namibia", code: "NA" },
-    { name: "Nauru", code: "NR" },
-    { name: "Nepal", code: "NP" },
-    { name: "Países Bajos", code: "NL" },
-    { name: "Nueva Zelanda", code: "NZ" },
-    { name: "Nicaragua", code: "NI" },
-    { name: "Níger", code: "NE" },
-    { name: "Nigeria", code: "NG" },
-  
-    { name: "Isla de Man", code: "IM" },
-    { name: "Noruega", code: "NO" },
-  
-    { name: "Omán", code: "OM" },
-  
-    { name: "Pakistán", code: "PK" },
-    { name: "Palaos", code: "PW" },
-    { name: "Palestina", code: "PS" },
-    { name: "Panamá", code: "PA" },
-    { name: "Papúa Nueva Guinea", code: "PG" },
-    { name: "Paraguay", code: "PY" },
-    { name: "Perú", code: "PE" },
-    { name: "Polonia", code: "PL" },
-    { name: "Portugal", code: "PT" },
-  
-    { name: "Ruanda", code: "RW" },
-  
-    { name: "Rumania", code: "RO" },
-    { name: "Rusia", code: "RU" },
-  
-    { name: "San Cristóbal y Nieves", code: "KN" },
-    { name: "Santa Lucía", code: "LC" },
-    { name: "San Vicente y las Granadinas", code: "VC" },
-    { name: "San Marino", code: "SM" },
-    { name: "Santo Tomé y Príncipe", code: "ST" },
-    { name: "Senegal", code: "SN" },
-    { name: "Serbia", code: "RS" },
-    { name: "Seychelles", code: "SC" },
-    { name: "Sierra Leona", code: "SL" },
-    { name: "Singapur", code: "SG" },
-    { name: "Siria", code: "SY" },
-    { name: "Somalia", code: "SO" },
-    { name: "Sudáfrica", code: "ZA" },
-    { name: "Sudán", code: "SD" },
-    { name: "Sudán del Sur", code: "SS" },
-    { name: "Suecia", code: "SE" },
-    { name: "Suiza", code: "CH" },
-  
-    { name: "Surinam", code: "SR" },
-  
-    { name: "Tailandia", code: "TH" },
-    { name: "Tanzania", code: "TZ" },
-    { name: "Timor Oriental", code: "TL" },
-    { name: "Togo", code: "TG" },
-    { name: "Tonga", code: "TO" },
-    { name: "Trinidad y Tobago", code: "TT" },
-    { name: "Túnez", code: "TN" },
-    { name: "Turkmenistán", code: "TM" },
-    { name: "Turquía", code: "TR" },
-    { name: "Tuvalu", code: "TV" },
-  
-    { name: "Uganda", code: "UG" },
-    { name: "Ucrania", code: "UA" },
-    { name: "Uruguay", code: "UY" },
-    { name: "Uzbekistán", code: "UZ" },
-  
-    { name: "Vanuatu", code: "VU" },
-    { name: "Ciudad del Vaticano", code: "VA" },
-    { name: "Venezuela", code: "VE" },
-    { name: "Vietnam", code: "VN" },
-  
-    { name: "Islas Vírgenes Británicas", code: "VG" },
-    { name: "Islas Vírgenes de los Estados Unidos", code: "VI" },
-  
-    { name: "Wallis y Futuna", code: "WF" },
-  
-    { name: "Yemen", code: "YE" },
-  
-    { name: "Zambia", code: "ZM" },
-    { name: "Zimbabue", code: "ZW" },
+  { name: "Bahamas", code: "BS" },
+  { name: "Baréin", code: "BH" },
+  { name: "Bangladesh", code: "BD" },
+  { name: "Birmania", code: "MM" },
+  { name: "Barbados", code: "BB" },
+  { name: "Bielorrusia", code: "BY" },
+  { name: "Bélgica", code: "BE" },
+  { name: "Belice", code: "BZ" },
+  { name: "Bermudas", code: "BM" },
+  { name: "Bután", code: "BT" },
+  { name: "Bolivia", code: "BO" },
+  { name: "Bosnia y Herzegovina", code: "BA" },
+  { name: "Botsuana", code: "BW" },
+  { name: "Brasil", code: "BR" },
+  { name: "Brunéi", code: "BN" },
+  { name: "Bulgaria", code: "BG" },
+  { name: "Burkina Faso", code: "BF" },
+  { name: "Burundi", code: "BI" },
+
+  { name: "Cabo Verde", code: "CV" },
+  { name: "Camboya", code: "KH" },
+  { name: "Camerún", code: "CM" },
+  { name: "Canadá", code: "CA" },
+  { name: "Catar", code: "QA" },
+  { name: "Chad", code: "TD" },
+  { name: "Chile", code: "CL" },
+  { name: "China", code: "CN" },
+  { name: "Chipre", code: "CY" },
+  { name: "Colombia", code: "CO" },
+  { name: "Comoras", code: "KM" },
+  { name: "Costa de Marfil", code: "CI" },
+  { name: "Costa Rica", code: "CR" },
+  { name: "Croacia", code: "HR" },
+  { name: "Cuba", code: "CU" },
+  { name: "Curazao", code: "CW" },
+
+  { name: "Dinamarca", code: "DK" },
+  { name: "Dominica", code: "DM" },
+  { name: "República Dominicana", code: "DO" },
+
+  { name: "Egipto", code: "EG" },
+  { name: "El Salvador", code: "SV" },
+  { name: "Emiratos Árabes Unidos", code: "AE" },
+  { name: "Eritrea", code: "ER" },
+  { name: "Eslovaquia", code: "SK" },
+  { name: "Eslovenia", code: "SI" },
+  { name: "España", code: "ES" },
+  { name: "Estados Unidos", code: "US" },
+  { name: "Estonia", code: "EE" },
+  { name: "Esuatini", code: "SZ" },
+  { name: "Etiopía", code: "ET" },
+
+  { name: "Filipinas", code: "PH" },
+  { name: "Finlandia", code: "FI" },
+  { name: "Francia", code: "FR" },
+
+  { name: "Gabón", code: "GA" },
+  { name: "Gambia", code: "GM" },
+  { name: "Georgia", code: "GE" },
+  { name: "Ghana", code: "GH" },
+  { name: "Granada", code: "GD" },
+  { name: "Guatemala", code: "GT" },
+  { name: "Guayana", code: "GY" },
+  { name: "Guinea", code: "GN" },
+  { name: "Guinea-Bisáu", code: "GW" },
+  { name: "Guinea Ecuatorial", code: "GQ" },
+
+  { name: "Haití", code: "HT" },
+  { name: "Honduras", code: "HN" },
+  { name: "Hungría", code: "HU" },
+
+  { name: "India", code: "IN" },
+  { name: "Indonesia", code: "ID" },
+  { name: "Inglaterra", code: "GB" },
+  { name: "Irán", code: "IR" },
+  { name: "Irak", code: "IQ" },
+  { name: "Irlanda", code: "IE" },
+  { name: "Islandia", code: "IS" },
+  { name: "Israel", code: "IL" },
+  { name: "Italia", code: "IT" },
+
+  { name: "Jamaica", code: "JM" },
+  { name: "Japón", code: "JP" },
+  { name: "Jordania", code: "JO" },
+
+  { name: "Kazajistán", code: "KZ" },
+  { name: "Kenia", code: "KE" },
+  { name: "Kirguistán", code: "KG" },
+  { name: "Kiribati", code: "KI" },
+  { name: "Corea del Norte", code: "KP" },
+  { name: "Corea del Sur", code: "KR" },
+  { name: "Kuwait", code: "KW" },
+
+  { name: "Laos", code: "LA" },
+  { name: "Letonia", code: "LV" },
+  { name: "Líbano", code: "LB" },
+  { name: "Liberia", code: "LR" },
+  { name: "Libia", code: "LY" },
+  { name: "Liechtenstein", code: "LI" },
+  { name: "Lituania", code: "LT" },
+  { name: "Luxemburgo", code: "LU" },
+
+  { name: "Macedonia del Norte", code: "MK" },
+  { name: "Madagascar", code: "MG" },
+  { name: "Malaui", code: "MW" },
+  { name: "Malasia", code: "MY" },
+  { name: "Maldivas", code: "MV" },
+  { name: "Malí", code: "ML" },
+  { name: "Malta", code: "MT" },
+  { name: "Islas Marshall", code: "MH" },
+  { name: "Mauritania", code: "MR" },
+  { name: "Mauricio", code: "MU" },
+  { name: "México", code: "MX" },
+  { name: "Micronesia", code: "FM" },
+  { name: "Moldavia", code: "MD" },
+  { name: "Mónaco", code: "MC" },
+  { name: "Mongolia", code: "MN" },
+  { name: "Montenegro", code: "ME" },
+  { name: "Marruecos", code: "MA" },
+  { name: "Mozambique", code: "MZ" },
+
+  { name: "Namibia", code: "NA" },
+  { name: "Nauru", code: "NR" },
+  { name: "Nepal", code: "NP" },
+  { name: "Países Bajos", code: "NL" },
+  { name: "Nueva Zelanda", code: "NZ" },
+  { name: "Nicaragua", code: "NI" },
+  { name: "Níger", code: "NE" },
+  { name: "Nigeria", code: "NG" },
+
+  { name: "Isla de Man", code: "IM" },
+  { name: "Noruega", code: "NO" },
+
+  { name: "Omán", code: "OM" },
+
+  { name: "Pakistán", code: "PK" },
+  { name: "Palaos", code: "PW" },
+  { name: "Palestina", code: "PS" },
+  { name: "Panamá", code: "PA" },
+  { name: "Papúa Nueva Guinea", code: "PG" },
+  { name: "Paraguay", code: "PY" },
+  { name: "Perú", code: "PE" },
+  { name: "Polonia", code: "PL" },
+  { name: "Portugal", code: "PT" },
+
+  { name: "Ruanda", code: "RW" },
+
+  { name: "Rumania", code: "RO" },
+  { name: "Rusia", code: "RU" },
+
+  { name: "San Cristóbal y Nieves", code: "KN" },
+  { name: "Santa Lucía", code: "LC" },
+  { name: "San Vicente y las Granadinas", code: "VC" },
+  { name: "San Marino", code: "SM" },
+  { name: "Santo Tomé y Príncipe", code: "ST" },
+  { name: "Senegal", code: "SN" },
+  { name: "Serbia", code: "RS" },
+  { name: "Seychelles", code: "SC" },
+  { name: "Sierra Leona", code: "SL" },
+  { name: "Singapur", code: "SG" },
+  { name: "Siria", code: "SY" },
+  { name: "Somalia", code: "SO" },
+  { name: "Sudáfrica", code: "ZA" },
+  { name: "Sudán", code: "SD" },
+  { name: "Sudán del Sur", code: "SS" },
+  { name: "Suecia", code: "SE" },
+  { name: "Suiza", code: "CH" },
+
+  { name: "Surinam", code: "SR" },
+
+  { name: "Tailandia", code: "TH" },
+  { name: "Tanzania", code: "TZ" },
+  { name: "Timor Oriental", code: "TL" },
+  { name: "Togo", code: "TG" },
+  { name: "Tonga", code: "TO" },
+  { name: "Trinidad y Tobago", code: "TT" },
+  { name: "Túnez", code: "TN" },
+  { name: "Turkmenistán", code: "TM" },
+  { name: "Turquía", code: "TR" },
+  { name: "Tuvalu", code: "TV" },
+
+  { name: "Uganda", code: "UG" },
+  { name: "Ucrania", code: "UA" },
+  { name: "Uruguay", code: "UY" },
+  { name: "Uzbekistán", code: "UZ" },
+
+  { name: "Vanuatu", code: "VU" },
+  { name: "Ciudad del Vaticano", code: "VA" },
+  { name: "Venezuela", code: "VE" },
+  { name: "Vietnam", code: "VN" },
+
+  { name: "Islas Vírgenes Británicas", code: "VG" },
+  { name: "Islas Vírgenes de los Estados Unidos", code: "VI" },
+
+  { name: "Wallis y Futuna", code: "WF" },
+
+  { name: "Yemen", code: "YE" },
+
+  { name: "Zambia", code: "ZM" },
+  { name: "Zimbabue", code: "ZW" },
 ]);
 axios.get(`${API}/countries`).then((response) => {
   countriesList.value = response.data.map((item: any) => {
@@ -841,13 +850,17 @@ axios.get(`${API}/ethnicities`).then((response) => {
   }));
 });
 
-const userProvince = ref<{ name: string; value: string; id: number } | null>(null);
-const userProvinceOptions = ref<{ name: string; value: string; id: number }[]>([]);
+const userProvince = ref<{ name: string; value: string; id: number } | null>(
+  null
+);
+const userProvinceOptions = ref<{ name: string; value: string; id: number }[]>(
+  []
+);
 axios.get(`${API}/provinces`).then((response) => {
   userProvinceOptions.value = response.data.map((item: any) => ({
     name: item.Province_Name,
     value: item.Province_Name, // Keep value as name for submission
-    id: item.Province_ID // Store the ID for filtering
+    id: item.Province_ID, // Store the ID for filtering
   }));
 });
 
@@ -867,7 +880,7 @@ const fetchCitiesByProvince = async (provinceId: number | null) => {
       userCityOptions.value = response.data.map((item: any) => ({
         name: item.City_Name,
         value: item.City_Name, // Keep value as name for submission
-        id: item.City_ID // Store the ID if needed elsewhere, though not strictly necessary for filtering here
+        id: item.City_ID, // Store the ID if needed elsewhere, though not strictly necessary for filtering here
       }));
     } catch (error) {
       console.error("Error fetching cities:", error);
@@ -875,7 +888,8 @@ const fetchCitiesByProvince = async (provinceId: number | null) => {
       toast.add({
         severity: "error",
         summary: "Error",
-        detail: "No se pudieron cargar las ciudades para la provincia seleccionada.",
+        detail:
+          "No se pudieron cargar las ciudades para la provincia seleccionada.",
         life: 3000,
       });
     }
@@ -887,10 +901,9 @@ const fetchCitiesByProvince = async (provinceId: number | null) => {
 watch(userProvince, (newProvince) => {
   // Avoid fetching cities during the initial reset or if the watcher triggers unexpectedly
   if (!isResettingConsultation.value) {
-     fetchCitiesByProvince(newProvince?.id ?? null);
+    fetchCitiesByProvince(newProvince?.id ?? null);
   }
 });
-
 
 //DATOS DE CONTACTO Y CONTACTO DE REFERENCIA
 const userPhone = ref("");
@@ -898,8 +911,12 @@ const userEmail = ref("");
 const userAddress = ref("");
 
 // Modify userSector ref to store Zone_FK
-const userSector = ref<{ name: string; value: string; zoneId: number } | null>(null);
-const userSectorOptions = ref<{ name: string; value: string; zoneId: number }[]>([]);
+const userSector = ref<{ name: string; value: string; zoneId: number } | null>(
+  null
+);
+const userSectorOptions = ref<
+  { name: string; value: string; zoneId: number }[]
+>([]);
 
 // Modify userZone ref to store Zone_ID
 const userZone = ref<{ name: string; value: string; id: number } | null>(null);
@@ -910,7 +927,7 @@ axios.get(`${API}/zone`).then((response) => {
   userZoneOptions.value = response.data.map((item: any) => ({
     name: item.Zone_Name,
     value: item.Zone_Name, // Keep value as name for submission
-    id: item.Zone_ID // Store the ID
+    id: item.Zone_ID, // Store the ID
   }));
   // After zones are loaded, fetch sectors
   fetchSectors();
@@ -922,24 +939,26 @@ const fetchSectors = async () => {
     userSectorOptions.value = response.data.map((item: any) => ({
       name: item.Sector_Name,
       value: item.Sector_Name, // Keep value as name for submission
-      zoneId: item.Zone_FK // Store the foreign key linking to Zone
+      zoneId: item.Zone_FK, // Store the foreign key linking to Zone
     }));
   } catch (error) {
     console.error("Error fetching sectors:", error);
     userSectorOptions.value = [];
-     toast.add({
-        severity: "error",
-        summary: "Error",
-        detail: "No se pudieron cargar los sectores.",
-        life: 3000,
-      });
+    toast.add({
+      severity: "error",
+      summary: "Error",
+      detail: "No se pudieron cargar los sectores.",
+      life: 3000,
+    });
   }
 };
 
 watch(userSector, (newSector) => {
   if (newSector) {
     // Find the corresponding zone in userZoneOptions based on the sector's zoneId
-    const correspondingZone = userZoneOptions.value.find(zone => zone.id === newSector.zoneId);
+    const correspondingZone = userZoneOptions.value.find(
+      (zone) => zone.id === newSector.zoneId
+    );
     userZone.value = correspondingZone || null; // Set the zone automatically
   } else {
     userZone.value = null; // Reset zone if sector is cleared
@@ -953,7 +972,7 @@ const userReferencePhone = ref("");
 //DATOS DEMOGRÁFICOS
 
 const userSocialBenefit = ref(false);
-const userEconomicDependece = ref(false);
+const userEconomicDependence = ref(false);
 const userAcademicInstruction = ref<{ name: string; value: string } | null>(
   null
 );
@@ -1067,18 +1086,7 @@ axios.get(`${API}/vulnerable-situation`).then((response) => {
   }));
 });
 
-const userSupportingDocuments = ref<{ name: string; value: string } | null>(
-  null
-);
-const userSupportingDocumentsOptions = ref<{ name: string; value: string }[]>(
-  []
-);
-axios.get(`${API}/documentation-backups`).then((response) => {
-  userSupportingDocumentsOptions.value = response.data.map((item: any) => ({
-    name: item.Documentation_Backup_Name,
-    value: item.Documentation_Backup_Name,
-  }));
-});
+
 
 const userDisability = ref<{ name: string; value: string } | null>(null);
 const userDisabilityOptions = ref<{ name: string; value: string }[]>([]);
@@ -1112,15 +1120,13 @@ const userHealthDocumentsName = ref("");
 
 const initCode = ref("");
 const internalID = authStore.user?.id;
-//Detectamos si init social work cambia de estado a true o false 
-
+//Detectamos si init social work cambia de estado a true o false
 
 const initSocialWork = ref<boolean>(false);
 const initMandatorySW = ref<boolean>(false);
 
 const initCaseStatusOptions = ref<{ name: string; value: string }[]>([]);
 const initCaseStatus = ref<{ name: string; value: string } | null>(null);
-
 
 axios.get(`${API}/case-status`).then((response) => {
   initCaseStatusOptions.value = response.data.map((item: any) => ({
@@ -1130,7 +1136,9 @@ axios.get(`${API}/case-status`).then((response) => {
 
   // Seleccionar "Activo" si existe en la lista, si no, tomar la primera opción
   initCaseStatus.value =
-    initCaseStatusOptions.value.find((option) => option.value === "Sin iniciar") ||
+    initCaseStatusOptions.value.find(
+      (option) => option.value === "Sin iniciar"
+    ) ||
     initCaseStatusOptions.value[0] ||
     null;
 });
@@ -1150,13 +1158,17 @@ axios.get(`${API}/client-types`).then((response) => {
 });
 
 // Modify initSubject ref to store ID for filtering
-const initSubject = ref<{ name: string; value: string; id: number } | null>(null);
-const initSubjectOptions = ref<{ name: string; value: string; id: number }[]>([]);
+const initSubject = ref<{ name: string; value: string; id: number } | null>(
+  null
+);
+const initSubjectOptions = ref<{ name: string; value: string; id: number }[]>(
+  []
+);
 axios.get(`${API}/subjects`).then((response) => {
   initSubjectOptions.value = response.data.map((item: any) => ({
     name: item.Subject_Name,
     value: item.Subject_Name, // Keep value as name for submission
-    id: item.Subject_ID // Store the ID for filtering
+    id: item.Subject_ID, // Store the ID for filtering
   }));
 });
 
@@ -1192,9 +1204,9 @@ const fetchTopicsBySubject = async (subjectId: number | null) => {
 // Watch for changes in the selected subject
 watch(initSubject, (newSubject) => {
   // Avoid fetching topics during the initial reset or if the watcher triggers unexpectedly
-   if (!isResettingConsultation.value) {
-      fetchTopicsBySubject(newSubject?.id ?? null);
-   }
+  if (!isResettingConsultation.value) {
+    fetchTopicsBySubject(newSubject?.id ?? null);
+  }
 });
 
 const initService = ref<{ name: string; value: string } | null>(null);
@@ -1356,7 +1368,7 @@ const restartUserForm = () => {
   userReferencePhone.value = "";
   //DATOS DEMOGRÁFICOS
   userSocialBenefit.value = false;
-  userEconomicDependece.value = false;
+  userEconomicDependence.value = false;
   userAcademicInstruction.value = null;
   userProfession.value = null;
   userMaritalStatus.value = null;
@@ -1371,7 +1383,6 @@ const restartUserForm = () => {
   userPensioner.value = null;
   userHealthInsurance.value = null;
   userVulnerableSituation.value = null;
-  userSupportingDocuments.value = null;
   userDisability.value = null;
   userDisabilityPercentage.value = 0;
   userCatastrophicIllness.value = null;
@@ -1415,20 +1426,6 @@ const restartConsultationForm = () => {
   initAlertNote.value = "";
   initSocialWork.value = false;
   initMandatorySW.value = false;
-};
-
-const searchIDButton = () => {
-  if (searchIDInput.value.trim() !== "") {
-    areInputsDisabled.value = false;
-    fetchUser();
-  } else {
-    toast.add({
-      severity: "error",
-      summary: "Error",
-      detail: "Ingrese un ID válido",
-      life: 3000,
-    });
-  }
 };
 
 const fetchUser = async () => {
@@ -1479,16 +1476,6 @@ const fetchUser = async () => {
         userEthnicity.value = option;
       }
     });
-    // userProvinceOptions.value.forEach((option) => {
-    //   if (option.name === selectedUser.value.User_Province) {
-    //     userProvince.value = option;
-    //   }
-    // });
-    // userCityOptions.value.forEach((option) => {
-    //   if (option.name === selectedUser.value.User_City) {
-    //     userCity.value = option;
-    //   }
-    // });
 
     const foundProvince = userProvinceOptions.value.find(
       (option) => option.name === selectedUser.value.User_Province
@@ -1505,10 +1492,9 @@ const fetchUser = async () => {
       );
       userCity.value = foundCity || null;
     } else {
-       userCityOptions.value = []; // Ensure city options are empty if province wasn't found
-       userCity.value = null;
+      userCityOptions.value = []; // Ensure city options are empty if province wasn't found
+      userCity.value = null;
     }
-
 
     userCityOptions.value.forEach((option) => {
       if (option.name === selectedUser.value.User_City) {
@@ -1537,7 +1523,7 @@ const fetchUser = async () => {
 
     //DATOS DEMOGRÁFICOS
     userSocialBenefit.value = selectedUser.value.User_SocialBenefit;
-    userEconomicDependece.value = selectedUser.value.User_EconomicDependence;
+    userEconomicDependence.value = selectedUser.value.User_EconomicDependence;
 
     userAcademicInstructionOptions.value.forEach((option) => {
       if (option.value === selectedUser.value.User_AcademicInstruction) {
@@ -1597,11 +1583,7 @@ const fetchUser = async () => {
         userVulnerableSituation.value = option;
       }
     });
-    userSupportingDocumentsOptions.value.forEach((option) => {
-      if (option.value === selectedUser.value.User_SupportingDocuments) {
-        userSupportingDocuments.value = option;
-      }
-    });
+
     userDisabilityOptions.value.forEach((option) => {
       if (option.value === selectedUser.value.User_Disability) {
         userDisability.value = option;
@@ -1633,12 +1615,42 @@ const fetchUser = async () => {
     isSearchButtonDisabled.value = true;
     isSearchInputDisabled.value = true;
     searchIDInput.value = "Buscar por Cédula o Pasaporte";
-    toast.add({
+    if(!secretaryUser){
+      toast.add({
       severity: "info",
       summary: "Usuario no registrado",
       detail:
         "Porfavor, completa el formulario para registrar al nuevo usuario y la consulta..",
       life: 6000,
+    });
+    }
+    else{
+      toast.add({
+        severity: "info",
+        summary: "Usuario no registrado",
+        detail:
+          "Porfavor, haz clic en el botón reiniciar para ingresar un nuevo ID.",
+        life: 7000,
+      });
+    }
+
+  }
+};
+
+const searchIDButton = async () => {
+  if (searchIDInput.value.trim() !== "") {
+    areInputsDisabled.value = false;
+    await fetchUser();
+    if(secretaryUser && doesUserExist.value === false) {
+      areInputsDisabled.value = true;
+    }
+
+  } else {
+    toast.add({
+      severity: "error",
+      summary: "Error",
+      detail: "Ingrese un ID válido",
+      life: 3000,
     });
   }
 };
@@ -1656,9 +1668,20 @@ const updateFormWithConsultation = async (
       (option) => option.value === String(data.Init_CaseStatus)
     ) || null;
   initOffice.value = data.Init_Office;
-  initDate.value = new Date(data.Init_Date);
+  const utcInitDate = new Date(data.Init_Date);
+  // Adjust by the local timezone offset to keep the original date parts
+  utcInitDate.setMinutes(utcInitDate.getMinutes() + utcInitDate.getTimezoneOffset());
+  initDate.value = utcInitDate;
+
   if (data.Init_EndDate) {
-    initEndDate.value = new Date(data.Init_EndDate);
+    // Parse the UTC date string
+    const utcEndDate = new Date(data.Init_EndDate);
+    // Adjust by the local timezone offset
+    utcEndDate.setMinutes(utcEndDate.getMinutes() + utcEndDate.getTimezoneOffset());
+    initEndDate.value = utcEndDate;
+  }
+  else {
+    initEndDate.value = null; // Set to null if no end date is provided
   }
   initClientType.value =
     initClientTypeOptions.value.find(
@@ -1680,14 +1703,9 @@ const updateFormWithConsultation = async (
     );
     initTopic.value = foundTopic || null;
   } else {
-     initTopicOptions.value = []; // Ensure topic options are empty if subject wasn't found
-     initTopic.value = null;
+    initTopicOptions.value = []; // Ensure topic options are empty if subject wasn't found
+    initTopic.value = null;
   }
-
-
-
-
-
 
   initService.value =
     initServiceOptions.value.find(
@@ -1838,6 +1856,7 @@ const fetchActivities = async (initCode: string): Promise<void> => {
   }
 };
 
+
 //CONSULTATION OPERATIONS
 //NEW CONSULTATION
 
@@ -1890,7 +1909,7 @@ const createInitialConsultation = async () => {
   formData.append("User_SocialBenefit", userSocialBenefit.value.toString());
   formData.append(
     "User_EconomicDependence",
-    userEconomicDependece.value.toString()
+    userEconomicDependence.value.toString()
   );
   formData.append(
     "User_AcademicInstruction",
@@ -1932,10 +1951,7 @@ const createInitialConsultation = async () => {
     "User_VulnerableSituation",
     userVulnerableSituation.value?.value || ""
   );
-  formData.append(
-    "User_SupportingDocuments",
-    userSupportingDocuments.value?.value || ""
-  );
+
   formData.append("User_Disability", userDisability.value?.value || "Ninguna");
   formData.append(
     "User_DisabilityPercentage",
@@ -1984,9 +2000,9 @@ const createInitialConsultation = async () => {
   formData.append("Init_Lawyer", initLawyer.value?.value || "");
   formData.append("Init_Referral", initReferral.value?.value || "");
   formData.append("Init_Notes", initNotes.value || "");
-  if(initMandatorySW.value !== true){
+  if (initMandatorySW.value !== true) {
     formData.append("Init_Type", "Por Revisar");
-  }else{
+  } else {
     formData.append("Init_Type", "En espera");
   }
 
@@ -2099,9 +2115,9 @@ const newUserConsultation = async () => {
     Init_Type: "",
     User_ID: userID.value,
   };
-  if(initMandatorySW.value !== true){
+  if (initMandatorySW.value !== true) {
     consultationData.Init_Type = "Por Revisar";
-  }else{
+  } else {
     consultationData.Init_Type = "En espera";
   }
 
@@ -2237,51 +2253,164 @@ const editUserConsultation = async () => {
     return;
   }
 
+  // Get Original Consultation Data ---
+  const originalConsultation = consultations.value.find(
+    (c) => c.Init_Code === initCode.value
+  );
+
+  if (!originalConsultation) {
+    toast.add({
+      severity: "error",
+      summary: "Error",
+      detail: "No se encontró la consulta original para comparar.",
+      life: 4000,
+    });
+    return;
+  }
+
   // El índice actual antes de editar
   const currentPageBeforeEdit = first.value;
 
-  const consultationData = {
-    Init_Code: initCode.value,
-    Internal_ID: internalID,
-    Init_ClientType: initClientType.value?.value,
-    Init_Subject: initSubject.value?.value,
-    Init_Lawyer: initLawyer.value?.value,
-    Init_Date: initDate.value ? initDate.value.toISOString().split("T")[0] : "",
+
+  const updatedConsultationData = {
+
+    Init_ClientType: initClientType.value?.value ?? originalConsultation.Init_ClientType,
+    Init_Subject: initSubject.value?.value ?? originalConsultation.Init_Subject,
+    Init_Lawyer: initLawyer.value?.value ?? originalConsultation.Init_Lawyer,
     Init_EndDate: initEndDate.value
-      ? initEndDate.value.toISOString().split("T")[0]
-      : null,
-    Init_Office: initOffice.value,
-    Init_Topic: initTopic.value?.value,
-    Init_Service: initService.value?.value,
-    Init_Referral: initReferral.value?.value,
-    Init_CaseStatus: initCaseStatus.value?.value,
-    Init_Notes: initNotes.value || "",
-    Init_Complexity: initComplexity.value?.value || "",
-    Init_Type: "",
+      ? initEndDate.value.toISOString().split("T")[0] 
+      : null, 
+    Init_Office: initOffice.value ?? originalConsultation.Init_Office,
+    Init_Topic: initTopic.value?.value ?? originalConsultation.Init_Topic,
+    Init_Service: initService.value?.value ?? originalConsultation.Init_Service,
+    Init_Referral: initReferral.value?.value ?? originalConsultation.Init_Referral,
+    Init_CaseStatus: initCaseStatus.value?.value ?? originalConsultation.Init_CaseStatus,
+    Init_Notes: initNotes.value ?? originalConsultation.Init_Notes, 
+    Init_Complexity: initComplexity.value?.value ?? originalConsultation.Init_Complexity,
+    Init_Type: "", 
     Init_SocialWork: initSocialWork.value,
-    Init_MandatorySW: initMandatorySW.value,
-    User_ID: userID.value,
+    Init_MandatorySW: initMandatorySW.value, 
+
   };
-  if (initService.value?.value === "Patrocinio") {
-    consultationData.Init_Type = "Por Asignar";
-  }   else if (initMandatorySW.value === true) {
-    consultationData.Init_Type = "En espera";
+
+  // Recalculate Init_Type based on updated values
+  if (updatedConsultationData.Init_Service === "Patrocinio") {
+    updatedConsultationData.Init_Type = "Por Asignar";
+  } else if (updatedConsultationData.Init_MandatorySW === true) {
+    updatedConsultationData.Init_Type = "En espera";
   } else {
-    consultationData.Init_Type = "Por Revisar";
+    updatedConsultationData.Init_Type = "Por Revisar";
   }
 
-  if(initSocialWork.value === false){
-    consultationData.Init_SocialWork = false;
-    consultationData.Init_MandatorySW = false;
+  // Apply conditional resets based on updated values
+  if (updatedConsultationData.Init_SocialWork === false) {
+    updatedConsultationData.Init_MandatorySW = false;
   }
 
-  
-  console.log("Datos enviados:", JSON.stringify(consultationData, null, 2));
+
+
+  //Verificamos que la fecha de fin no sea menor a la fecha de inicio
+  // Use originalConsultation.Init_Date for comparison as initDate ref might change
+  const originalInitDate = new Date(originalConsultation.Init_Date);
+  originalInitDate.setMinutes(originalInitDate.getMinutes() + originalInitDate.getTimezoneOffset()); // Adjust timezone if needed
+
+  if (initEndDate.value && initEndDate.value < originalInitDate) {
+    toast.add({
+      severity: "error",
+      summary: "Error",
+      detail: "La fecha de fin no puede ser menor a la fecha de inicio.",
+      life: 4000,
+    });
+    return;
+  }
+
+  // --- START: Comparison Logic ---
+  let hasChanges = false;
+
+  // Define keys to compare (exclude identifiers like Init_Code, User_ID, Internal_ID)
+  const keysToCompare: (keyof typeof updatedConsultationData)[] = [
+    'Init_ClientType', 'Init_Subject', 'Init_Lawyer', 'Init_EndDate',
+    'Init_Office', 'Init_Topic', 'Init_Service', 'Init_Referral',
+    'Init_CaseStatus', 'Init_Notes', 'Init_Complexity', 'Init_Type',
+    'Init_SocialWork', 'Init_MandatorySW'
+  ];
+
+  for (const key of keysToCompare) {
+    const updatedValue = updatedConsultationData[key];
+    const originalValue = originalConsultation[key as keyof Initial_Consultation]; // Type assertion
+
+    // Handle Date comparison specifically for Init_EndDate
+    if (key === 'Init_EndDate') {
+        const originalDatePart = originalValue ? String(originalValue).substring(0, 10) : null;
+        const updatedDatePart = updatedValue; // Already YYYY-MM-DD or null
+
+        if (originalDatePart !== updatedDatePart) {
+
+            hasChanges = true;
+            break;
+        }
+    }
+    // Handle boolean comparison directly
+    else if (typeof updatedValue === 'boolean' && typeof originalValue === 'boolean') {
+        if (updatedValue !== originalValue) {
+             console.log(`*** Change detected in BOOLEAN key: ${key} ***`);
+             console.log(`Original: ${originalValue}, Updated: ${updatedValue}`);
+             hasChanges = true;
+             break;
+        }
+    }
+    // Handle other types (including null/undefined vs empty string)
+    else {
+        // Normalize null/undefined/empty string for comparison
+        const normUpdated = updatedValue === null || updatedValue === undefined ? "" : String(updatedValue);
+        const normOriginal = originalValue === null || originalValue === undefined ? "" : String(originalValue);
+
+        if (normUpdated !== normOriginal) {
+            console.log(`*** Change detected in key: ${key} ***`);
+            console.log(`Original Value: '${originalValue}' (Type: ${typeof originalValue})`);
+            console.log(`Updated Value: '${updatedValue}' (Type: ${typeof updatedValue})`);
+            console.log(`Normalized Original: '${normOriginal}'`);
+            console.log(`Normalized Updated: '${normUpdated}'`);
+            hasChanges = true;
+            break;
+        }
+    }
+  }
+
+  if (!hasChanges) {
+    toast.add({
+      severity: "warn",
+      summary: "Sin Cambios",
+      detail: "No se detectaron cambios para actualizar la ficha.",
+      life: 4000,
+    });
+
+    // Reset UI states as if edit was cancelled
+    editConsultationButtonDisabled.value = true;
+    isInitStatusDisabled.value = true;
+    isInitEndDateDisabled.value = true;
+    doesUserRequestOp.value = false;
+    isSaveButtonDisabled.value = false;
+    isEditButtonDisabled.value = false;
+    isDeleteButtonDisabled.value = false;
+    isExportButtonDisabled.value = false;
+    doesUserRequestEditConsultation.value = false;
+    return; // Stop execution if no changes are found
+  }
+  // --- END: Comparison Logic ---
+
+
+  const dataToSend = {
+      ...updatedConsultationData,
+      Init_Code: initCode.value,
+      Internal_ID: internalID,
+      User_ID: userID.value,
+  };
 
   try {
     await axios.put(
       `${API}/initial-consultations/${initCode.value}`,
-      consultationData,
+      dataToSend, // Send the final data object
       {
         headers: {
           "internal-id": authStore.user?.id,
@@ -2295,6 +2424,8 @@ const editUserConsultation = async () => {
       detail: "La ficha ha sido actualizada con éxito.",
       life: 4000,
     });
+
+    // --- Reset UI states and fetch data
     editConsultationButtonDisabled.value = true;
     isInitStatusDisabled.value = true;
     isInitEndDateDisabled.value = true;
@@ -2304,30 +2435,42 @@ const editUserConsultation = async () => {
     isDeleteButtonDisabled.value = false;
     isExportButtonDisabled.value = false;
     doesUserRequestEditConsultation.value = false;
-    restartEvidence();
-    restartConsultationForm();
-    await fetchConsultations();
+    restartEvidence(); 
+    await fetchConsultations(); // Refetch to get updated list
+
+    // Find the index of the updated consultation
     const index = consultations.value.findIndex(
       (consulta) => consulta.Init_Code === initCode.value
     );
+
     if (index !== -1) {
+      // If found, update the paginator and form
       first.value = index;
-      // Forzamos la actualización manual del formulario
+      // Ensure the form reflects the *just fetched* data, not stale refs
+      await nextTick(); // Wait for DOM update if necessary
       updateFormWithConsultation(consultations.value[index]);
     } else {
+      // If not found (shouldn't happen often after PUT), go back to previous or last page
       first.value =
         currentPageBeforeEdit < consultations.value.length
           ? currentPageBeforeEdit
-          : consultations.value.length - 1;
-      updateFormWithConsultation(consultations.value[first.value]);
+          : Math.max(0, consultations.value.length - 1); // Ensure first is not negative
+      if (consultations.value.length > 0) {
+         updateFormWithConsultation(consultations.value[first.value]);
+      } else {
+         restartConsultationForm(); // No consultations left, clear form
+         restartEvidence();
+      }
     }
+    // --- End Reset UI ---
+
   } catch (error: any) {
     if ((error as any).response?.status === 404) {
       toast.add({
-        severity: "warn",
-        summary: "Advertencia",
+        severity: "error", 
+        summary: "Error",
         detail:
-          "Por favor, revisa que has hecho cambios antes de actualizar la ficha.",
+          "No se encontró la consulta para actualizar o ocurrió un error.", // Adjusted message
         life: 4000,
       });
     } else {
@@ -2398,89 +2541,78 @@ const editUser = async () => {
   // Crear objeto actualizado mezclando datos originales y cambios del formulario
   const updatedUser = {
     //DATOS PERSONALES
-    User_ID_Type: userIDType.value?.value || originalUser.User_ID_Type,
-    User_ID: userID.value || originalUser.User_ID,
-    User_Age: userAge.value || originalUser.User_Age,
-    User_FirstName: userFirstName.value || originalUser.User_FirstName,
-    User_LastName: userLastName.value || originalUser.User_LastName,
-    User_Gender: userGender.value?.value || originalUser.User_Gender,
+    User_ID_Type: userIDType.value?.value ?? originalUser.User_ID_Type,
+    User_ID: userID.value ?? originalUser.User_ID,
+    User_Age: userAge.value ?? originalUser.User_Age, // Keep as string from form or original number
+    User_FirstName: userFirstName.value ?? originalUser.User_FirstName,
+    User_LastName: userLastName.value ?? originalUser.User_LastName,
+    User_Gender: userGender.value?.value ?? originalUser.User_Gender,
     User_BirthDate: userBirthDate.value
-      ? userBirthDate.value.toISOString().split("T")[0]
-      : originalUser.User_BirthDate,
+      ? userBirthDate.value.toISOString().split("T")[0] // Format to YYYY-MM-DD
+      : originalUser.User_BirthDate, // Keep original if no change
     User_Nationality:
-      userNationality.value?.name || originalUser.User_Nationality,
-    User_Ethnicity: userEthnicity.value?.value || originalUser.User_Ethnicity,
-    User_Province: userProvince.value?.value || originalUser.User_Province,
-    User_City: userCity.value?.value || originalUser.User_City,
+      userNationality.value?.name ?? originalUser.User_Nationality,
+    User_Ethnicity: userEthnicity.value?.value ?? originalUser.User_Ethnicity,
+    User_Province: userProvince.value?.value ?? originalUser.User_Province,
+    User_City: userCity.value?.value ?? originalUser.User_City,
 
     //DATOS DE CONTACTO Y CONTACTO DE REFERENCIA
-    User_Phone: userPhone.value.replace(/\D/g, "") || originalUser.User_Phone,
-    User_Email: userEmail.value || originalUser.User_Email,
-    User_Address: userAddress.value || originalUser.User_Address,
-    User_Sector: userSector.value?.value || originalUser.User_Sector,
-    User_Zone: userZone.value?.value || originalUser.User_Zone,
+    User_Phone: userPhone.value.replace(/\D/g, "") ?? originalUser.User_Phone,
+    User_Email: userEmail.value ?? originalUser.User_Email,
+    User_Address: userAddress.value ?? originalUser.User_Address,
+    User_Sector: userSector.value?.value ?? originalUser.User_Sector,
+    User_Zone: userZone.value?.value ?? originalUser.User_Zone,
     User_ReferenceRelationship:
-      userReferenceRelationship.value ||
+      userReferenceRelationship.value ??
       originalUser.User_ReferenceRelationship,
     User_ReferenceName:
-      userReferenceName.value || originalUser.User_ReferenceName,
+      userReferenceName.value ?? originalUser.User_ReferenceName,
     User_ReferencePhone:
-      userReferencePhone.value.replace(/\D/g, "") ||
+      userReferencePhone.value.replace(/\D/g, "") ??
       originalUser.User_ReferencePhone,
 
     //DATOS DEMOGRÁFICOS
     User_SocialBenefit:
-      userSocialBenefit.value !== undefined
-        ? userSocialBenefit.value
-        : originalUser.User_SocialBenefit,
-    User_EconomicDependece:
-      userEconomicDependece.value !== undefined
-        ? userEconomicDependece.value
-        : originalUser.User_EconomicDependence,
+      userSocialBenefit.value ?? originalUser.User_SocialBenefit,
+    User_EconomicDependence: // Corrected name
+      userEconomicDependence.value ?? originalUser.User_EconomicDependence,
     User_AcademicInstruction:
-      userAcademicInstruction.value?.value ||
+      userAcademicInstruction.value?.value ??
       originalUser.User_AcademicInstruction,
     User_Profession:
-      userProfession.value?.value || originalUser.User_Profession,
+      userProfession.value?.value ?? originalUser.User_Profession,
     User_MaritalStatus:
-      userMaritalStatus.value?.value || originalUser.User_MaritalStatus,
+      userMaritalStatus.value?.value ?? originalUser.User_MaritalStatus,
     User_Dependents:
-      userDependents.value !== null
-        ? userDependents.value
-        : originalUser.User_Dependents,
+      userDependents.value ?? originalUser.User_Dependents,
     User_IncomeLevel:
-      userIncomeLevel.value?.value || originalUser.User_IncomeLevel,
+      userIncomeLevel.value?.value ?? originalUser.User_IncomeLevel,
     User_FamilyIncome:
-      userFamilyIncome.value?.value || originalUser.User_FamilyIncome,
+      userFamilyIncome.value?.value ?? originalUser.User_FamilyIncome,
     User_FamilyGroup: userFamilyGroup.value.map((option) => option.value),
     User_EconomicActivePeople:
-      userEconomicActivePeople.value !== null
-        ? userEconomicActivePeople.value
-        : originalUser.User_EconomicActivePeople,
+      userEconomicActivePeople.value ?? originalUser.User_EconomicActivePeople,
 
     //DATOS SOCIOECONÓMICOS Y DE SALUD
     User_OwnAssets: userOwnAssets.value.map((option) => option.value),
     User_HousingType:
-      userHousingType.value?.value || originalUser.User_HousingType,
-    User_Pensioner: userPensioner.value?.value || originalUser.User_Pensioner,
+      userHousingType.value?.value ?? originalUser.User_HousingType,
+    User_Pensioner: userPensioner.value?.value ?? originalUser.User_Pensioner,
     User_HealthInsurance:
-      userHealthInsurance.value?.value || originalUser.User_HealthInsurance,
+      userHealthInsurance.value?.value ?? originalUser.User_HealthInsurance,
     User_VulnerableSituation:
-      userVulnerableSituation.value?.value ||
+      userVulnerableSituation.value?.value ??
       originalUser.User_VulnerableSituation,
-    User_SupportingDocuments:
-      userSupportingDocuments.value?.value ||
-      originalUser.User_SupportingDocuments,
     User_Disability:
-      userDisability.value?.value || originalUser.User_Disability,
+      userDisability.value?.value ?? originalUser.User_Disability,
     User_DisabilityPercentage:
-      userDisabilityPercentage.value || originalUser.User_DisabilityPercentage,
+      userDisabilityPercentage.value ?? originalUser.User_DisabilityPercentage,
     User_CatastrophicIllness:
-      userCatastrophicIllness.value?.value ||
+      userCatastrophicIllness.value?.value ??
       originalUser.User_CatastrophicIllness,
   };
-  //Si se modifica el check a desactivado en discapacidad y enfermedad, se limpian los campos de discapacidad y enfermedad
-  // Validación antes de continuar con la edición
+
+  // Apply conditional disability/illness resets *before* comparison
   if (userHasDisability.value === false) {
     updatedUser.User_Disability = "Ninguna";
     updatedUser.User_DisabilityPercentage = 0;
@@ -2494,10 +2626,69 @@ const editUser = async () => {
     return; // Detiene la ejecución si la validación falla
   }
 
-  console.log("Datos enviados:", JSON.stringify(updatedUser, null, 2));
+  // --- START: Comparison logic ---
+  let hasChanges = false;
+
+  for (const key in updatedUser) {
+    // Ensure the key exists in originalUser as well to avoid errors
+    // If a key exists in updatedUser but not originalUser, it's considered a change (or handle as needed)
+    if (!originalUser.hasOwnProperty(key)) {
+        console.warn(`Key "${key}" exists in updatedUser but not in originalUser.`);
+        continue; // Skip keys not present in the original object for comparison
+    }
+
+    const updatedValue = updatedUser[key as keyof typeof updatedUser];
+    const originalValue = originalUser[key as keyof typeof originalUser];
+
+    // Handle array comparison
+    if (Array.isArray(updatedValue) && Array.isArray(originalValue)) {
+      const sortedUpdated = [...updatedValue].sort();
+      const sortedOriginal = [...originalValue].sort();
+      if (JSON.stringify(sortedUpdated) !== JSON.stringify(sortedOriginal)) {
+        hasChanges = true;
+        break;
+      }
+    }
+    // Handle Date comparison specifically
+    else if (key === 'User_BirthDate') {
+        const originalDatePart = String(originalValue).substring(0, 10);
+        const updatedDatePart = String(updatedValue).substring(0, 10);
+        if (originalDatePart !== updatedDatePart) {
+            hasChanges = true;
+            break;
+        }
+    }
+    // Handle other types (including null/undefined vs empty string)
+    else {
+        const normUpdated = updatedValue === null || updatedValue === undefined ? "" : String(updatedValue);
+        const normOriginal = originalValue === null || originalValue === undefined ? "" : String(originalValue);
+
+        if (normUpdated !== normOriginal) {
+            // Skip User_Age if the only difference is type (number vs string) but value is same
+            if (key === 'User_Age' && Number(normUpdated) === Number(normOriginal)) {
+                continue;
+            }
+            hasChanges = true;
+            break;
+        }
+    }
+  }
+
+  if (!hasChanges) {
+    toast.add({
+      severity: "warn",
+      summary: "Sin Cambios",
+      detail: "No se detectaron cambios para actualizar.",
+      life: 4000,
+    });
+    return; // Stop execution if no changes are found
+  }
 
   try {
-    await axios.put(`${API}/user/${selectedUser.value.User_ID}`, updatedUser, {
+    // Data to send is simply the updatedUser object now
+    const dataToSend = { ...updatedUser };
+
+    await axios.put(`${API}/user/${selectedUser.value.User_ID}`, dataToSend, {
       headers: {
         "internal-id": authStore.user?.id,
       },
@@ -2512,12 +2703,13 @@ const editUser = async () => {
 
     await fetchUser(); // Recargar datos después de la actualización
   } catch (error) {
+    // Keep existing error handling
     if ((error as any).response?.status === 404) {
       toast.add({
         severity: "warn",
         summary: "Advertencia",
         detail:
-          "Por favor, revisa que has hecho cambios antes de actualizar al usuario.",
+          "No se detectaron cambios para actualizar o el usuario no fue encontrado.",
         life: 4000,
       });
     } else {
@@ -2530,8 +2722,6 @@ const editUser = async () => {
     }
   }
 };
-
-//gaurdamos el documento en la variable User_HealthDocuments
 
 //-------------------------------------------------------------------------------------------------------------//
 //METODOS DE VALIDACION DE CÉDULA
@@ -2757,6 +2947,28 @@ function getInternalUserName(internalId: string): string {
     return "Cargando...";
   }
 }
+
+// Add refs for DataTable pagination
+const activityFirst = ref(0);
+const activityRows = ref(7); // Or any default number of rows per page
+
+// ...existing code...
+
+// Function to get status severity for Tag component
+const getActivityStatusSeverity = (status: string) => {
+  switch (status?.toLowerCase()) {
+    case "completada":
+      return "success";
+    case "en progreso":
+      return "info";
+    case "pendiente":
+      return "warning";
+    case "cancelada":
+      return "danger";
+    default:
+      return "secondary";
+  }
+};
 </script>
 
 <template>
@@ -2796,7 +3008,7 @@ function getInternalUserName(internalId: string): string {
           icon="pi pi-user-edit"
           label="Editar"
           class="ml-2"
-          :disabled="!doesUserExist"
+          :disabled="!doesUserExist || secretaryUser"
         />
       </div>
     </div>
@@ -2913,13 +3125,14 @@ function getInternalUserName(internalId: string): string {
             />
             <label for="userBirthDate">Fecha de nacimiento</label>
           </FloatLabel>
-          <!-- Nacionalidad (sin modificar íconos) -->
+          <!-- Nacionalidad -->
           <FloatLabel variant="on" class="w-full">
             <Select
               v-model="userNationality"
               inputId="nacionalidad"
               :options="countriesList"
               filter
+              resetFilterOnHide
               optionLabel="name"
               size="large"
               placeholder="ㅤ"
@@ -2968,6 +3181,7 @@ function getInternalUserName(internalId: string): string {
               optionLabel="name"
               class="w-full"
               filter
+              resetFilterOnHide
               :disabled="areInputsDisabled"
             />
             <label for="userEthnicity">Etnia</label>
@@ -2981,6 +3195,7 @@ function getInternalUserName(internalId: string): string {
               :options="userProvinceOptions"
               size="large"
               filter
+              resetFilterOnHide
               optionLabel="name"
               class="w-full"
               :disabled="areInputsDisabled"
@@ -2996,6 +3211,7 @@ function getInternalUserName(internalId: string): string {
               :options="userCityOptions"
               size="large"
               filter
+              resetFilterOnHide
               optionLabel="name"
               class="w-full"
               :disabled="areInputsDisabled"
@@ -3053,6 +3269,7 @@ function getInternalUserName(internalId: string): string {
                 optionLabel="name"
                 class="w-full md:w-48"
                 filter
+                resetFilterOnHide
                 :disabled="areInputsDisabled"
               />
               <label for="userSector">Sector</label>
@@ -3126,6 +3343,7 @@ function getInternalUserName(internalId: string): string {
                 icon="pi pi-check"
                 label="Guardar"
                 class="bg-blue-600 hover:bg-blue-700 text-white"
+                :disabled="secretaryUser"
                 @click="referenceDialog = false"
               />
             </div>
@@ -3158,7 +3376,7 @@ function getInternalUserName(internalId: string): string {
           </div>
           <div class="flex items-center gap-2">
             <Checkbox
-              v-model="userEconomicDependece"
+              v-model="userEconomicDependence"
               binary
               :disabled="areInputsDisabled"
               class="-ml-40"
@@ -3177,6 +3395,7 @@ function getInternalUserName(internalId: string): string {
               optionLabel="name"
               class="w-full"
               filter
+              resetFilterOnHide
               :disabled="areInputsDisabled"
             />
             <label for="userAcademicInstruction">Instrucción</label>
@@ -3192,6 +3411,7 @@ function getInternalUserName(internalId: string): string {
               optionLabel="name"
               class="w-full"
               filter
+              resetFilterOnHide
               :disabled="areInputsDisabled"
             />
             <label for="userProfession">Ocupación</label>
@@ -3238,6 +3458,7 @@ function getInternalUserName(internalId: string): string {
               optionLabel="name"
               class="w-full"
               filter
+              resetFilterOnHide
               :disabled="areInputsDisabled"
             />
             <label for="userIncomeLevel">Nivel de ingresos</label>
@@ -3253,6 +3474,7 @@ function getInternalUserName(internalId: string): string {
               optionLabel="name"
               class="w-full"
               filter
+              resetFilterOnHide
               :disabled="areInputsDisabled"
             />
             <label for="userIncomeLevel">Ingresos Familiares</label>
@@ -3265,6 +3487,7 @@ function getInternalUserName(internalId: string): string {
               :options="userFamilyGroupOptions"
               optionLabel="name"
               filter
+              resetFilterOnHide
               :disabled="areInputsDisabled"
               size="large"
               :maxSelectedLabels="3"
@@ -3394,6 +3617,7 @@ function getInternalUserName(internalId: string): string {
               :options="userOwnAssetsOptions"
               optionLabel="name"
               filter
+              resetFilterOnHide
               :disabled="areInputsDisabled"
               size="large"
               :maxSelectedLabels="2"
@@ -3460,19 +3684,6 @@ function getInternalUserName(internalId: string): string {
             >
           </FloatLabel>
 
-          <!-- Documentos de respaldo -->
-          <FloatLabel variant="on" class="w-full md:w-70">
-            <Select
-              v-model="userSupportingDocuments"
-              inputId="userSupportingDocuments"
-              :options="userSupportingDocumentsOptions"
-              size="large"
-              optionLabel="name"
-              class="w-full text-left"
-              :disabled="areInputsDisabled"
-            />
-            <label for="userSupportingDocuments">Documentos de Respaldo</label>
-          </FloatLabel>
 
           <!-- Discapacidad -->
           <transition
@@ -3518,6 +3729,7 @@ function getInternalUserName(internalId: string): string {
                   optionLabel="name"
                   class="w-full"
                   filter
+                  resetFilterOnHide
                   :disabled="areInputsDisabled"
                 />
                 <label for="userCatastrophicIllness"
@@ -3545,6 +3757,7 @@ function getInternalUserName(internalId: string): string {
                 @select="onSelectedFiles"
                 :autoClear="false"
                 class="w-full md:w-100"
+                :disabled="secretaryUser"
               >
                 <!-- Header: solo se muestra el botón para elegir archivo -->
                 <template #header="{ chooseCallback, files }">
@@ -3558,6 +3771,11 @@ function getInternalUserName(internalId: string): string {
                       v-tooltip="'Seleccionar archivo'"
                       outlined
                       severity="secondary"
+                      :class ="
+                        secretaryUser
+                          ? 'pointer-events-none cursor-not-allowed'
+                          : ''
+                      "
                       :disabled="!!userHealthDocuments && !!doesUserExist"
                     />
                   </div>
@@ -3610,7 +3828,7 @@ function getInternalUserName(internalId: string): string {
                       >
                         {{ userHealthDocumentsName }}
                       </span>
-                      <div class="flex gap-2 mt-2">
+                      <div class="flex gap-2 mt-2"">
                         <Button
                           icon="pi pi-times"
                           label="Reemplazar"
@@ -3638,7 +3856,8 @@ function getInternalUserName(internalId: string): string {
                         {{ selectedUser.User_HealthDocumentsName }}
                       </span>
                       <div class="flex gap-2 mt-2">
-                        <Button
+                        <div v-if="authStore.user?.type == 'Administrador' || authStore.user?.type == 'Coordinador'">
+                          <Button
                           icon="pi pi-times"
                           label="Reemplazar"
                           class="p-button-danger mt-2"
@@ -3646,11 +3865,12 @@ function getInternalUserName(internalId: string): string {
                           outlined
                           rounded
                         />
+                        </div>
                         <div
                           v-if="
                             doesUserExist && userHealthDocumentsName != null
                           "
-                        >
+                         >
                           <Button
                             icon="pi pi-eye"
                             label="Ver"
@@ -3678,7 +3898,7 @@ function getInternalUserName(internalId: string): string {
                     </p>
                   </div>
                   <div
-                    v-else-if="!userHealthDocuments && doesUserExist"
+                    v-else-if="!userHealthDocuments && doesUserExist && !secretaryUser"
                     class="flex items-center justify-center flex-col"
                   >
                     <i
@@ -3686,6 +3906,17 @@ function getInternalUserName(internalId: string): string {
                     />
                     <p class="mt-6 mb-0">
                       Arrastra y suelta el archivo PDF aquí.
+                    </p>
+                  </div>
+                  <div
+                    v-else-if="!userHealthDocuments && doesUserExist && secretaryUser"
+                    class="flex items-center justify-center flex-col"
+                  >
+                    <i
+                      class="pi pi-info !border-2 !rounded-full !p-3.5 !text-4xl !text-muted-color"
+                    />
+                    <p class="mt-6 mb-0">
+                      No hay documento de salud cargado para este usuario.
                     </p>
                   </div>
                 </template>
@@ -3750,7 +3981,7 @@ function getInternalUserName(internalId: string): string {
                 severity="contrast"
                 class="w-full md:w-70 md:h-12"
                 :disabled="areInputsDisabled"
-              />                    
+              />
             </div>
           </transition>
         </div>
@@ -3763,57 +3994,65 @@ function getInternalUserName(internalId: string): string {
     <Tabs v-model:value="activeTab">
       <TabList>
         <Tab value="0">Asesorias </Tab>
-        <Tab value="1" v-if="authStore.user?.type == 'Administrador'"
-          >Patrocinios</Tab
+        <Tab value="1" v-if="authStore.user?.type != 'Estudiante'">
+          Actividades del Patrocinio</Tab
         >
         <div
           v-if="isAsesoriasTab"
           class="flex justify-between items-center w-full"
-          :class="authStore.user?.type == 'Estudiante' ? 'ml-266' : 'ml-0'"
+          :class="authStore.user?.type != 'Administrador' && authStore.user?.type != 'Coordinador' && authStore.user?.type != 'Abogado' && authStore.user?.type != 'Secretaria' ? 'ml-266' : 'ml-0'"
         >
-<!-- Checkbox -->
-<div
-  v-if="authStore.user?.type == 'Administrador' || authStore.user?.type == 'Coordinador'"
-  class="flex items-center gap-4 ml-120"
->
-  <div class="flex items-center gap-2">
-    <Checkbox
-      v-model="initSocialWork"
-      binary
-      :disabled="areInputsDisabled"
-      :class="
-        !doesUserRequestOp && doesUserExist
-          ? 'mouse pointer-events-none'
-          : ''
-      "
-    />
-    <label class="whitespace-nowrap">¿Trabajo Social?</label>
-  </div>
-  <transition
-    enter-active-class="transition ease-out duration-300"
-    enter-from-class="opacity-0 transform -translate-y-2"
-    enter-to-class="opacity-100 transform translate-y-0"
-    leave-active-class="transition ease-in duration-300"
-    leave-from-class="opacity-100 transform translate-y-0"
-    leave-to-class="opacity-0 transform -translate-y-2"
-  >
-    <div v-show="initSocialWork" class="flex items-center gap-2">
-      <ToggleSwitch v-model="initMandatorySW" v-tooltip.bottom="'Selecciona'"       :disabled="areInputsDisabled"
-      :class="
-        !doesUserRequestOp && doesUserExist
-          ? 'mouse pointer-events-none'
-          : ''
-      " />
-      <label class="whitespace-nowrap">¿Obligatorio?</label>
-    </div>
-  </transition>
-</div>
+          <!-- Checkbox -->
+          <div
+            v-if="
+              authStore.user?.type == 'Administrador' ||
+              authStore.user?.type == 'Coordinador' ||
+              authStore.user?.type == 'Abogado' ||
+              authStore.user?.type == 'Secretaria'
+            "
+            class="flex items-center gap-4 ml-98"
+          >
+            <div class="flex items-center gap-2">
+              <Checkbox
+                v-model="initSocialWork"
+                binary
+                :disabled="areInputsDisabled"
+                :class="
+                  !doesUserRequestOp && doesUserExist
+                    ? 'mouse pointer-events-none'
+                    : ''
+                "
+              />
+              <label class="whitespace-nowrap">¿Trabajo Social?</label>
+            </div>
+            <transition
+              enter-active-class="transition ease-out duration-300"
+              enter-from-class="opacity-0 transform -translate-y-2"
+              enter-to-class="opacity-100 transform translate-y-0"
+              leave-active-class="transition ease-in duration-300"
+              leave-from-class="opacity-100 transform translate-y-0"
+              leave-to-class="opacity-0 transform -translate-y-2"
+            >
+              <div v-show="initSocialWork" class="flex items-center gap-2">
+                <ToggleSwitch
+                  v-model="initMandatorySW"
+                  v-tooltip.bottom="'Selecciona'"
+                  :disabled="areInputsDisabled"
+                  :class="
+                    !doesUserRequestOp && doesUserExist
+                      ? 'mouse pointer-events-none'
+                      : ''
+                  "
+                />
+                <label class="whitespace-nowrap">¿Obligatorio?</label>
+              </div>
+            </transition>
+          </div>
 
           <!-- Botones alineados al final -->
-          <div class="flex items-center gap-2 mr-10">
+          <div class="flex items-center gap-2 mr-10" :class="authStore.user?.type !== 'Administrador' && authStore.user?.type !== 'Coordinador' && authStore.user?.type !== 'Abogado' ? '-ml-12' : ''">
             <div
               v-if="
-                authStore.user?.type == 'Administrador' &&
                 doesUserExist &&
                 initAlertNote != ''
               "
@@ -3829,15 +4068,18 @@ function getInternalUserName(internalId: string): string {
                 />
               </div>
             </div>
-            <Button
+            <div v-if="authStore.user?.type !== 'Secretaria'">
+              <Button
               icon="pi pi-file-plus"
               @click="requestNewConsultation()"
               v-tooltip.bottom="'Nueva Ficha'"
               rounded
               aria-label="Nueva Ficha"
               :disabled="!doesUserExist || isSaveButtonDisabled"
-            />
-            <div v-if="authStore.user?.type !== 'Estudiante'">
+              />
+            </div>
+
+            <div v-if="authStore.user?.type !== 'Estudiante' && authStore.user?.type !== 'Abogado' && authStore.user?.type !== 'Secretaria'">
               <Button
                 icon="pi pi-file-edit"
                 @click="requestEditConsultation()"
@@ -3889,12 +4131,12 @@ function getInternalUserName(internalId: string): string {
                       :options="initCaseStatusOptions"
                       size="large"
                       optionLabel="name"
-                      class="w-full"
+                      class="w-full max-w-48"
                       :class="
-                      !doesUserRequestOp && doesUserExist
-                        ? 'mouse pointer-events-none'
-                        : ''
-                    "
+                        !doesUserRequestOp && doesUserExist
+                          ? 'mouse pointer-events-none'
+                          : ''
+                      "
                       :disabled="areInputsDisabled"
                     />
                     <label for="initCaseStatus">Estado</label>
@@ -3969,7 +4211,11 @@ function getInternalUserName(internalId: string): string {
               <FloatLabel variant="on" class="w-full">
                 <Select
                   v-model="initSubject"
-                  :options="initSubjectOptions"
+                  :options="
+                           initSubjectOptions.filter(
+                              (option) => option.name !== 'Primeras Consultas'
+                            )
+                      "
                   optionLabel="name"
                   class="w-full"
                   :class="
@@ -3977,8 +4223,10 @@ function getInternalUserName(internalId: string): string {
                       ? 'mouse pointer-events-none'
                       : ''
                   "
+                  
                   size="large"
                   filter
+                  resetFilterOnHide
                   :disabled="areInputsDisabled"
                 />
                 <label for="initSubject">Área/Materia</label>
@@ -3998,6 +4246,7 @@ function getInternalUserName(internalId: string): string {
                   "
                   size="large"
                   filter
+                  resetFilterOnHide
                   :disabled="areInputsDisabled"
                 />
                 <label for="initTopic">Tema</label>
@@ -4113,9 +4362,10 @@ function getInternalUserName(internalId: string): string {
                     areInputsDisabled ? 'select-none opacity-50' : '',
                   ]"
                   :readonly="
-                    ((!doesUserExist && areInputsDisabled) ||
-                    (!doesUserRequestNewConsultation) &&
-                      (!doesUserRequestEditConsultation && doesUserExist))
+                    (!doesUserExist && areInputsDisabled) ||
+                    (!doesUserRequestNewConsultation &&
+                      !doesUserRequestEditConsultation &&
+                      doesUserExist)
                   "
                 >
                   <template v-slot:toolbar>
@@ -4148,7 +4398,7 @@ function getInternalUserName(internalId: string): string {
                   @select="onSelectedFilesEvidence"
                   :autoClear="false"
                   class="w-full md:w-100"
-                  :disabled="areInputsDisabled"
+                  :disabled="areInputsDisabled || secretaryUser"
                 >
                   <!-- Header: solo se muestra el botón para elegir archivo -->
                   <template #header="{ chooseCallback, files }">
@@ -4163,7 +4413,7 @@ function getInternalUserName(internalId: string): string {
                         outlined
                         severity="secondary"
                         :class="
-                          areInputsDisabled || evidenceFile
+                          areInputsDisabled || evidenceFile || secretaryUser
                             ? 'pointer-events-none'
                             : ''
                         "
@@ -4290,7 +4540,7 @@ function getInternalUserName(internalId: string): string {
                       </p>
                     </div>
                     <div
-                      v-else-if="!evidenceFile && doesUserExist"
+                      v-else-if="!evidenceFile && doesUserExist && !secretaryUser"
                       class="flex items-center justify-center flex-col"
                     >
                       <i
@@ -4300,6 +4550,17 @@ function getInternalUserName(internalId: string): string {
                         Arrastra y suelta el archivo PDF aquí.
                       </p>
                     </div>
+                    <div
+                    v-else-if="!evidenceFile && doesUserExist && secretaryUser"
+                    class="flex items-center justify-center flex-col"
+                  >
+                    <i
+                      class="pi pi-info !border-2 !rounded-full !p-3.5 !text-4xl !text-muted-color"
+                    />
+                    <p class="mt-6 mb-0">
+                      No hay documento de respaldo cargado para esta ficha.
+                    </p>
+                  </div>
                   </template>
                 </FileUpload>
               </div>
@@ -4317,68 +4578,118 @@ function getInternalUserName(internalId: string): string {
 
         <TabPanel value="1">
           <div class="p-6">
-            <!-- Mostrar actividades si existen -->
-            <div class="scroll-container">
-              <div
-                v-if="doesActivityExist"
-                class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
-              >
-                <Card
-                  v-for="activity in selectedActivity"
-                  :key="activity.Activity_ID"
-                  style="
-                    width: 100%;
-                    overflow: hidden;
-                    box-shadow: 0 0 8px #ccc;
-                  "
+            <DataTable
+              :value="selectedActivity"
+              :paginator="true"
+              :rows="activityRows"
+              size="large"
+              removableSort
+              v-model:first="activityFirst"
+              :globalFilterFields="[
+                'Activity_Name',
+                'Activity_Location',
+                'Activity_Status',
+              ]"
+              v-if="doesActivityExist"
+              class="p-datatable-sm"
+              responsiveLayout="scroll"
+            >
+              <template #empty>
+                <div
+                  class="flex flex-row justify-center items-center h-40 font-medium text-2xl gap-2 mt-50"
                 >
-                  <template #title>{{ activity.Activity_Name }}</template>
-                  <template #subtitle
-                    >Fecha:
-                    {{
-                      new Date(
-                        activity.Activity_Start_Date
-                      ).toLocaleDateString()
-                    }}</template
-                  >
-                  <template #content>
-                    <p class="m-0">
-                      <strong>Estudiante: </strong
-                      >{{ getInternalUserName(activity.Internal_ID) }}
-                      <br />
-                      <strong>Lugar: </strong>{{ activity.Activity_Location }}
-                      <br />
-                      <strong>Abogado: </strong>
-                      {{ activity.Activity_Judge_Name || "No asignado" }}
-                      <br />
-                      <strong>Estado: </strong> {{ activity.Activity_Status }}
-                    </p>
-                  </template>
-                  <template #footer>
-                    <div class="flex gap-4 mt-4 justify-center items-center">
-                      <Button
-                        label="Ver información"
-                        severity="info"
-                        icon="pi pi-info-circle"
-                        class="w-full md:w-50"
-                        @click="showActivityDetails(activity)"
-                      />
-                    </div>
-                  </template>
-                </Card>
-              </div>
+                  <p>Este caso aún no tiene actividades registradas 🔎</p>
+                </div>
+              </template>
 
-              <!-- Mensaje si no hay actividades -->
-              <div
-                v-else
-                class="flex flex-row justify-center items-center h-40 font-medium text-2xl gap-2 mt-50"
+              <Column
+                field="Activity_ID"
+                header="Código"
+                sortable
+                style="min-width: 8rem"
+              ></Column>
+              <Column
+                field="Activity_Name"
+                header="Nombre"
+                sortable
+                style="min-width: 12rem"
+              ></Column>
+              <Column
+                header="Estudiante"
+                sortable
+                sortField="Internal_User_ID_Student"
+                style="min-width: 12rem"
               >
-                <p>Este caso aún no tiene actividades registradas 🔎</p>
-              </div>
+                <template #body="slotProps">
+                  {{ getInternalUserName(slotProps.data.Internal_User_ID_Student) }}
+                </template>
+              </Column>
+              <Column
+                field="Activity_Location"
+                header="Lugar"
+                sortable
+                style="min-width: 10rem"
+              ></Column>
+              <Column
+                header="Abogado"
+                sortable
+                sortField="Internal_ID"
+                style="min-width: 12rem"
+              >
+              <template #body="slotProps">
+                  {{ getInternalUserName(slotProps.data.Internal_ID) }}
+                </template>
+              </Column>
+              <Column
+                field="Activity_Status"
+                header="Estado"
+                sortable
+                style="min-width: 10rem"
+              >
+                <template #body="slotProps">
+                  <Tag
+                    :value="slotProps.data.Activity_Status"
+                    :severity="
+                      getActivityStatusSeverity(slotProps.data.Activity_Status)
+                    "
+                  />
+                </template>
+              </Column>
+              <Column
+                header="Acciones"
+                style="min-width: 10rem; text-align: center"
+              >
+                <template #body="slotProps">
+                  <div class="flex justify-center items-center gap-2">
+                    <Button
+                      @click="showActivityDetails(slotProps.data)"
+                      v-tooltip.bottom="'Ver Detalles'"
+                      icon="pi pi-eye"
+                      severity="info"
+                      rounded
+                    />
+                    <Button
+                      @click="loadActivityDocument(slotProps.data.Activity_ID)"
+                      v-tooltip.bottom="'Ver documento'"
+                      icon="pi pi-file-pdf"
+                      severity="contrast"
+                      rounded
+                    />
+                  </div>
+                </template>
+              </Column>
+            </DataTable>
+
+            <!-- Mensaje si no hay actividades (redundant if DataTable's empty template is used, but kept for safety) -->
+            <div
+              v-else
+              class="flex flex-row justify-center items-center h-40 font-medium text-2xl gap-2 mt-50"
+            >
+              <p>Este caso aún no tiene actividades registradas 🔎</p>
             </div>
           </div>
 
-          <!-- Diálogo para mostrar detalles de la actividad -->
+          <!-- Diálogo para mostrar detalles de la actividad (remains the same) -->
           <Dialog
             v-model:visible="activityDialogVisible"
             modal
@@ -4391,11 +4702,11 @@ function getInternalUserName(internalId: string): string {
               class="grid grid-cols-1 md:grid-cols-2 gap-4 text-lg"
             >
               <div>
-                <p class="mb-2">
+                <p class="mb-3">
                   <strong>📌 Nombre:</strong>
                   {{ selectedActivityDetails.Activity_Name }}
                 </p>
-                <p class="mb-2">
+                <p class="mb-3">
                   <strong>📅 Fecha:</strong>
                   {{
                     new Date(
@@ -4403,43 +4714,52 @@ function getInternalUserName(internalId: string): string {
                     ).toLocaleDateString()
                   }}
                 </p>
-                <p class="mb-2">
+                <p class="mb-3">
                   <strong>🕒 Hora:</strong>
                   {{ selectedActivityDetails.Activity_Start_Time }}
                 </p>
-                <p class="mb-2">
+                <p class="mb-3">
                   <strong>📍 Lugar:</strong>
                   {{ selectedActivityDetails.Activity_Location }}
                 </p>
-                <p class="mb-2">
+                <p class="mb-3">
                   <strong>⏳ Duración:</strong>
                   {{ selectedActivityDetails.Activity_Duration }}
                 </p>
-                <p class="mb-2">
+                <p class="mb-3">
                   <strong>🤝 Contraparte:</strong>
                   {{ selectedActivityDetails.Activity_Counterparty }}
                 </p>
               </div>
 
               <div>
-                <p class="mb-2">
+                <p class="mb-3">
                   <strong>🏛️ Juzgado:</strong>
                   {{ selectedActivityDetails.Activity_Judged }}
                 </p>
-                <p class="mb-2">
+                <p class="mb-3">
                   <strong>⚖️ Juez:</strong>
-                  {{ selectedActivityDetails.Activity_Judge_Name }}
+                  {{
+                    selectedActivityDetails.Activity_Judge_Name || "No asignado"
+                  }}
                 </p>
-                <p class="mb-2">
-                  <strong>📌 Estado:</strong>
-                  {{ selectedActivityDetails.Activity_Status }}
+                <p class="mb-3">
+                  <strong>📌 Estado: </strong>
+                  <Tag
+                    :value="selectedActivityDetails.Activity_Status"
+                    :severity="
+                      getActivityStatusSeverity(
+                        selectedActivityDetails.Activity_Status
+                      )
+                    "
+                  />
                 </p>
-                <p class="mb-2">
+                <p class="mb-3">
                   <strong>📁 Referencia:</strong>
                   {{ selectedActivityDetails.Activity_Reference_File }}
                 </p>
-                <p class="mb-2">
-                  <strong>⏱️ ¿A tiempo?:</strong>
+                <p class="mb-3">
+                  <strong>⏱️ ¿A tiempo?: </strong>
                   <span
                     :class="
                       selectedActivityDetails.Activity_OnTime
@@ -4450,15 +4770,6 @@ function getInternalUserName(internalId: string): string {
                     {{ selectedActivityDetails.Activity_OnTime ? "Sí" : "No" }}
                   </span>
                 </p>
-                <Button
-                  label="Ver documento"
-                  icon="pi pi-file-pdf"
-                  class="mt-4 w-full md:w-50"
-                  @click="
-                    loadActivityDocument(selectedActivityDetails.Activity_ID)
-                  "
-                  severity="contrast"
-                />
               </div>
             </div>
           </Dialog>
@@ -4500,7 +4811,7 @@ function getInternalUserName(internalId: string): string {
         @click="cancelEditConsultation()"
       />
       <Button
-        label="Editar Ficha"
+        label="Guardar Ficha"
         icon="pi pi-file-edit"
         severity="info"
         @click="editUserConsultation()"
@@ -4508,58 +4819,42 @@ function getInternalUserName(internalId: string): string {
     </div>
   </div>
 
-   <!-- Dialog para visualizar el documento PDF de SALUD -->
-<Dialog
-            v-model:visible="watchHealthDocumentDialog"
-            modal
-            header="🏥🩺 Documento de Salud"
-            class="p-6 rounded-lg shadow-lg bg-white max-w-7xl w-full"
-          >
-            <iframe
-              :src="urlDocument"
-              class="w-full h-250"
-              frameborder="0"
-            ></iframe>
-          </Dialog>
-          <!-- Dialog para visualizar el documento PDF de EVIDENCIA -->
-          <Dialog
-            v-model:visible="watchEvidenceDocumentDialog"
-            modal
-            header="📋 Documento de Atención"
-            class="p-6 rounded-lg shadow-lg bg-white max-w-7xl w-full"
-          >
-            <iframe
-              :src="urlDocument"
-              class="w-full h-250"
-              frameborder="0"
-            ></iframe>
-          </Dialog>
-            <!-- Dialog para visualizar el documento PDF de Ficha de Atención -->
-            <Dialog
-            v-model:visible="watchAttentionSheetDialog"
-            modal
-            header="📂 Ficha de Atención"
-            class="p-6 rounded-lg shadow-lg bg-white max-w-7xl w-full"
-          >
-            <iframe
-              :src="urlDocument"
-              class="w-full h-250"
-              frameborder="0"
-            ></iframe>
-          </Dialog>
-            <!-- Dialog para visualizar el documento PDF de Actividades -->
-            <Dialog
-            v-model:visible="watchActivityDocumentDialog"
-            modal
-            header="📄 Actividad del Caso"
-            class="p-6 rounded-lg shadow-lg bg-white max-w-7xl w-full"
-          >
-            <iframe
-              :src="urlDocument"
-              class="w-full h-250"
-              frameborder="0"
-            ></iframe>
-          </Dialog>      
+  <!-- Dialog para visualizar el documento PDF de SALUD -->
+  <Dialog
+    v-model:visible="watchHealthDocumentDialog"
+    modal
+    header="🏥🩺 Documento de Salud"
+    class="p-6 rounded-lg shadow-lg bg-white max-w-7xl w-full" 
+  >
+    <iframe :src="urlDocument" class="w-full h-250" frameborder="0"></iframe>
+  </Dialog>
+  <!-- Dialog para visualizar el documento PDF de EVIDENCIA -->
+  <Dialog
+    v-model:visible="watchEvidenceDocumentDialog"
+    modal
+    header="📋 Documento de Atención"
+    class="p-6 rounded-lg shadow-lg bg-white max-w-7xl w-full"
+  >
+    <iframe :src="urlDocument" class="w-full h-250" frameborder="0"></iframe>
+  </Dialog>
+  <!-- Dialog para visualizar el documento PDF de Ficha de Atención -->
+  <Dialog
+    v-model:visible="watchAttentionSheetDialog"
+    modal
+    header="📂 Ficha de Atención"
+    class="p-6 rounded-lg shadow-lg bg-white max-w-7xl w-full"
+  >
+    <iframe :src="urlDocument" class="w-full h-250" frameborder="0"></iframe>
+  </Dialog>
+  <!-- Dialog para visualizar el documento PDF de Actividades -->
+  <Dialog
+    v-model:visible="watchActivityDocumentDialog"
+    modal
+    header="💼 Actividad del Caso"
+    class="p-6 rounded-lg shadow-lg bg-white max-w-7xl w-full"
+  >
+    <iframe :src="urlDocument" class="w-full h-250" frameborder="0"></iframe>
+  </Dialog>
 
   <Dialog
     v-model:visible="watchAlertDialog"
@@ -4589,13 +4884,16 @@ function getInternalUserName(internalId: string): string {
       <p class="text-gray-700 text-lg">
         <strong>Fecha de la alerta:</strong> {{ initDate.toLocaleDateString() }}
       </p>
-      <Button
+      <div v-if="authStore.user?.type == 'Administrador' || authStore.user?.type == 'Coordinador'">
+        <Button
         label="Rechazar Patrocinio"
         icon="pi pi-envelope"
         class="mt-4 w-full md:w-50"
         @click="rejectCase()"
         severity="danger"
       />
+      </div>
+
     </div>
   </Dialog>
 </template>

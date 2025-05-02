@@ -40,8 +40,8 @@
           <Dropdown 
             v-model="filterPeriodo" 
             :options="periodos" 
-            optionLabel="PeriodoNombre" 
-            optionValue="Periodo_ID" 
+            optionLabel="Period_Name" 
+            optionValue="Period_ID" 
             placeholder="Seleccione período" 
             class="w-60" 
           />
@@ -56,30 +56,30 @@
   
       <!-- DataTable de Registros Cerrados -->
       <DataTable :value="filteredRecords" paginator rows="10" class="w-full shadow-lg mt-2">
-        <Column field="usuarioXPeriodo.usuario.Internal_ID" header="Cédula" sortable />
+        <Column field="userXPeriod.user.Internal_ID" header="Cédula" sortable />
         <Column header="Nombre" sortable>
           <template #body="slotProps">
-            {{ slotProps.data.usuarioXPeriodo.usuario.Internal_Name }} {{ slotProps.data.usuarioXPeriodo.usuario.Internal_LastName }}
+            {{ slotProps.data.userXPeriod.user.Internal_Name }} {{ slotProps.data.userXPeriod.user.Internal_LastName }}
           </template>
         </Column>
         <Column header="Fecha Entrada" sortable>
           <template #body="slotProps">
-            {{ formatDate(slotProps.data.Registro_Entrada) }}
+            {{ formatDate(slotProps.data.Attendance_Entry) }}
           </template>
         </Column>
         <Column header="Fecha Salida" sortable>
           <template #body="slotProps">
-            {{ formatDate(slotProps.data.Registro_Salida) }}
+            {{ formatDate(slotProps.data.Attendance_Exit) }}
           </template>
         </Column>
         <Column header="Período" sortable>
           <template #body="slotProps">
-            {{ slotProps.data.usuarioXPeriodo?.periodo?.PeriodoNombre || "N/A"  }}
+            {{ slotProps.data.userXPeriod?.period?.Period_Name || "N/A"  }}
           </template>
         </Column>
-        <Column field="Registro_Tipo" header="Tipo de Registro" sortable>
+        <Column field="Attendance_Type" header="Tipo de Registro" sortable>
           <template #body="slotProps">
-            {{ slotProps.data.Registro_Tipo }}
+            {{ slotProps.data.Attendance_Type }}
           </template>
         </Column>
         <Column header="Acciones">
@@ -119,7 +119,7 @@
             Cualquier cambio en la hora de salida afectará el total de horas acumuladas del estudiante.
           </p>
           <p class="mb-2 font-medium">
-            Hora de Entrada: {{ formatDate(selectedRegistro?.Registro_Entrada) }}
+            Hora de Entrada: {{ formatDate(selectedRegistro?.Attendance_Entry) }}
           </p>
           <label class="block font-medium mb-1">Nueva Hora de Salida</label>
           <InputText 
@@ -173,6 +173,7 @@
   import Toast from "primevue/toast";
   import { useToast } from "primevue/usetoast";
   import { API } from "@/ApiRoute";
+  import axios from "axios";
   
   const router = useRouter();
   const toast = useToast();
@@ -188,26 +189,26 @@
   
   // Cargar registros cerrados (GET /registrosCerrados)
   const loadRegistros = async () => {
-    try {
-      const response = await fetch(`${API}/registrosCerrados`);
-      if (!response.ok) throw new Error("Error al cargar registros cerrados");
-      registros.value = await response.json();
-    } catch (error: any) {
-      toast.add({ severity: "error", summary: "Error", detail: error.message, life: 3000 });
-    }
-  };
+  try {
+    const { data } = await axios.get(`${API}/registrosCerrados`, { withCredentials: true });
+    registros.value = data;
+  } catch (error: any) {
+    toast.add({ severity: "error", summary: "Error", detail: error.message, life: 3000 });
+  }
+};
+
   
   // Cargar períodos (GET /periodos)
   const periodos = ref([]);
   const loadPeriodos = async () => {
-    try {
-      const response = await fetch(`${API}/periodos`);
-      if (!response.ok) throw new Error("Error al cargar períodos");
-      periodos.value = await response.json();
-    } catch (error: any) {
-      toast.add({ severity: "error", summary: "Error", detail: error.message, life: 3000 });
-    }
-  };
+  try {
+    const { data } = await axios.get(`${API}/periodos`, { withCredentials: true });
+    periodos.value = data;
+  } catch (error: any) {
+    toast.add({ severity: "error", summary: "Error", detail: error.message, life: 3000 });
+  }
+};
+
   
   onMounted(() => {
     loadRegistros();
@@ -218,27 +219,27 @@
   const filteredRecords = computed(() => {
     const filterFechaStr = filterFecha.value ? new Date(filterFecha.value).toISOString().split("T")[0] : "";
     return registros.value.filter(reg => {
-      const ced = reg.usuarioXPeriodo?.usuario?.Internal_ID?.toLowerCase() || "";
+      const ced = reg.userXPeriod?.user?.Internal_ID?.toLowerCase() || "";
       const matchCedula = ced.includes(filterCedula.value.toLowerCase());
       
       const nombreCompleto = (
-        reg.usuarioXPeriodo?.usuario?.Internal_Name +
+        reg.userXPeriod?.user?.Internal_Name +
         " " +
-        reg.usuarioXPeriodo?.usuario?.Internal_LastName
+        reg.userXPeriod?.user?.Internal_LastName
       ).toLowerCase();
       const matchNombre = nombreCompleto.includes(filterNombre.value.toLowerCase());
       
       let matchFecha = true;
       if (filterFechaStr) {
-        const regFecha = reg.Registro_Entrada
-          ? new Date(reg.Registro_Entrada).toISOString().split("T")[0]
+        const regFecha = reg.Attendance_Entry
+          ? new Date(reg.Attendance_Entry).toISOString().split("T")[0]
           : "";
         matchFecha = filterFechaStr === regFecha;
       }
       
       let matchPeriodo = true;
       if (filterPeriodo.value) {
-        matchPeriodo = reg.usuarioXPeriodo?.Periodo_ID == filterPeriodo.value;
+        matchPeriodo = reg.userXPeriod?.Period_ID == filterPeriodo.value;
       }
       
       return matchCedula && matchNombre && matchFecha && matchPeriodo;
@@ -264,7 +265,7 @@
   const openEditModal = (registro: any) => {
     selectedRegistro.value = registro;
     // Pre-cargar editSalida con la hora de entrada del registro (en formato datetime-local)
-    editSalida.value = new Date(registro.Registro_Entrada).toISOString().substring(0, 16);
+    editSalida.value = new Date(registro.Attendance_Entry).toISOString().substring(0, 16);
     editModalVisible.value = true;
   };
   
@@ -274,35 +275,44 @@
   
   // Guardar edición (PUT /registrosCerrados/:id)
   const saveEdit = async () => {
-    if (!selectedRegistro.value) {
-      toast.add({ severity: "error", summary: "Error", detail: "No se seleccionó registro", life: 3000 });
-      return;
-    }
-    const entrada = new Date(selectedRegistro.value.Registro_Entrada);
-    const nuevaSalida = new Date(editSalida.value);
-    if (nuevaSalida <= entrada) {
-      toast.add({ severity: "error", summary: "Error", detail: "La hora de salida debe ser posterior a la entrada.", life: 3000 });
-      return;
-    }
-    if (nuevaSalida.toDateString() !== entrada.toDateString()) {
-      toast.add({ severity: "error", summary: "Error", detail: "La hora de salida debe ser del mismo día que la entrada.", life: 3000 });
-      return;
-    }
-    try {
-      const registroId = selectedRegistro.value.Registro_ID;
-      const response = await fetch(`${API}/registrosCerrados/${registroId}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ Registro_Salida: editSalida.value })
-      });
-      if (!response.ok) throw new Error("No se pudo actualizar el registro");
-      toast.add({ severity: "success", summary: "Actualizado", detail: "Registro actualizado correctamente", life: 3000 });
-      closeEditModal();
-      await loadRegistros();
-    } catch (error: any) {
-      toast.add({ severity: "error", summary: "Error", detail: error.message, life: 3000 });
-    }
-  };
+  if (!selectedRegistro.value) {
+    toast.add({ severity: "error", summary: "Error", detail: "No se seleccionó registro", life: 3000 });
+    return;
+  }
+
+  const entrada = new Date(selectedRegistro.value.Attendance_Entry);
+  const nuevaSalida = new Date(editSalida.value);
+
+  if (nuevaSalida <= entrada) {
+    toast.add({ severity: "error", summary: "Error", detail: "La hora de salida debe ser posterior a la entrada.", life: 3000 });
+    return;
+  }
+
+  const mismoDia =
+    entrada.getFullYear() === nuevaSalida.getFullYear() &&
+    entrada.getMonth() === nuevaSalida.getMonth() &&
+    entrada.getDate() === nuevaSalida.getDate();
+
+  if (!mismoDia) {
+    toast.add({ severity: "error", summary: "Error", detail: "La hora de salida debe ser del mismo día que la entrada.", life: 3000 });
+    return;
+  }
+
+  try {
+    const registroId = selectedRegistro.value.Attendance_ID;
+    await axios.put(
+      `${API}/registrosCerrados/${registroId}`,
+      { Attendance_Exit: editSalida.value },
+      { withCredentials: true }
+    );
+    toast.add({ severity: "success", summary: "Actualizado", detail: "Registro actualizado correctamente", life: 3000 });
+    closeEditModal();
+    await loadRegistros();
+  } catch (error: any) {
+    toast.add({ severity: "error", summary: "Error", detail: error.message, life: 3000 });
+  }
+};
+
   
   // Abrir modal de confirmación para eliminar
   const openDeleteConfirm = (registro: any) => {
@@ -316,20 +326,19 @@
   
   // Confirmar eliminación (DELETE /registrosCerrados/:id/ajuste)
   const confirmDelete = async () => {
-    if (!registroToDelete.value) return;
-    try {
-      const registroId = registroToDelete.value.Registro_ID;
-      const response = await fetch(`${API}/registrosCerrados/${registroId}/ajuste`, {
-        method: "DELETE"
-      });
-      if (!response.ok) throw new Error("No se pudo eliminar el registro");
-      toast.add({ severity: "success", summary: "Eliminado", detail: "Registro eliminado y resumen ajustado", life: 3000 });
-      deleteDialogVisible.value = false;
-      await loadRegistros();
-    } catch (error: any) {
-      toast.add({ severity: "error", summary: "Error", detail: error.message, life: 3000 });
-    }
-  };
+  if (!registroToDelete.value) return;
+
+  try {
+    const registroId = registroToDelete.value.Attendance_ID;
+    await axios.delete(`${API}/registrosCerrados/${registroId}/ajuste`, { withCredentials: true });
+    toast.add({ severity: "success", summary: "Eliminado", detail: "Registro eliminado y resumen ajustado", life: 3000 });
+    deleteDialogVisible.value = false;
+    await loadRegistros();
+  } catch (error: any) {
+    toast.add({ severity: "error", summary: "Error", detail: error.message, life: 3000 });
+  }
+};
+
   
   // Función para limpiar filtros
   const limpiarFiltros = () => {

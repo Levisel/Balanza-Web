@@ -23,7 +23,7 @@
       <div class="flex flex-wrap gap-4 items-center mt-2">
         <Dropdown v-model="periodoSeleccionado"
                   :options="periodos"
-                  optionLabel="PeriodoNombre"
+                  optionLabel="Period_Name"
                   placeholder="Filtrar por Período"
                   class="w-72" />
 
@@ -35,14 +35,15 @@
                    placeholder="Buscar por Nombre y Apellido"
                    class="w-72 p-inputtext-lg" />
 
-                   <Dropdown
-  v-model="filtroArea"
-  :options="filtroAreasOpciones"
-  optionLabel="label"
-  optionValue="value"
-  placeholder="Filtrar por Área"
-  class="w-60"
-/>
+          <Dropdown
+          v-model="filtroArea"
+          :options="filtroAreasOpciones"
+          optionLabel="label"
+          optionValue="label"  
+          placeholder="Filtrar por Área"
+          class="w-60"
+        />
+
 
 
         <!-- Label aclarativo para la sección de selección -->
@@ -54,10 +55,11 @@
   v-model="areaSeleccionada"
   :options="opcionesAreas"
   optionLabel="label"
-  optionValue="value"
+  optionValue="label"  
   placeholder="Seleccionar Área para Asignar"
   class="w-72"
 />
+
 
 
         <Button label="Asignar Área"
@@ -101,7 +103,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue';
-import { API, type Usuario, type Periodo } from "@/ApiRoute";
+import { API, type Usuario, type Period } from "@/ApiRoute";
 import Toast from 'primevue/toast';
 import { useToast } from 'primevue/usetoast';
 import DataTable from 'primevue/datatable';
@@ -112,6 +114,7 @@ import Button from 'primevue/button';
 import Message from 'primevue/message';
 import Dialog from 'primevue/dialog';
 import { useSubjects } from "@/useSubjects";
+import axios from 'axios'; // asegúrate que esté importado
 
 const { subjects: opcionesAreas } = useSubjects(); // ← Esto reemplaza tu arreglo hardcoded
 
@@ -127,17 +130,16 @@ const busquedaNombre = ref('');
 const busquedaCedula = ref('');
 const dialogoVisible = ref(false);
 const errorMensaje = ref('');
-const periodos = ref<Periodo[]>([]);
-const periodoSeleccionado = ref<Periodo | null>(null);
+const periodos = ref<Period[]>([]);
+const periodoSeleccionado = ref<Period | null>(null);
 
 
 
 // 📌 Fetch de períodos
 const fetchPeriodos = async () => {
   try {
-    const res = await fetch(`${API}/periodos`);
-    if (!res.ok) throw new Error('Error al obtener períodos');
-    periodos.value = await res.json();
+    const res = await axios.get(`${API}/periodos`);
+    periodos.value = res.data;
   } catch (err) {
     errorMensaje.value = 'Error al cargar períodos.';
   }
@@ -146,32 +148,32 @@ const fetchPeriodos = async () => {
 // 📌 Fetch de estudiantes (usando Internal)
 const fetchEstudiantes = async () => {
   try {
-    const res = await fetch(`${API}/usuarioInterno/estudiantes`);
-    if (!res.ok) throw new Error('Error al obtener estudiantes');
-    estudiantes.value = await res.json();
+    const res = await axios.get(`${API}/usuarioInterno/estudiantes`);
+    estudiantes.value = res.data;
   } catch (err) {
     errorMensaje.value = 'Error al cargar estudiantes.';
   }
 };
 
+
 // 📌 Fetch estudiantes por período (mapeando campos Internal)
 const fetchEstudiantesPorPeriodo = async (periodoId: number) => {
   try {
-    const res = await fetch(`${API}/usuarioxPeriodo/periodo/${periodoId}`);
-    if (!res.ok) throw new Error('Error al obtener estudiantes del período');
-    const data = await res.json();
+    const res = await axios.get(`${API}/usuarioxPeriodo/periodo/${periodoId}`);
+    const data = res.data;
 
     estudiantes.value = data.map((rel: any) => ({
-      Internal_ID: rel.usuario.Internal_ID,
-      Internal_Name: rel.usuario.Internal_Name,
-      Internal_LastName: rel.usuario.Internal_LastName,
-      Internal_Email: rel.usuario.Internal_Email,
-      Internal_Area: rel.usuario.Internal_Area || 'Sin Asignar',
+      Internal_ID: rel.user.Internal_ID,
+      Internal_Name: rel.user.Internal_Name,
+      Internal_LastName: rel.user.Internal_LastName,
+      Internal_Email: rel.user.Internal_Email,
+      Internal_Area: rel.user.Internal_Area || 'Sin Asignar',
     }));
   } catch (err) {
     errorMensaje.value = 'Error al cargar estudiantes por período.';
   }
 };
+
 
 const filtroAreasOpciones = computed(() => [
   { label: "Todos", value: "Todos" },
@@ -200,7 +202,8 @@ const estudiantesFiltrados = computed(() => {
 // 📌 Watch: Cargar estudiantes cada vez que cambia el período
 watch(periodoSeleccionado, async (nuevo) => {
   if (nuevo) {
-    await fetchEstudiantesPorPeriodo(nuevo.Periodo_ID);
+    await fetchEstudiantesPorPeriodo(nuevo.Period_ID);
+
   } else {
     await fetchEstudiantes();
   }
@@ -230,19 +233,13 @@ const asignarArea = async () => {
     for (const estudiante of estudiantesSeleccionados.value) {
       const payload = { Internal_Area: areaSeleccionada.value };
 
-      const res = await fetch(`${API}/internal-user/${estudiante.Internal_ID}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-
-      if (!res.ok) throw new Error(`Error al actualizar área de ${estudiante.Internal_ID}`);
+      await axios.put(`${API}/internal-user/${estudiante.Internal_ID}`, payload);
     }
 
     toast.add({ severity: 'success', summary: 'Éxito', detail: 'Área asignada correctamente', life: 3000 });
 
     if (periodoSeleccionado.value) {
-      await fetchEstudiantesPorPeriodo(periodoSeleccionado.value.Periodo_ID);
+      await fetchEstudiantesPorPeriodo(periodoSeleccionado.value.Period_ID);
     } else {
       await fetchEstudiantes();
     }
@@ -252,6 +249,7 @@ const asignarArea = async () => {
     toast.add({ severity: 'error', summary: 'Error', detail: (err as Error).message, life: 4000 });
   }
 };
+
 
 onMounted(() => {
   fetchPeriodos();

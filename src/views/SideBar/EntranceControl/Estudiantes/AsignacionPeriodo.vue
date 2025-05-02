@@ -9,7 +9,7 @@
       <Dropdown
         v-model="periodoOrigen"
         :options="periodos"
-        optionLabel="PeriodoNombre"
+        optionLabel="Period_Name"
         placeholder="Filtrar por Período Origen (para extender)"
         class="w-72"
       />
@@ -28,10 +28,11 @@
   v-model="areaSeleccionada"
   :options="opcionesAreas"
   optionLabel="label"
-  optionValue="value"
+  optionValue="label" 
   placeholder="Filtrar por Área"
   class="w-60"
 />
+
 
       <!-- Botón para limpiar filtros -->
       <Button
@@ -47,13 +48,15 @@
       <p class="text-lg font-semibold mb-2">
         Seleccione el Período a asignar/extender
       </p>
-      <Dropdown
-        v-model="periodoDestino"
-        :options="periodos"
-        optionLabel="PeriodoNombre"
-        placeholder="Seleccionar Período Destino"
-        class="w-72"
-      />
+
+<Dropdown
+  v-model="periodoDestino"
+  :options="periodos"
+  optionLabel="Period_Name" 
+  placeholder="Seleccionar Período Destino"
+  class="w-72"
+/>
+
     </div>
 
     <!-- Si hay estudiantes seleccionados, muestra la cantidad -->
@@ -99,7 +102,8 @@
         ¿Está seguro de
         {{ periodoOrigen ? 'extender' : 'asignar' }}
         los estudiantes al período
-        <strong>{{ periodoDestino?.PeriodoNombre }}</strong>?
+        <strong>{{ periodoDestino?.Period_Name }}</strong>
+
       </p>
       <template #footer>
         <Button
@@ -121,8 +125,9 @@
 
 <script setup lang="ts">
 import { ref, onMounted, computed, watch } from "vue";
-import { API, type Usuario, type Periodo } from "@/ApiRoute";
+import { API, type Usuario, type Period } from "@/ApiRoute";
 import { useSubjects } from "@/useSubjects";
+import axios from "axios";
 
 // Importamos componentes PrimeVue
 import Toast from "primevue/toast";
@@ -141,9 +146,9 @@ const estudiantes = ref<Usuario[]>([]);
 const asignacionesOrigen = ref<string[]>([]);  // Internal_IDs asignados en el período de origen
 const asignacionesDestino = ref<string[]>([]); // Internal_IDs asignados en el período destino
 const estudiantesSeleccionados = ref<Usuario[]>([]);
-const periodos = ref<Periodo[]>([]);
-const periodoOrigen = ref<Periodo | null>(null);
-const periodoDestino = ref<Periodo | null>(null);
+const periodos = ref<Period[]>([]);
+const periodoOrigen = ref<Period | null>(null);
+const periodoDestino = ref<Period | null>(null);
 const busquedaNombre = ref("");
 const busquedaCedula = ref("");
 const dialogoAsignarVisible = ref(false);
@@ -155,29 +160,30 @@ const areaSeleccionada = ref<string | null>(null);
 // Función para cargar períodos (GET /periodos)
 async function fetchPeriodos() {
   try {
-    const res = await fetch(`${API}/periodos`);
-    periodos.value = await res.json();
-  } catch (error) {
+    const { data } = await axios.get(`${API}/periodos`);
+    periodos.value = data;
+  } catch (error: any) {
     console.error("Error al cargar períodos:", error);
   }
 }
 
+
 // Función para cargar todos los usuarios internos (GET /usuarioInterno/estudiantes)
 async function fetchEstudiantes() {
   try {
-    const res = await fetch(`${API}/usuarioInterno/estudiantes`);
-    estudiantes.value = await res.json();
-  } catch (error) {
+    const { data } = await axios.get(`${API}/usuarioInterno/estudiantes`);
+    estudiantes.value = data;
+  } catch (error: any) {
     console.error("Error al cargar estudiantes:", error);
   }
 }
 
+
 // Función para cargar asignaciones de un período (GET /usuarioxPeriodo/periodo/:periodoId)
-async function fetchAsignaciones(periodoId: number, destino = false) {
+async function fetchAsignaciones(periodId: number, destino = false) {
   try {
-    const res = await fetch(`${API}/usuarioxPeriodo/periodo/${periodoId}`);
-    const data = await res.json();
-    const ids = data.map((rel: any) => rel.usuario.Internal_ID);
+    const { data } = await axios.get(`${API}/usuarioxPeriodo/periodo/${periodId}`);
+    const ids = data.map((rel: any) => rel.user.Internal_ID);
     if (destino) {
       asignacionesDestino.value = ids;
     } else {
@@ -193,10 +199,12 @@ async function fetchAsignaciones(periodoId: number, destino = false) {
   }
 }
 
+
 // Watch: Cuando cambia el período origen, se cargan sus asignaciones
 watch(periodoOrigen, async (nuevo) => {
   if (nuevo) {
-    await fetchAsignaciones(nuevo.Periodo_ID, false);
+    await fetchAsignaciones(nuevo.Period_ID
+, false);
   } else {
     asignacionesOrigen.value = [];
   }
@@ -205,7 +213,8 @@ watch(periodoOrigen, async (nuevo) => {
 // Watch: Cuando cambia el período destino, se cargan sus asignaciones
 watch(periodoDestino, async (nuevo) => {
   if (nuevo) {
-    await fetchAsignaciones(nuevo.Periodo_ID, true);
+    await fetchAsignaciones(nuevo.Period_ID
+, true);
   } else {
     asignacionesDestino.value = [];
   }
@@ -260,10 +269,11 @@ function mostrarConfirmacionAsignar() {
 // Función para asignar los estudiantes seleccionados al período destino
 async function asignarEstudiantes() {
   dialogoAsignarVisible.value = false;
-  // Filtrar los estudiantes que aún no están asignados en el período destino
+
   const nuevos = estudiantesSeleccionados.value.filter(
     (est) => !asignacionesDestino.value.includes(est.Internal_ID)
   );
+
   if (nuevos.length === 0) {
     toast.add({
       severity: "warn",
@@ -273,42 +283,35 @@ async function asignarEstudiantes() {
     });
     return;
   }
-  // Construir el payload para asignarlos al período destino
+
   const payload = nuevos.map((est) => ({
-    Internal_ID: est.Internal_ID, // Mantenemos la estructura esperada en el endpoint
-    Periodo_ID: periodoDestino.value?.Periodo_ID,
+    Internal_ID: est.Internal_ID,
+    Period_ID: periodoDestino.value?.Period_ID,
   }));
+
   try {
-    const res = await fetch(`${API}/usuarioxPeriodo`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
+    await axios.post(`${API}/usuarioxPeriodo`, payload);
+    toast.add({
+      severity: "success",
+      summary: "Éxito",
+      detail: "Estudiantes asignados correctamente",
+      life: 3000,
     });
-    if (res.ok) {
-      toast.add({
-        severity: "success",
-        summary: "Éxito",
-        detail: "Estudiantes asignados correctamente",
-        life: 3000,
-      });
-      estudiantesSeleccionados.value = [];
-      // Actualizamos las asignaciones del período destino
-      if (periodoDestino.value) {
-        await fetchAsignaciones(periodoDestino.value.Periodo_ID, true);
-      }
-    } else {
-      console.error("Error al asignar estudiantes:", await res.text());
-      toast.add({
-        severity: "error",
-        summary: "Error",
-        detail: "No se pudo asignar estudiantes al período",
-        life: 3000,
-      });
+    estudiantesSeleccionados.value = [];
+    if (periodoDestino.value) {
+      await fetchAsignaciones(periodoDestino.value.Period_ID, true);
     }
   } catch (error) {
     console.error("Error al asignar estudiantes:", error);
+    toast.add({
+      severity: "error",
+      summary: "Error",
+      detail: "No se pudo asignar estudiantes al período",
+      life: 3000,
+    });
   }
 }
+
 
 // Cargar períodos y estudiantes al montar
 onMounted(() => {

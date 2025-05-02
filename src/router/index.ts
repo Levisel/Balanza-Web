@@ -21,6 +21,8 @@ import HomeView from "@/views/SideBar/HomeView.vue";
 import CaseAssign from "@/views/SideBar/Admin/CaseManagement/CaseAssign.vue";
 import CaseReview from "@/views/SideBar/Admin/CaseManagement/CaseReview.vue";
 import Configuration from "@/views/SideBar/Admin/Configuration.vue";
+import AssignedCases from "@/views/SideBar/Admin/CaseManagement/AssignedCases.vue";
+import AllCases from "@/views/SideBar/Admin/CaseManagement/AllCases.vue";
 
 //-- Admin -> (Parameter Management)
 import ParameterView from "@/views/SideBar/Admin/ParameterManagement/ParameterView.vue";
@@ -40,9 +42,11 @@ import MyCases from "@/views/SideBar/Cases/MyCases.vue";
 import CaseNotifications from "@/views/SideBar/Cases/CaseNotifications.vue";
 import CreateActivities from "@/views/SideBar/Cases/CreateActivities.vue";
 
+
 //Cases -> Reports
 import FeasibilityReport from "@/views/SideBar/Cases/Reports/FeasibilityReport.vue";
 import FileReport from "@/views/SideBar/Cases/Reports/FileReport.vue";
+import ExcelReport from "@/views/SideBar/Cases/Reports/ExcelReport.vue";
 
 //----------------------------------------------------------------------------------------------------------------//
 //ENTRANCE CONTROL
@@ -66,7 +70,6 @@ import VistaHorarios from '@/views/SideBar/EntranceControl/Horario/VistaHorarios
 // FingerPrint
 import AsignacionHuella from '@/views/SideBar/EntranceControl/RegistroBiometrico/AsignacionHuella.vue';
 import RegistroHuella from '@/views/SideBar/EntranceControl/RegistroBiometrico/RegistroHuella.vue';
-import RegistroAsistencia from '@/views/SideBar/EntranceControl/RegistroBiometrico/RegistroAsistencia.vue';
 import RegistroPorCedula from "@/views/SideBar/EntranceControl/RegistroBiometrico/RegistroPorCedula.vue";
 import SeguimientoGeneral from "@/views/SideBar/EntranceControl/ControlAsistencia/SeguimientoGeneral.vue";
 import SeguimientoSemanal from "@/views/SideBar/EntranceControl/Cronograma/SeguimientoSemanal.vue";
@@ -100,6 +103,16 @@ const routes: Array<RouteRecordRaw> = [
         path: "AsignacionDeCasos",
         name: "CaseAssign",
         component: CaseAssign,
+      },
+      {
+        path: "VerCasosAsignados",
+        name: "AssignedCases",
+        component: AssignedCases,
+      },
+      {
+        path: "VerCasos",
+        name: "AllCases",
+        component: AllCases,
       },
       // Admin -> Parameter Management
       {
@@ -170,6 +183,11 @@ const routes: Array<RouteRecordRaw> = [
         path: "ReporteDeDocumentos",
         name: "FileReport",
         component: FileReport,
+      },
+      {
+        path: "ReporteDeExcel",
+        name: "ExcelReport",
+        component: ExcelReport,
       },
       // Entrance Control
       // Cronogram
@@ -255,11 +273,6 @@ const routes: Array<RouteRecordRaw> = [
         path: 'RegistroHuella/:id?',
         name: 'RegistroHuella',
         component: RegistroHuella,
-      },
-      {
-        path: 'RegistroAsistencia/:id/periodo/:periodoId',
-        name: 'RegistroAsistencia',
-        component: RegistroAsistencia,
       },
       {
         path: 'RegistroPorCedula',

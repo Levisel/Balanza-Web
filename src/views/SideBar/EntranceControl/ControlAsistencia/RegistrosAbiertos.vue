@@ -51,24 +51,24 @@
 
     <!-- DataTable de registros abiertos -->
     <DataTable :value="filteredRecords" paginator rows="10" class="w-full">
-      <Column field="usuarioXPeriodo.usuario.Internal_ID" header="Cédula" sortable></Column>
+      <Column field="userXPeriod.user.Internal_ID" header="Cédula" sortable></Column>
       <Column header="Nombre" sortable>
         <template #body="slotProps">
-          {{ slotProps.data.usuarioXPeriodo.usuario.Internal_Name }} 
-          {{ slotProps.data.usuarioXPeriodo.usuario.Internal_LastName }}
+          {{ slotProps.data.userXPeriod?.user.Internal_Name }} 
+          {{ slotProps.data.userXPeriod.user.Internal_LastName }}
         </template>
       </Column>
-      <Column field="usuarioXPeriodo.usuario.Internal_Email" header="Correo" sortable></Column>
-      <Column field="Registro_Entrada" header="Hora de Entrada" sortable>
-        <template #body="slotProps">
-          {{ formatDate(slotProps.data.Registro_Entrada) }}
-        </template>
-      </Column>
-      <Column field="Registro_Tipo" header="Tipo de Registro" sortable>
-        <template #body="slotProps">
-          {{ slotProps.data.Registro_Tipo }}
-        </template>
-      </Column>
+      <Column field="userXPeriod.user.Internal_Email" header="Correo" sortable></Column>
+      <Column field="Attendance_Entry" header="Hora de Entrada" sortable>
+          <template #body="slotProps">
+            {{ formatDate(slotProps.data.Attendance_Entry) }}
+          </template>
+        </Column>
+        <Column field="Attendance_Type" header="Tipo de Registro" sortable>
+          <template #body="slotProps">
+            {{ slotProps.data.Attendance_Type }}
+          </template>
+        </Column>
       <Column header="Acciones">
         <template #body="slotProps">
           <div class="flex gap-2">
@@ -145,6 +145,7 @@ import DataTable from "primevue/datatable";
 import Column from "primevue/column";
 import { useToast } from "primevue/usetoast";
 import { API } from "@/ApiRoute";
+import axios from "axios";
 
 const router = useRouter();
 const toast = useToast();
@@ -165,17 +166,12 @@ const limpiarFiltros = () => {
 // Método para cargar registros abiertos
 const loadRecords = async () => {
   try {
-    const response = await fetch(`${API}/registrosAbiertos`);
-    // Si se recibe un 404, significa que no hay registros abiertos; se limpia la tabla
-    if (response.status === 404) {
-      records.value = [];
-      return;
-    }
-    if (!response.ok) throw new Error("Error al cargar registros abiertos");
-    records.value = await response.json();
+    const response = await axios.get(`${API}/registrosAbiertos`, {
+      withCredentials: true,
+    });
+    records.value = response.data;
   } catch (error: any) {
-    // Si el error es 404, se limpia la lista
-    if (error.status === 404) {
+    if (error.response?.status === 404) {
       records.value = [];
     } else {
       toast.add({ severity: "error", summary: "Error", detail: error.message, life: 3000 });
@@ -195,9 +191,9 @@ const formatDate = (dateStr: string) => {
 const filteredRecords = computed(() => {
   const filterDateStr = filterFecha.value ? new Date(filterFecha.value).toISOString().split("T")[0] : "";
   return records.value.filter((reg) => {
-    const ced = reg.usuarioXPeriodo?.usuario?.Internal_ID?.toLowerCase() || "";
-    const nombre = (reg.usuarioXPeriodo?.usuario?.Internal_Name + " " + reg.usuarioXPeriodo?.usuario?.Internal_LastName).toLowerCase();
-    const fecha = reg.Registro_Entrada ? new Date(reg.Registro_Entrada).toISOString().split("T")[0] : "";
+    const ced = reg.userXPeriod?.user?.Internal_ID?.toLowerCase() || "";
+    const nombre = (reg.userXPeriod?.user?.Internal_Name + " " + reg.userXPeriod?.user?.Internal_LastName).toLowerCase();
+    const fecha = reg.Attendance_Entry ? new Date(reg.Attendance_Entry).toISOString().split("T")[0] : "";
     return ced.includes(filterCedula.value.toLowerCase()) &&
            nombre.includes(filterNombre.value.toLowerCase()) &&
            fecha.includes(filterDateStr);
@@ -212,7 +208,7 @@ const editSalida = ref("");
 // Abrir modal de edición
 const openEditModal = (registro: any) => {
   selectedRegistro.value = registro;
-  const entrada = new Date(registro.Registro_Entrada);
+  const entrada = new Date(registro.Attendance_Entry);
   // Establecer la hora de salida por defecto: 1 hora después de la hora de entrada
   const defaultSalida = new Date(entrada.getTime() + 60 * 60 * 1000);
   editSalida.value = defaultSalida.toISOString().substring(0, 16);
@@ -226,8 +222,9 @@ const closeEditModal = () => {
 // Validar que la hora de salida sea posterior a la de entrada y esté en el mismo día
 const validarSalida = (): boolean => {
   if (!selectedRegistro.value) return false;
-  const entrada = new Date(selectedRegistro.value.Registro_Entrada);
+  const entrada = new Date(selectedRegistro.value.Attendance_Entry);
   const salida = new Date(editSalida.value);
+
   if (salida <= entrada) {
     toast.add({
       severity: "error",
@@ -237,17 +234,25 @@ const validarSalida = (): boolean => {
     });
     return false;
   }
-  if (entrada.toISOString().substring(0,10) !== salida.toISOString().substring(0,10)) {
+
+  // ✅ Comparación por fecha local
+  const mismoDia = entrada.getFullYear() === salida.getFullYear() &&
+                   entrada.getMonth() === salida.getMonth() &&
+                   entrada.getDate() === salida.getDate();
+
+  if (!mismoDia) {
     toast.add({
       severity: "error",
       summary: "Error",
-      detail: "La hora de salida debe estar en el mismo día que la hora de entrada.",
+      detail: "La hora de salida debe estar en el mismo día que la entrada (hora local).",
       life: 3000,
     });
     return false;
   }
+
   return true;
 };
+
 
 // Guardar la hora de salida (PUT /registros/:id/salida)
 const saveSalida = async () => {
@@ -256,21 +261,22 @@ const saveSalida = async () => {
     return;
   }
   if (!validarSalida()) return;
+
   try {
-    const registroId = selectedRegistro.value.Registro_ID;
-    const response = await fetch(`${API}/registros/${registroId}/salida`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ Registro_Salida: editSalida.value })
-    });
-    if (!response.ok) throw new Error("No se pudo actualizar la hora de salida");
+    const registroId = selectedRegistro.value.Attendance_ID;
+    await axios.put(
+      `${API}/registros/${registroId}/salida`,
+      { Attendance_Exit: editSalida.value },
+      { withCredentials: true }
+    );
     toast.add({ severity: "success", summary: "Actualizado", detail: "Registro actualizado correctamente", life: 3000 });
     closeEditModal();
-    await loadRecords(); // Recargar registros para refrescar la tabla (si no hay registros, se limpia)
+    await loadRecords();
   } catch (error: any) {
     toast.add({ severity: "error", summary: "Error", detail: error.message, life: 3000 });
   }
 };
+
 
 // Modal de confirmación para eliminar registro
 const deleteDialogVisible = ref(false);
@@ -287,11 +293,12 @@ const cancelDelete = () => {
 
 const confirmDelete = async () => {
   if (!registroToDelete.value) return;
+
   try {
-    const response = await fetch(`${API}/registros/${registroToDelete.value.Registro_ID}`, {
-      method: "DELETE"
+    const registroId = registroToDelete.value.Attendance_ID;
+    await axios.delete(`${API}/registros/${registroId}`, {
+      withCredentials: true,
     });
-    if (!response.ok) throw new Error("No se pudo eliminar el registro");
     toast.add({ severity: "success", summary: "Eliminado", detail: "Registro eliminado", life: 3000 });
     deleteDialogVisible.value = false;
     await loadRecords();
@@ -299,6 +306,7 @@ const confirmDelete = async () => {
     toast.add({ severity: "error", summary: "Error", detail: error.message, life: 3000 });
   }
 };
+
 
 // Función para volver
 const volver = () => {

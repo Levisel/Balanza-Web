@@ -12,6 +12,7 @@ export interface Internal_User {
     Internal_Area: string;
     Internal_Phone: string;
     Internal_Status: string;
+    Internal_Picture: string;
 }
 // 📌 Internal User (The external user that requires the consultation service)
 export interface User {
@@ -56,7 +57,6 @@ export interface User {
     User_Pensioner: string;
     User_HealthInsurance: string;
     User_VulnerableSituation: string;
-    User_SupportingDocuments: string;
     User_Disability: string;
     User_DisabilityPercentage: number;
     User_CatastrophicIllness: string;
@@ -122,15 +122,16 @@ export interface Activity {
 //------------------------------------------------------------------------------------------------------------------//
 //Control de Ingreso
 // 📌 Interface de Periodo
-export interface Periodo {
-    Periodo_ID: number;
-    PeriodoNombre: string;
-    PeriodoTipo: string;
-    Periodo_Inicio: Date;
-    Periodo_Fin: Date;
-    Periodo_Total_Horas: number;
-    Periodo_IsDeleted: boolean;
-}
+export interface Period {
+    Period_ID: number;
+    Period_Name: string;
+    Period_Type: string;
+    Period_Start: Date;
+    Period_End: Date;
+    Period_Total_Hours: number;
+    Period_IsDeleted: boolean;
+  }
+  
 
 // 📌 Interface de Usuario (sin `UsuarioXPeriodo_ID`)
 export interface Usuario {
@@ -147,27 +148,33 @@ export interface Usuario {
 }
 
 // 📌 Interface de UsuarioXPeriodo (con `UsuarioXPeriodo_ID`)
-export interface UsuarioXPeriodo {
-    UsuarioXPeriodo_ID: number;
-    Periodo_ID: number;
-    Usuario_Cedula: string;
-    UsuarioXPeriodo_IsDeleted: boolean;
+export interface UserXPeriod {
+    UserXPeriod_ID: number;
+    Period_ID: number;
+    Internal_ID: string;
+    UserXPeriod_IsDeleted: boolean;
 }
 
 // 📌 Interface de UsuarioXPeriodoDVM (Usado en la tabla para mostrar datos combinados)
-export interface UsuarioXPeriodoDVM {
+export interface UserXPeriodDVM {
     Internal_ID: string;
     Internal_Name: string;
     Internal_LastName: string;
     Internal_Email: string;
-    Internal_Phone: string | null;
-    Internal_Type: string | null;
-    Internal_Status: string | null;
-    Internal_Huella: Blob;
     Internal_Area: string;
-    Periodo_ID: number;
-    PeriodoNombre: string;
-}
+    Internal_Huella?: boolean; // Added this property
+    // Este campo se usa cuando haces `fetchUsersByPeriod`
+    Period_ID?: number;
+    Period_Name?: string;
+  
+    // Este campo se usa cuando haces `fetchAllUsersXPeriod`
+    periodos?: Array<{
+      Period_ID: number;
+      Period_Name: string;
+    }>;
+  }
+  
+  
 
 // 📌 Interface de Horarios (basado en tu esquema de la base de datos)
 export interface Horario {
