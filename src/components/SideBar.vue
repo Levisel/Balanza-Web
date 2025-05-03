@@ -81,6 +81,16 @@ const activitiesClass = computed(() => [
   route.path === "/CrearActividades" ? "text-green-400" : "",
   isDarkTheme.value ? "hover:bg-gray-700" : "hover:bg-gray-100",
 ]);
+const assignedCasesClass = computed(() => [
+  "select-none flex items-center cursor-pointer p-4 rounded text-surface-700 transition-colors",
+  route.path === "/VerCasosAsignados" ? "text-green-400" : "",
+  isDarkTheme.value ? "hover:bg-gray-700" : "hover:bg-gray-100",
+]);
+const viewAllCasesClass = computed(() => [
+  "select-none flex items-center cursor-pointer p-4 rounded text-surface-700 transition-colors",
+  route.path === "/VerCasos" ? "text-green-400" : "",
+  isDarkTheme.value ? "hover:bg-gray-700" : "hover:bg-gray-100",
+]);
 
 //Cases -> Reports
 const feasibilityReportClass = computed(() => [
@@ -323,7 +333,8 @@ const seguimientoHorasClass = computed(() => [
               authStore.user?.type == 'Administrador' ||
               authStore.user?.type == 'Estudiante' ||
               authStore.user?.type == 'Abogado' ||
-              authStore.user?.type == 'Coordinador'
+              authStore.user?.type == 'Coordinador' ||
+              authStore.user?.type == 'Secretaria'
             "
           >
             <div
@@ -337,7 +348,8 @@ const seguimientoHorasClass = computed(() => [
                   authStore.user?.type == 'Administrador' ||
                   authStore.user?.type == 'Estudiante' ||
                   authStore.user?.type == 'Abogado' ||
-                  authStore.user?.type == 'Coordinador'
+                  authStore.user?.type == 'Coordinador' ||
+                  authStore.user?.type == 'Secretaria'
                 "
               >
                 <li>
@@ -419,6 +431,32 @@ const seguimientoHorasClass = computed(() => [
                   </router-link>
                 </li>
               </div>
+              <div v-if="authStore.user?.type == 'Administrador' || authStore.user?.type == 'Coordinador' || authStore.user?.type == 'Secretaria'">
+                <li>
+                  <router-link
+                    to="/VerCasosAsignados"
+                    draggable="false"
+                    v-ripple
+                    :class="assignedCasesClass"
+                  >
+                    <i class="pi pi-th-large mr-2"></i>
+                    <span class="font-medium text-lg">Casos Asignados</span>
+                  </router-link>
+                </li>
+              </div>
+              <div v-if="authStore.user?.type == 'Administrador' || authStore.user?.type == 'Coordinador' || authStore.user?.type == 'Abogado' || authStore.user?.type == 'Secretaria'" >
+                <li>
+                  <router-link
+                    to="/VerCasos"
+                    draggable="false"
+                    v-ripple
+                    :class="viewAllCasesClass"
+                  >
+                    <i class="pi pi-book mr-2"></i>
+                    <span class="font-medium text-lg">Ver Casos</span>
+                  </router-link>
+                </li>
+              </div>
             </ul>
 
             <!-- Sección: REPORTES -->
@@ -445,7 +483,9 @@ const seguimientoHorasClass = computed(() => [
                       v-if="
                         authStore.user?.type == 'Administrador' ||
                         authStore.user?.type == 'Abogado' ||
-                        authStore.user?.type == 'Estudiante'
+                        authStore.user?.type == 'Estudiante' ||
+                        authStore.user?.type == 'Coordinador' ||
+                        authStore.user?.type == 'Secretaria'
                       "
                     >
                       <li>
@@ -467,7 +507,8 @@ const seguimientoHorasClass = computed(() => [
                       v-if="
                         authStore.user?.type == 'Administrador' ||
                         authStore.user?.type == 'Abogado' ||
-                        authStore.user?.type == 'Estudiante'
+                        authStore.user?.type == 'Estudiante' ||
+                        authStore.user?.type == 'Coordinador'
                       "
                     >
                       <li>
@@ -489,7 +530,8 @@ const seguimientoHorasClass = computed(() => [
                       v-if="
                         authStore.user?.type == 'Administrador' ||
                         authStore.user?.type == 'Abogado' ||
-                        authStore.user?.type == 'Estudiante'
+                        authStore.user?.type == 'Estudiante' ||
+                        authStore.user?.type == 'Coordinador'
                       "
                     >
                       <li>
@@ -507,7 +549,8 @@ const seguimientoHorasClass = computed(() => [
                   </ul>
                 </li>
                 <!-- Sección: NOTIFICACIONES -->
-                <li>
+                 <div>
+                  <li>
                   <router-link
                     to="/Notificaciones"
                     draggable="false"
@@ -516,13 +559,10 @@ const seguimientoHorasClass = computed(() => [
                   >
                     <i class="pi pi-comments mr-2"></i>
                     <span class="font-medium text-lg">Notificaciones</span>
-                    <!-- <span
-                  class="inline-flex items-center justify-center ml-auto bg-blue-500 text-white rounded-full"
-                  style="min-width: 1.5rem; height: 1.5rem"
-                  >3</span
-                > -->
                   </router-link>
                 </li>
+                 </div>
+
               </ul>
             </div>
           </div>
@@ -953,8 +993,7 @@ const seguimientoHorasClass = computed(() => [
 
         <ul
           v-if="
-            authStore.user?.type == 'Administrador' ||
-            authStore.user?.type == 'Secretaria'
+            authStore.user?.type == 'Administrador' 
           "
           class="list-none p-4 m-0"
         >
@@ -975,7 +1014,7 @@ const seguimientoHorasClass = computed(() => [
                 <span class="font-medium text-lg"> Configuración </span>
                 <i class="pi pi-chevron-down ml-auto"> </i>
               </a>
-              <ul class="submenu closed list-none p-0 m-0">
+              <ul class="submenu list-none p-0 m-0">
                 <!-- Sección: Nuevo Usuario -->
                 <li>
                   <router-link
@@ -990,7 +1029,7 @@ const seguimientoHorasClass = computed(() => [
                 </li>
 
                 <!-- Sección: Tabla de Parámetros -->
-                <li>
+                  <li>
                   <router-link
                     to="/Parametros"
                     draggable="false"
@@ -1003,18 +1042,6 @@ const seguimientoHorasClass = computed(() => [
                     >
                   </router-link>
                 </li>
-
-                <!-- <li>
-                <router-link
-                  to="/Configuracion"
-                  draggable="false"
-                  v-ripple
-                  :class="configurationClass"
-                >
-                  <i class="pi pi-cog mr-2"></i>
-                  <span class="font-medium text-lg">Configuración</span>
-                </router-link>
-              </li> -->
               </ul>
             </div>
           </li>

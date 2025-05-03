@@ -85,7 +85,7 @@ const clearCode = () => {
 async function submitEmail() {
   loading.value = true;
   try {
-    await axios.post(`${API}/forgot-password`, { email: email.value });
+    await axios.post(`${API}/forgot-password`, { email: email.value.trim() });
     toast.add({
       severity: "success",
       summary: "Correo enviado",
@@ -125,7 +125,7 @@ async function submitCode() {
   loading.value = false;
   try {
     await axios.post(`${API}/verify-code`, {
-      email: email.value,
+      email: email.value.trim(),
       code: code.value,
     });
     toast.add({
@@ -177,7 +177,7 @@ async function submitResetPassword() {
   loading.value = false;
   try {
     await axios.post(`${API}/reset-password`, {
-      email: email.value,
+      email: email.value.trim(),
       code: code.value,
       newPassword: repeatPassword.value,
     });

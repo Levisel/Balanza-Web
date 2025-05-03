@@ -57,7 +57,6 @@ export interface User {
     User_Pensioner: string;
     User_HealthInsurance: string;
     User_VulnerableSituation: string;
-    User_SupportingDocuments: string;
     User_Disability: string;
     User_DisabilityPercentage: number;
     User_CatastrophicIllness: string;

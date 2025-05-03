@@ -12,12 +12,14 @@ import Button from "primevue/button";
 import axios from "axios";
 import type { boolean } from "zod";
 import { useSubjects } from "@/useSubjects";
+import ProgressSpinner from 'primevue/progressspinner';
+
 
 const toast = useToast();
 const selectedIdType = ref<string>("");
 const bandera = ref<boolean>(false);
 const userRegistered = ref<boolean>(false);
-
+const isLoading = ref(false); // Add loading state
 const internalUser = ref<Internal_User>({
   Internal_ID: "",
   Internal_Name: "",
@@ -28,6 +30,7 @@ const internalUser = ref<Internal_User>({
   Internal_Area: "",
   Internal_Phone: "",
   Internal_Status: "",
+  Internal_Picture: "",
 });
 
 const profileOptions = ref<{ name: string; value: string }[]>([]);
@@ -39,12 +42,12 @@ axios.get(`${API}/profile`).then((response) => {
 });
 
 const opcionesAreas = ref<{ name: string; value: string }[]>([]);
-axios.get(`${API}/subjects`).then((response) => {;
-    opcionesAreas.value = response.data.map((area: any) => ({
-      label: area.Subject_Name,
-      value: area.Subject_Name,
-    }));
-  });
+axios.get(`${API}/subjects`).then((response) => {
+  opcionesAreas.value = response.data.map((area: any) => ({
+    label: area.Subject_Name,
+    value: area.Subject_Name,
+  }));
+});
 
 const status = ref([
   { label: "Activo", value: "Activo" },
@@ -221,6 +224,7 @@ const checkIdSize = (shouldShowToast: boolean = true): boolean => {
 
 const onFormSubmit = async () => {
   // Make the API call
+  isLoading.value = true;
   try {
     const response = await axios.post<Internal_User>(`${API}/register`, {
       Internal_ID: internalUser.value.Internal_ID,
@@ -269,6 +273,8 @@ const onFormSubmit = async () => {
         });
       }
     }
+  } finally {
+    isLoading.value = false; // Reset loading state
   }
 };
 
@@ -394,200 +400,208 @@ const createPassword = () => {
   <Toast />
   <div class="card">
     <h3 class="text-2xl font-semibold mb-8">Crear nuevo usuario</h3>
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-80">
-      <!-- Datos Personales -->
-      <div>
-        <h4 class="text-lg font-semibold mb-6">Datos Personales</h4>
-        <div class="grid gap-7">
-          <!-- Fila 1: Cédula -->
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 -mr-40">
-            <div class="flex flex-col sm:flex-row gap-4">
-              <!-- Select para Tipo ID -->
-              <div class="w-full sm:w-1/3">
-                <FloatLabel variant="on" class="w-full">
-                  <Select
-                    id="tipoID"
-                    v-model="selectedIdType"
-                    :options="idOptions"
-                    size="large"
-                    option-label="name"
-                    option-value="value"
-                    class="w-full"
-                    @change="internalUser.Internal_ID = ''"
-                  />
-                  <label for="tipoID">Tipo ID</label>
-                </FloatLabel>
+    <div v-if="isLoading" class="flex-grow flex items-center justify-center mt-40 mb-48 mr-20">
+        <ProgressSpinner style="width: 70px; height: 70px" strokeWidth="8" fill="transparent"
+            animationDuration=".8s" aria-label="Custom ProgressSpinner" />
+    </div>
+    <template v-if="!isLoading">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-80">
+        <!-- Datos Personales -->
+        <div>
+          <h4 class="text-lg font-semibold mb-6">Datos Personales</h4>
+          <div class="grid gap-7">
+            <!-- Fila 1: Cédula -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 -mr-40">
+              <div class="flex flex-col sm:flex-row gap-4">
+                <!-- Select para Tipo ID -->
+                <div class="w-full sm:w-1/3">
+                  <FloatLabel variant="on" class="w-full">
+                    <Select
+                      id="tipoID"
+                      v-model="selectedIdType"
+                      :options="idOptions"
+                      size="large"
+                      option-label="name"
+                      option-value="value"
+                      class="w-full"
+                      @change="internalUser.Internal_ID = ''"
+                    />
+                    <label for="tipoID">Tipo ID</label>
+                  </FloatLabel>
+                </div>
+                <!-- Input para Número de ID -->
+                <div class="w-full sm:w-2/3">
+                  <FloatLabel variant="on" class="w-full">
+                    <InputText
+                      id="idNumber"
+                      v-model="internalUser.Internal_ID"
+                      size="large"
+                      class="w-full"
+                      :maxlength="selectedIdType === 'cedula' ? 10 : 15"
+                      @blur="() => checkIdSize()"
+                      :disabled="!selectedIdType"
+                      autocomplete="off"
+                    />
+                    <label for="idNumber">Número de ID</label>
+                  </FloatLabel>
+                </div>
               </div>
-              <!-- Input para Número de ID -->
-              <div class="w-full sm:w-2/3">
-                <FloatLabel variant="on" class="w-full">
-                  <InputText
-                    id="idNumber"
-                    v-model="internalUser.Internal_ID"
-                    size="large"
-                    class="w-full"
-                    :maxlength="selectedIdType === 'cedula' ? 10 : 15"
-                    @blur="() => checkIdSize()"
-                    :disabled="!selectedIdType"
-                    autocomplete="off"
-                  />
-                  <label for="idNumber">Número de ID</label>
-                </FloatLabel>
-              </div>
+              <FloatLabel variant="on" class="w-full md:w-80">
+                <Select
+                  id="userStatus"
+                  v-model="internalUser.Internal_Status"
+                  :options="status"
+                  optionLabel="label"
+                  optionValue="value"
+                  class="w-full"
+                  size="large"
+                />
+                <label for="userStatus"
+                  ><span class="text-red-500">*</span> Estado</label
+                >
+              </FloatLabel>
             </div>
-            <FloatLabel variant="on" class="w-full md:w-80">
-              <Select
-                id="userStatus"
-                v-model="internalUser.Internal_Status"
-                :options="status"
-                optionLabel="label"
-                optionValue="value"
-                class="w-full"
-                size="large"
-              />
-              <label for="userStatus"
-                ><span class="text-red-500">*</span> Estado</label
-              >
-            </FloatLabel>
+            <!-- Fila 2: Nombre y Apellido -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 -mr-40">
+              <FloatLabel variant="on" class="w-full md:w-80">
+                <InputText
+                  id="name"
+                  v-model="internalUser.Internal_Name"
+                  size="large"
+                  class="w-full"
+                />
+                <label for="name"
+                  ><span class="text-red-500">*</span> Nombre</label
+                >
+              </FloatLabel>
+              <FloatLabel variant="on" class="w-full md:w-80">
+                <InputText
+                  id="lastName"
+                  v-model="internalUser.Internal_LastName"
+                  size="large"
+                  class="w-full"
+                />
+                <label for="lastName"
+                  ><span class="text-red-500">*</span> Apellido</label
+                >
+              </FloatLabel>
+            </div>
+            <!-- Fila 3: Teléfono y Área -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 -mr-40">
+              <FloatLabel variant="on" class="w-full">
+                <InputMask
+                  id="telefono"
+                  v-model="internalUser.Internal_Phone"
+                  size="large"
+                  class="w-full md:w-80"
+                  mask="(999)-999-9999"
+                />
+                <label for="telefono"
+                  ><span class="text-red-500">*</span> Teléfono</label
+                >
+              </FloatLabel>
+              <FloatLabel variant="on" class="w-full md:w-80">
+                <Select
+                  id="userArea"
+                  v-model="internalUser.Internal_Area"
+                  :options="opcionesAreas"
+                  optionLabel="label"
+                  optionValue="value"
+                  class="w-full"
+                  size="large"
+                />
+                <label for="userArea"
+                  ><span class="text-red-500">*</span> Área</label
+                >
+              </FloatLabel>
+            </div>
           </div>
-          <!-- Fila 2: Nombre y Apellido -->
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 -mr-40">
-            <FloatLabel variant="on" class="w-full md:w-80">
-              <InputText
-                id="name"
-                v-model="internalUser.Internal_Name"
-                size="large"
-                class="w-full"
+        </div>
+
+        <!-- Credenciales -->
+        <div>
+          <h4 class="text-lg font-semibold mb-6">Credenciales</h4>
+          <div class="grid gap-7">
+            <!-- Fila 1: Tipo de Usuario -->
+            <div>
+              <FloatLabel variant="on" class="w-full md:w-80">
+                <Select
+                  id="userType"
+                  v-model="internalUser.Internal_Type"
+                  :options="profileOptions"
+                  optionLabel="name"
+                  optionValue="value"
+                  class="w-full"
+                  size="large"
+                />
+                <label for="userType"
+                  ><span class="text-red-500">*</span> Tipo de Usuario</label
+                >
+              </FloatLabel>
+            </div>
+            <!-- Fila 2: Email -->
+            <div>
+              <FloatLabel variant="on" class="w-full md:w-80">
+                <InputText
+                  id="email"
+                  v-model="internalUser.Internal_Email"
+                  size="large"
+                  class="w-full"
+                />
+                <label for="email"
+                  ><span class="text-red-500">*</span> Email</label
+                >
+              </FloatLabel>
+            </div>
+            <!-- Fila 3: Contraseña -->
+            <div class="flex items-center gap-2">
+              <FloatLabel variant="on" class="w-full md:w-80">
+                <Password
+                  id="password"
+                  type="text"
+                  :feedback="false"
+                  toggleMask
+                  fluid
+                  size="large"
+                  v-model="internalUser.Internal_Password"
+                  class="w-full"
+                />
+                <label for="password"
+                  ><span class="text-red-500">*</span> Contraseña</label
+                >
+              </FloatLabel>
+              <Button
+                @click="createPassword"
+                v-tooltip.bottom="'Generar contraseña'"
+                placeholder="Bottom"
+                icon="pi pi-key"
+                class="p-2 bg-gray-300 text-black rounded-md text-sm"
               />
-              <label for="name"
-                ><span class="text-red-500">*</span> Nombre</label
-              >
-            </FloatLabel>
-            <FloatLabel variant="on" class="w-full md:w-80">
-              <InputText
-                id="lastName"
-                v-model="internalUser.Internal_LastName"
-                size="large"
-                class="w-full"
-              />
-              <label for="lastName"
-                ><span class="text-red-500">*</span> Apellido</label
-              >
-            </FloatLabel>
-          </div>
-          <!-- Fila 3: Teléfono y Área -->
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 -mr-40">
-            <FloatLabel variant="on" class="w-full">
-              <InputMask
-                id="telefono"
-                v-model="internalUser.Internal_Phone"
-                size="large"
-                class="w-full md:w-80"
-                mask="(999)-999-9999"
-              />
-              <label for="telefono"
-                ><span class="text-red-500">*</span> Teléfono</label
-              >
-            </FloatLabel>
-            <FloatLabel variant="on" class="w-full md:w-80">
-              <Select
-                id="userArea"
-                v-model="internalUser.Internal_Area"
-                :options="opcionesAreas"
-                optionLabel="label"
-                optionValue="value"
-                class="w-full"
-                size="large"
-              />
-              <label for="userArea"
-                ><span class="text-red-500">*</span> Área</label
-              >
-            </FloatLabel>
+            </div>
           </div>
         </div>
       </div>
 
-      <!-- Credenciales -->
-      <div>
-        <h4 class="text-lg font-semibold mb-6">Credenciales</h4>
-        <div class="grid gap-7">
-          <!-- Fila 1: Tipo de Usuario -->
-          <div>
-            <FloatLabel variant="on" class="w-full md:w-80">
-              <Select
-                id="userType"
-                v-model="internalUser.Internal_Type"
-                :options="profileOptions"
-                optionLabel="name"
-                optionValue="value"
-                class="w-full"
-                size="large"
-              />
-              <label for="userType"
-                ><span class="text-red-500">*</span> Tipo de Usuario</label
-              >
-            </FloatLabel>
-          </div>
-          <!-- Fila 2: Email -->
-          <div>
-            <FloatLabel variant="on" class="w-full md:w-80">
-              <InputText
-                id="email"
-                v-model="internalUser.Internal_Email"
-                size="large"
-                class="w-full"
-              />
-              <label for="email"
-                ><span class="text-red-500">*</span> Email</label
-              >
-            </FloatLabel>
-          </div>
-          <!-- Fila 3: Contraseña -->
-          <div class="flex items-center gap-2">
-            <FloatLabel variant="on" class="w-full md:w-80">
-              <Password
-                id="password"
-                type="text"
-                :feedback="false"
-                toggleMask
-                fluid
-                size="large"
-                v-model="internalUser.Internal_Password"
-                class="w-full"
-              />
-              <label for="password"
-                ><span class="text-red-500">*</span> Contraseña</label
-              >
-            </FloatLabel>
-            <Button
-              @click="createPassword"
-              v-tooltip.bottom="'Generar contraseña'"
-              placeholder="Bottom"
-              icon="pi pi-key"
-              class="p-2 bg-gray-300 text-black rounded-md text-sm"
-            />
-          </div>
-        </div>
+      <div class="mt-6 text-center mb-10">
+        <Button
+          @click="$router.push('/Usuarios')"
+          label="Regresar"
+          severity="contrast"
+          class="w-full md:w-auto bg-blue-600 hover:bg-blue-700 text-white mt-10 mr-10"
+          icon="pi pi-arrow-circle-left"
+          :disabled="isLoading"
+        />
+
+        <Button
+          type="submit"
+          label="Crear Usuario"
+          icon="pi pi-user-plus"
+          class="w-full md:w-auto bg-blue-600 hover:bg-blue-700 text-white mt-10 mr-35"
+          @click="onFormSubmit"
+          :disabled="isLoading"
+        />
       </div>
-    </div>
-
-    <div class="mt-6 text-center mb-10">
-      <Button
-        @click="$router.push('/Usuarios')"
-        label="Regresar"
-        severity="contrast"
-        class="w-full md:w-auto bg-blue-600 hover:bg-blue-700 text-white mt-10 mr-10"
-        icon="pi pi-arrow-circle-left"
-      />
-
-      <Button
-        type="submit"
-        label="Crear Usuario"
-        icon="pi pi-user-plus"
-        class="w-full md:w-auto bg-blue-600 hover:bg-blue-700 text-white mt-10 mr-35"
-        @click="onFormSubmit"
-      />
-    </div>
+    </template>
   </div>
 </template>
 
