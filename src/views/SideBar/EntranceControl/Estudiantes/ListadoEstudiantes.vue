@@ -334,12 +334,12 @@ const editarEstudiante = (cedula: string) => {
 // Función que se dispara cuando el modal notifica la actualización
 const handleStudentUpdated = async () => {
   await fetchAllUsersXPeriod();
-  toast.add({
+  /*toast.add({
     severity: "success",
     summary: "Actualizado",
     detail: "Estudiante actualizado correctamente",
     life: 3000,
-  });
+  });*/
 };
 
 // Variables para el diálogo de confirmación de eliminación

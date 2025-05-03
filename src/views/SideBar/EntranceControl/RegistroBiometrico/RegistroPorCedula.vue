@@ -142,7 +142,7 @@ import Dialog from "primevue/dialog";
 import ProgressSpinner from "primevue/progressspinner";
 import Toast from "primevue/toast";
 import { useToast } from "primevue/usetoast";
-import { API, type Usuario } from "@/ApiRoute";
+import { API } from "@/ApiRoute";
 import { useDarkMode } from "@/components/ThemeSwitcher";
 import axios from "axios";
 // Router
@@ -188,7 +188,7 @@ const capturando = ref(false);
 
 // 🧪 SIMULACIÓN DE FECHA Y HORA
 // SIMULACIÓN DE FECHA Y HORA ACTUAL
-const modoSimulacion = true; // ⚠️ Cambia a false para usar la hora real
+const modoSimulacion = false; // Cambiar a false para usar la hora real
 const fechaSimulada = new Date("2025-04-23T13:51:00"); // Lunes 8:49 AM
 
 function getAhoraLocal(): Date {
@@ -495,7 +495,7 @@ const esAtraso = computed(() => {
   const programado = scheduledTimeUTC.value;
 
   const diffMinutos = (ahoraLocal.getTime() - programado.getTime()) / 60000;
-  return diffMinutos > 30;
+  return diffMinutos > 10; // Si es mayor a 10 minutos, se considera atraso
 });
 
 

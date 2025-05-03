@@ -512,26 +512,41 @@ function calcularHorasTotales(): number {
 
 // Validar y guardar: se verifica que no supere 8 horas virtuales y que no se solape con presencial
 async function validarYGuardar() {
-  if (isGuardando.value) return
-if (calcularHorasTotales() > maxHorasVirtuales.value) {
-  dialogoErrorVisible.value = true;
-  return;
-}
+  if (isGuardando.value) return;
+
+  // 🔒 Validación nueva
+  const hayAlMenosUno = Object.values(horariosSeleccionados.value).some(h => h && h.value);
+  if (!hayAlMenosUno) {
+    toast.add({
+      severity: 'warn',
+      summary: 'Horario vacío',
+      detail: 'Debe seleccionar al menos un horario antes de guardar.',
+      life: 3000
+    });
+    return;
+  }
+
+  if (calcularHorasTotales() > maxHorasVirtuales.value) {
+    dialogoErrorVisible.value = true;
+    return;
+  }
 
   if (await verificarSolapamientoConPresencial()) {
     toast.add({
       severity: 'error',
       summary: 'Solapamiento',
       detail: 'El horario virtual se cruza con el horario presencial.'
-    })
-    return
+    });
+    return;
   }
+
   if (horarioGuardado.value) {
-    dialogoCambioAdministrativo.value = true
+    dialogoCambioAdministrativo.value = true;
   } else {
-    await guardarHorario(false)
+    await guardarHorario(false);
   }
 }
+
 
 // Verificar que ningún turno virtual se solape con el turno presencial asignado
 async function verificarSolapamientoConPresencial(): Promise<boolean> {

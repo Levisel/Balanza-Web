@@ -18,6 +18,7 @@ const selectedIdType = ref<string>("");
 const bandera = ref<boolean>(false);
 const userRegistered = ref<boolean>(false);
 
+
 const internalUser = ref<Internal_User>({
   Internal_ID: "",
   Internal_Name: "",
@@ -28,6 +29,7 @@ const internalUser = ref<Internal_User>({
   Internal_Area: "",
   Internal_Phone: "",
   Internal_Status: "",
+  Internal_Picture: "",
 });
 
 const types = ref([

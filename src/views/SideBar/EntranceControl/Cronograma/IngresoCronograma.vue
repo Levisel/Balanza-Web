@@ -260,7 +260,7 @@ const validarYGuardar = async () => {
     let nuevoPeriodo;
 
     if (periodoId) {
-      // 🛠 Edición de período
+      //  Edición de período
       response = await axios.put(`${API}/periodos/${periodoId}`, periodoData, {
         withCredentials: true
       });

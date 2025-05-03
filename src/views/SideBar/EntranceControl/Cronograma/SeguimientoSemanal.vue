@@ -115,7 +115,7 @@
           mode="decimal"
           :step="0.1"
           :useGrouping="false"
-          showButtons="false"
+          :showButtons="false"
         />
       </div>
 
@@ -130,7 +130,7 @@
           mode="decimal"
           :step="0.1"
           :useGrouping="false"
-          showButtons="false"
+          :showButtons="false"
         />
       </div>
 
