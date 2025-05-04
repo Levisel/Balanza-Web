@@ -319,5 +319,5 @@ function limpiarFiltros() {
 </script>
 
 <style scoped>
-/* Personaliza tus estilos aquí */
+
 </style>

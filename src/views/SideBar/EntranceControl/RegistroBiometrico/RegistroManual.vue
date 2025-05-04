@@ -379,6 +379,5 @@ if (new Date(manualSalida.value) > periodoFinAdjusted) {
   </script>
   
   <style scoped>
-  /* Ajusta estilos según tus necesidades */
   </style>
   

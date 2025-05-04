@@ -121,7 +121,7 @@ const { subjects: opcionesAreas } = useSubjects(); // ← Esto reemplaza tu arre
 
 const toast = useToast();
 
-// 📌 Estados
+// Estados
 const estudiantes = ref<Usuario[]>([]);
 const estudiantesSeleccionados = ref<Usuario[]>([]);
 const areaSeleccionada = ref<string | null>(null);
@@ -135,7 +135,7 @@ const periodoSeleccionado = ref<Period | null>(null);
 
 
 
-// 📌 Fetch de períodos
+// Fetch de períodos
 const fetchPeriodos = async () => {
   try {
     const res = await axios.get(`${API}/periodos`);
@@ -145,7 +145,7 @@ const fetchPeriodos = async () => {
   }
 };
 
-// 📌 Fetch de estudiantes (usando Internal)
+//  Fetch de estudiantes (usando Internal)
 const fetchEstudiantes = async () => {
   try {
     const res = await axios.get(`${API}/usuarioInterno/estudiantes`);
@@ -156,7 +156,7 @@ const fetchEstudiantes = async () => {
 };
 
 
-// 📌 Fetch estudiantes por período (mapeando campos Internal)
+//  Fetch estudiantes por período (mapeando campos Internal)
 const fetchEstudiantesPorPeriodo = async (periodoId: number) => {
   try {
     const res = await axios.get(`${API}/usuarioxPeriodo/periodo/${periodoId}`);
@@ -182,7 +182,7 @@ const filtroAreasOpciones = computed(() => [
 ]);
 
 
-// 📌 Filtro dinámico (usando campos Internal)
+// Filtro dinámico (usando campos Internal)
 const estudiantesFiltrados = computed(() => {
   return estudiantes.value.filter(est => {
     const coincideNombre = (est.Internal_Name + ' ' + est.Internal_LastName)
@@ -199,7 +199,7 @@ const estudiantesFiltrados = computed(() => {
   });
 });
 
-// 📌 Watch: Cargar estudiantes cada vez que cambia el período
+// Watch: Cargar estudiantes cada vez que cambia el período
 watch(periodoSeleccionado, async (nuevo) => {
   if (nuevo) {
     await fetchEstudiantesPorPeriodo(nuevo.Period_ID);
@@ -220,12 +220,12 @@ const limpiarFiltros = () => {
   fetchEstudiantes();
 };
 
-// 📌 Mostrar confirmación
+// Mostrar confirmación
 const confirmarAsignacion = () => {
   dialogoVisible.value = true;
 };
 
-// 📌 Asignar área (actualizando campo Internal_Area)
+// Asignar área (actualizando campo Internal_Area)
 const asignarArea = async () => {
   dialogoVisible.value = false;
 
@@ -258,5 +258,5 @@ onMounted(() => {
 </script>
 
 <style scoped>
-/* Estilos personalizados */
+
 </style>

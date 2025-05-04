@@ -292,6 +292,6 @@ const irSeguimientoSemanal = (resumenId: number, internalId: number) => {
   </script>
   
   <style scoped>
-  /* Puedes agregar tus estilos personalizados aquí */
+
   </style>
   

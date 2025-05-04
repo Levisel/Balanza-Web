@@ -56,6 +56,5 @@
   </script>
   
   <style scoped>
-  /* Personaliza si lo deseas */
   </style>
   

@@ -215,9 +215,9 @@
 
 <!-- Dialogo de Ayuda para el cambio -->
 <Dialog v-model:visible="mostrarAyudaCambio" header="¿Qué significa cada opción?">
-  <div class="text-sm leading-relaxed">
+  <div class="leading-relaxed">
     <p><strong>Modificar:</strong> Solo cambia los horarios actuales <em>si aún no se ha comenzado a registrar asistencia</em>.</p>
-    <p class="mt-2"><strong>Cambio Administrativo:</strong> Guarda un registro del horario anterior, lo deja como inactivo y crea uno nuevo. Ideal cuando ya hay registros de asistencia y necesitas cambiar los horarios sin perder historial.</p>
+    <p class="mt-2"><strong>Cambio Administrativo:</strong> Guarda un registro del horario anterior, lo deja como inactivo y crea uno nuevo.</p>
   </div>
   <template #footer>
     <Button label="Entendido" class="p-button-primary" @click="mostrarAyudaCambio = false" />
@@ -954,11 +954,8 @@ async function crearHorarioEspecial() {
 }
 
 
-function volver() {
-  // Ejemplo: router.push({ name: 'Dashboard' });
-}
 </script>
 
 <style scoped>
-/* Ajusta los estilos según prefieras */
+
 </style>

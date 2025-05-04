@@ -233,23 +233,6 @@ const fetchAllUsersXPeriod = async () => {
   }
 };
 
-// Función para cargar usuarios de un período
-const fetchUsersByPeriod = async (periodoId: string) => {
-  try {
-    const { data } = await axios.get(`${API}/usuarioxPeriodo/periodo/${periodoId}`);
-    usersXPeriod.value = data.map((rel: any) => ({
-      ...rel.user,
-      periodos: [{
-        Period_ID: rel.periodo.Period_ID,
-        Period_Name: rel.periodo.Period_Name,
-      }]
-    }));
-  } catch (error) {
-    console.error("Error al cargar asignaciones del período:", error);
-    errorMensaje.value = "Error al cargar asignaciones del período.";
-  }
-};
-
 
 // Computed para filtrar estudiantes según los filtros aplicados
 const estudiantesFiltrados = computed(() => {

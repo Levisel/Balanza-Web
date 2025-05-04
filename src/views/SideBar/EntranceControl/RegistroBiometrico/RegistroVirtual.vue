@@ -519,7 +519,6 @@ async function guardarAsistenciaVirtual() {
   </script>
   
   <style scoped>
-  /* Personaliza tus estilos aquí */
   </style>
   
   <!-- Filtro opcional para formatear horas -->

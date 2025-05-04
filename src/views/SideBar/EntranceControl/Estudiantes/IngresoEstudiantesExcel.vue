@@ -129,18 +129,26 @@ function procesarArchivo(event: any) {
         row["Correo_institucional"] &&
         row["NRC"];
 
-      const usuario: Internal_User = {
-        Internal_ID: cedulaString,
-        Internal_LastName: row["APELLIDOS"]?.toString().trim() || "N/A",
-        Internal_Name: row["NOMBRES"]?.toString().trim() || "N/A",
-        Internal_Email: row["Correo_institucional"]?.toString().trim() || "N/A",
-        Internal_Password: "",
-        Internal_Type: "Estudiante",
-        Internal_Area: area,
-        Internal_Huella: undefined,
-        Internal_Status: "Activo",
-        completo: !!tieneDatosObligatorios,
-      };
+        // Extraer primer nombre y primer apellido
+        const apellidosRaw = row["APELLIDOS"]?.toString().trim() || "";
+        const nombresRaw = row["NOMBRES"]?.toString().trim() || "";
+
+        const primerApellido = apellidosRaw.split(" ")[0] || "N/A";
+        const primerNombre = nombresRaw.split(" ")[0] || "N/A";
+
+        const usuario: Internal_User = {
+          Internal_ID: cedulaString,
+          Internal_LastName: primerApellido,
+          Internal_Name: primerNombre,
+          Internal_Email: row["Correo_institucional"]?.toString().trim() || "N/A",
+          Internal_Password: "",
+          Internal_Type: "Estudiante",
+          Internal_Area: area,
+          Internal_Huella: undefined,
+          Internal_Status: "Activo",
+          completo: !!tieneDatosObligatorios,
+        };
+
       return usuario;
     });
 
@@ -276,6 +284,14 @@ const isGuardarDisabled = computed(() => {
   return noEstudiantes || hayIncompletos || sinPeriodo || loading.value;
 });
 
+const nombreArchivoVisible = computed(() => {
+  if (!archivoNombre.value) return "";
+  return archivoNombre.value.length > 30
+    ? archivoNombre.value.slice(0, 30) + "..."
+    : archivoNombre.value;
+});
+
+
 function editarRegistro(usuario: Internal_User) {
   registroEditando.value = { ...usuario };
   dialogVisible.value = true;
@@ -329,13 +345,15 @@ function guardarEdicion() {
           {{ estudiantes.length === 0 ? 'Cargar Excel' : 'Actualizar Excel' }}
         </label>
         <FileUpload 
-          mode="basic" 
-          accept=".xls,.xlsx" 
-          customUpload 
-          @select="procesarArchivo" 
-          chooseLabel="Seleccionar archivo xlsx"
-          :disabled="!periodoSeleccionado" 
-        />
+            mode="basic"
+            auto
+            customUpload
+            @select="procesarArchivo"
+            accept=".xls,.xlsx"
+            chooseLabel="Seleccionar archivo xlsx"
+            :disabled="!periodoSeleccionado"
+          />
+
       </div>
       <Button 
         :disabled="isGuardarDisabled" 
@@ -345,13 +363,20 @@ function guardarEdicion() {
         class="px-6 py-3 rounded-full bg-blue-600 text-white transition duration-300 hover:bg-blue-700 disabled:opacity-50"
         @click="guardarEstudiantes" 
       />
-      <Button
+      <!-- <Button
         label="Cargar sin Email (prueba)"
         icon="pi pi-exclamation-triangle"
         class="mt-4 px-6 py-3 rounded-full bg-yellow-500 text-white hover:bg-yellow-600"
         @click="forzarCargaSinCorreo"
-      />
+      /> -->
     </div>
+
+    <div v-if="archivoNombre" class="text-sm italic text-gray-400 mb-2">
+  Archivo cargado: <span class="font-medium text-white">{{ nombreArchivoVisible }}</span>
+</div>
+
+
+
     <div class="flex flex-col items-center mt-2 mb-4">
       <label class="mb-1 text-lg font-medium">Total Estudiantes Cargados :</label>
       <div class="text-xl font-bold">{{ estudiantes.length }}</div>
@@ -475,4 +500,14 @@ function guardarEdicion() {
 :deep(.incomplete-row.dark) {
   background-color: #7f1d1d !important;
 }
+
+/* Oculta el nombre del archivo que PrimeVue muestra por defecto */
+:deep(.p-fileupload-filename) {
+  display: none !important;
+}
+
+:deep(.p-button + span) {
+  display: none !important;
+}
+
 </style>

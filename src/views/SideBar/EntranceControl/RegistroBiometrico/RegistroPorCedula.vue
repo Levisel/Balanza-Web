@@ -715,5 +715,4 @@ const volver = () => {
 </script>
 
 <style scoped>
-/* Personaliza tus estilos aquí */
 </style>

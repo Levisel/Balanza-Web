@@ -442,5 +442,4 @@ onMounted(() => {
   border-top: 1px solid #374151;
 }
 
-/* Puedes agregar estilos personalizados aquí si lo requieres */
 </style>

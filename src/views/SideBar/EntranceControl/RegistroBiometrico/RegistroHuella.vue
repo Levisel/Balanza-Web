@@ -294,5 +294,4 @@ onMounted(() => {
 </script>
 
 <style scoped>
-/* Agrega estilos adicionales si es necesario */
 </style>
