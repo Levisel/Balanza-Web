@@ -231,7 +231,7 @@ const asignarArea = async () => {
 
   try {
     for (const estudiante of estudiantesSeleccionados.value) {
-      const payload = { Internal_Area: areaSeleccionada.value };
+      const payload = { Internal_Area: areaSeleccionada.value, Internal_Email: estudiante.Internal_Email };
 
       await axios.put(`${API}/internal-user/${estudiante.Internal_ID}`, payload);
     }

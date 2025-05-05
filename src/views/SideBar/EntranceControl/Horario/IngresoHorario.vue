@@ -13,15 +13,15 @@
         class="w-60"
       />
       <Dropdown
-  v-model="areaSeleccionada"
-  :options="opcionesAreas"
-  optionLabel="label"
-  optionValue="label"
-  placeholder="Área"
-  class="w-60"
-/>
+        v-model="areaSeleccionada"
+        :options="opcionesAreas"
+        optionLabel="label"
+        optionValue="label"
+        placeholder="Área"
+        class="w-60"
+      />
 
-<InputText
+  <InputText
         v-model="busquedaCedula"
         placeholder="Buscar por Cédula"
         class="w-60"
@@ -665,14 +665,14 @@ async function guardarHorario(esCambioAdministrativo: boolean) {
     }
   }
 
-  const registro1 = {
-    UserXPeriod_ID: usuarioXPeriodoId.value,
-    Schedule_Mode: "Presencial",
-    Schedule_Day_Monday: null,
-    Schedule_Day_Tuesday: null,
-    Schedule_Day_Wednesday: null,
-    Schedule_Day_Thursday: null,
-    Schedule_Day_Friday: null
+  const registro1: Record<string, any> = {
+      UserXPeriod_ID: usuarioXPeriodoId.value,
+      Schedule_Mode: "Presencial",
+      Schedule_Day_Monday: null,
+      Schedule_Day_Tuesday: null,
+      Schedule_Day_Wednesday: null,
+      Schedule_Day_Thursday: null,
+      Schedule_Day_Friday: null
   };
 
   const registro2 = { ...registro1 };
@@ -789,7 +789,9 @@ async function cargarHorarioVirtual() {
   if (!usuarioXPeriodoId.value) return;
 
   try {
-    const urlHor = `${API}/horarioEstudiantes/completo?periodId=${periodoSeleccionado.value.Period_ID}&area=${encodeURIComponent(areaSeleccionada.value)}`;
+    const urlHor = periodoSeleccionado.value 
+      ? `${API}/horarioEstudiantes/completo?periodId=${periodoSeleccionado.value.Period_ID}&area=${encodeURIComponent(areaSeleccionada.value || '')}`
+      : '';
     const resHor = await axios.get(urlHor, { withCredentials: true });
     const todosHorarios = Array.isArray(resHor.data) ? resHor.data : [];
 

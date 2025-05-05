@@ -188,7 +188,7 @@ const capturando = ref(false);
 
 // 🧪 SIMULACIÓN DE FECHA Y HORA
 // SIMULACIÓN DE FECHA Y HORA ACTUAL
-const modoSimulacion = false; // Cambiar a false para usar la hora real
+const modoSimulacion = true; // Cambiar a false para usar la hora real
 const fechaSimulada = new Date("2025-04-23T13:51:00"); // Lunes 8:49 AM
 
 function getAhoraLocal(): Date {
@@ -636,14 +636,17 @@ const iniciarCaptura = async () => {
       params.append("Licstr", "");
       params.append("TemplateFormat", "ISO");
 
+
       const resMatch = await fetch("/SGIMatchScore", {
         method: "POST",
         headers: {
           "Content-Type": "application/x-www-form-urlencoded",
           Accept: "*/*",
+          "Access-Control-Allow-Origin": "*",
         },
         body: params,
       });
+
 
       if (!resMatch.ok) throw new Error("Error al comparar las huellas.");
       const matchData = await resMatch.json();
