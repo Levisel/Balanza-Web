@@ -323,7 +323,8 @@ const borrarHuella = async () => {
   try {
     const cedula = estudianteSeleccionado.value.Internal_ID;
     await axios.put(`${API}/internal-user/${cedula}`, {
-      Internal_Huella: null
+      Internal_Huella: null,
+      Internal_Email: estudianteSeleccionado.value.Internal_Email,
     });
 
     const index = usuariosXPeriodoDVM.value.findIndex(

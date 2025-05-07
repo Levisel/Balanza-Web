@@ -207,6 +207,7 @@ const iniciarCaptura = async () => {
       throw new Error(`Respuesta HTTP inválida: ${response.status}`);
     }
     const data = await response.json();
+    console.log("Respuesta de captura:", data);
     if (data.ErrorCode === 0 && data.TemplateBase64) {
       huellaBase64.value = data.TemplateBase64;
       huellaCapturada.value = true;

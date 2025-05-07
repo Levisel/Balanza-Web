@@ -325,6 +325,7 @@ const buscarEstudiante = async () => {
       withCredentials: true,
     });
     huellaGuardada.value = huellaData.huella || "";
+    console.log("Huella guardada:", huellaGuardada.value.length); //216 igual que al guardar en templateBase64
 
     // Obtener períodos del estudiante
     const { data: periodosData } = await axios.get(`${API}/usuarioXPeriodo/usuario/${cedula.value}`, {
@@ -635,6 +636,10 @@ const iniciarCaptura = async () => {
       params.append("Template2", huellaBase64.value);
       params.append("Licstr", "");
       params.append("TemplateFormat", "ISO");
+
+      console.log("Template1 (BD):", huellaGuardada.value.length);
+console.log("Template2 (capturada):", huellaBase64.value.length);
+
 
 
       const resMatch = await fetch("/SGIMatchScore", {
