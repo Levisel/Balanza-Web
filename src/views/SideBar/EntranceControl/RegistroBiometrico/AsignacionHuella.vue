@@ -331,7 +331,7 @@ const borrarHuella = async () => {
       (u) => u.Internal_ID === estudianteSeleccionado.value?.Internal_ID
     );
     if (index !== -1) {
-      usuariosXPeriodoDVM.value[index].Internal_Huella = null;
+      usuariosXPeriodoDVM.value[index].Internal_Huella = undefined;
     }
 
     toast.add({

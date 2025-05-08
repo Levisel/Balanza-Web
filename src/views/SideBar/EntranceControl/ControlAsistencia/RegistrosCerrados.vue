@@ -31,9 +31,9 @@
         </div>
         <!-- Filtro: Fecha (Registro_Entrada) -->
         <div class="flex flex-col">
-          <label class="mb-1 font-medium">Fecha:</label>
-          <Calendar v-model="filterFecha" dateFormat="yy-mm-dd" placeholder="Seleccione fecha" class="w-60" />
-        </div>
+        <label class="mb-1 font-medium">Fecha</label>
+        <InputText v-model="filterFecha" type="date" class="w-60" />
+      </div>
         <!-- Filtro: Período -->
         <div class="flex flex-col">
           <label class="mb-1 font-medium">Período:</label>
@@ -55,7 +55,7 @@
       </div>
   
       <!-- DataTable de Registros Cerrados -->
-      <DataTable :value="filteredRecords" paginator rows="10" class="w-full shadow-lg mt-2">
+      <DataTable :value="filteredRecords" paginator :rows="10" class="w-full shadow-lg mt-2">
         <Column field="userXPeriod.user.Internal_ID" header="Cédula" sortable />
         <Column header="Nombre" sortable>
           <template #body="slotProps">
@@ -119,7 +119,7 @@
             Cualquier cambio en la hora de salida afectará el total de horas acumuladas del estudiante.
           </p>
           <p class="mb-2 font-medium">
-            Hora de Entrada: {{ formatDate(selectedRegistro?.Attendance_Entry) }}
+            Hora de Entrada: {{ formatDate(selectedRegistro?.Attendance_Entry || '') }}
           </p>
           <label class="block font-medium mb-1">Nueva Hora de Salida</label>
           <InputText 
@@ -174,12 +174,31 @@
   import { useToast } from "primevue/usetoast";
   import { API } from "@/ApiRoute";
   import axios from "axios";
+  const isDarkTheme = ref(false); // Cambia esto según tu lógica de tema
   
   const router = useRouter();
   const toast = useToast();
   
   // Arreglo de registros cerrados
-  const registros = ref([]);
+  interface Registro {
+    userXPeriod?: {
+      user?: {
+        Internal_ID?: string;
+        Internal_Name?: string;
+        Internal_LastName?: string;
+      };
+      Period_ID?: number;
+      period?: {
+        Period_Name?: string;
+      };
+    };
+    Attendance_Entry?: string;
+    Attendance_Exit?: string;
+    Attendance_ID?: number;
+    Attendance_Type?: string;
+  }
+  
+  const registros = ref<Registro[]>([]);
   
   // Filtros
   const filterCedula = ref("");
@@ -254,12 +273,12 @@
   
   // Modal de edición
   const editModalVisible = ref(false);
-  const selectedRegistro = ref(null);
+  const selectedRegistro = ref<Registro | null>(null);
   const editSalida = ref("");
   
   // Modal de confirmación para eliminación
   const deleteDialogVisible = ref(false);
-  const registroToDelete = ref(null);
+  const registroToDelete = ref<Registro | null>(null);
   
   // Abrir modal para editar
   const openEditModal = (registro: any) => {
@@ -280,7 +299,7 @@
     return;
   }
 
-  const entrada = new Date(selectedRegistro.value.Attendance_Entry);
+  const entrada = selectedRegistro.value.Attendance_Entry ? new Date(selectedRegistro.value.Attendance_Entry) : new Date();
   const nuevaSalida = new Date(editSalida.value);
 
   if (nuevaSalida <= entrada) {

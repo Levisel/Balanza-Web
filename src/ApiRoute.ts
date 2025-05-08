@@ -163,6 +163,10 @@ export interface UserXPeriodDVM {
     Internal_Email: string;
     Internal_Area: string;
     Internal_Huella?: boolean; // Added this property
+    Internal_Phone?: string; // Added this property
+    Internal_Type?: string;
+    Internal_Status?: string;
+    Internal_Picture?: string; // Added this property
     // Este campo se usa cuando haces `fetchUsersByPeriod`
     Period_ID?: number;
     Period_Name?: string;

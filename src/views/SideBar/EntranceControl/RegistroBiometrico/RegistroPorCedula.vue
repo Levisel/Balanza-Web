@@ -186,9 +186,8 @@ const dialogoActivo = ref(false);
 const capturando = ref(false);
 
 
-// 🧪 SIMULACIÓN DE FECHA Y HORA
 // SIMULACIÓN DE FECHA Y HORA ACTUAL
-const modoSimulacion = true; // Cambiar a false para usar la hora real
+const modoSimulacion = false; // Cambiar a false para usar la hora real
 const fechaSimulada = new Date("2025-04-23T13:51:00"); // Lunes 8:49 AM
 
 function getAhoraLocal(): Date {
@@ -212,9 +211,10 @@ const registroEntradaLocal = computed(() => {
 const horaEntradaProgramada = computed(() => {
   const ahora = getAhoraLocal();
   return horarioDelDia.value?.find(h => {
-    const entradaDesde = new Date(h.entrada.getTime() - 10 * 60000);
+    if (!h || !h.entrada) return null;
+    const entradaDesde = h && h.entrada ? new Date(h.entrada.getTime() - 10 * 60000) : null;
     const salidaHasta = h.salida;
-    return ahora >= entradaDesde && ahora <= salidaHasta;
+    return entradaDesde && ahora >= entradaDesde && ahora <= salidaHasta;
   })?.entrada || null;
 });
 
@@ -223,11 +223,11 @@ const horaSalidaProgramada = computed(() => {
   const posiblesHorarios = horarioDelDia.value || [];
 
   // Filtrar solo los horarios cuyo turno ya haya empezado (es decir, estamos dentro o después del turno)
-  const horariosValidos = posiblesHorarios.filter(h => ahora >= h.entrada);
+  const horariosValidos = posiblesHorarios.filter(h => h && ahora >= h.entrada);
 
   // De esos, tomar el que esté más cerca a la hora actual (último que aplica)
   if (horariosValidos.length > 0) {
-    return horariosValidos[horariosValidos.length - 1].salida;
+    return horariosValidos.length > 0 && horariosValidos[horariosValidos.length - 1] !== null ? horariosValidos[horariosValidos.length - 1]!.salida : null;
   }
 
   return null;
@@ -357,16 +357,16 @@ const buscarEstudiante = async () => {
         let turnoProximo: any = null;
 
         for (const h of horarioDelDia.value) {
-          const entradaDesde = new Date(h.entrada.getTime() - 10 * 60000);
-          const salidaHasta = new Date(h.salida.getTime() + 10 * 60000);
+          const entradaDesde = h && h.entrada ? new Date(h.entrada.getTime() - 10 * 60000) : null;
+          const salidaHasta = h && h.salida ? new Date(h.salida.getTime() + 10 * 60000) : null;
 
-          if (tipoRegistro.value === "entrada" && ahora < h.entrada) {
+          if (h && tipoRegistro.value === "entrada" && ahora < h.entrada) {
             turnoProximo = h.entrada;
             break;
           }
 
-          if (tipoRegistro.value === "salida" && ahora < salidaHasta) {
-            turnoProximo = h.salida;
+          if (tipoRegistro.value === "salida" && salidaHasta && ahora < salidaHasta) {
+            turnoProximo = h ? h.salida : null;
             break;
           }
         }
@@ -537,7 +537,7 @@ const guardarAsistencia = async () => {
     }
 
     if (registroAbierto.value && tipoRegistro.value === "salida") {
-      // 🔵 Actualizar registro de salida (axios.put)
+      //  Actualizar registro de salida (axios.put)
       const registroId = registroAbierto.value.Attendance_ID;
       if (!registroId) {
         toast.add({

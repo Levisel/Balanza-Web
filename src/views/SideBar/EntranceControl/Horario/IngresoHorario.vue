@@ -1,6 +1,22 @@
 <template>
   <main class="flex flex-col items-center p-6 min-h-screen">
-    <h1 class="text-3xl font-bold mb-6">Asignar Horarios Presenciales</h1>
+    <div class="flex items-center gap-2 mb-6">
+  <h1 class="text-3xl font-bold">Asignar Horarios Presenciales</h1>
+  <Button
+    icon="pi pi-info-circle"
+    class="p-button-text p-button-md"
+    @click="mostrarInfoAsignar = true"
+    tooltip="¿Cómo iniciar?"
+    tooltipOptions="{ position: 'top' }"
+  />
+</div>
+<Dialog v-model:visible="mostrarInfoAsignar" header="¿Cómo empezar?" modal>
+  <p>Selecciona un <strong>Período</strong> y un <strong>Área</strong> para poder asignar horarios a los estudiantes.</p>
+  <template #footer>
+    <Button label="Entendido" class="p-button-primary" @click="mostrarInfoAsignar = false" />
+  </template>
+</Dialog>
+
     <Toast />
 
     <!-- Filtros -->
@@ -315,6 +331,7 @@ const areaSeleccionada = ref<string | null>(null);
 const busquedaNombre = ref('');
 const busquedaCedula = ref('');
 const mostrarAyudaCambio = ref(false);
+const mostrarInfoAsignar = ref(false);
 
 
 /* CACHE DE PARÁMETROS */
@@ -346,7 +363,7 @@ const dialogoCambioAdministrativo = ref(false);
 const nuevoHorarioEspecial = ref({ entrada: '', salida: '', tipo: 'Temprano' });
 
 /* DÍAS DE LA SEMANA Y OPCIONES */
-const diasSemana = ref([
+const diasSemana = ref<{ nombre: string; horarios: any[] }[]>([
   { nombre: 'Monday', horarios: [] },
   { nombre: 'Tuesday', horarios: [] },
   { nombre: 'Wednesday', horarios: [] },
@@ -473,6 +490,10 @@ async function cargarHorarios() {
   if (!estudianteSeleccionado.value) return;
 
   try {
+    if (!periodoSeleccionado.value) {
+      console.error("Error: periodoSeleccionado is null");
+      return;
+    }
     const urlUser = `${API}/usuarioxperiodo/${periodoSeleccionado.value.Period_ID}/${estudianteSeleccionado.value.user.Internal_ID}`;
     const userRes = await axios.get(urlUser, { withCredentials: true });
     const userData = userRes.data;
@@ -506,13 +527,13 @@ async function cargarHorarios() {
       let horariosTarde = tardRes.status === 200 ? tardRes.data : [];
 
       dia.horarios = [
-        ...horariosTemprano.map(h => ({
+        ...horariosTemprano.map((h: { Parameter_Schedule_Start_Time: string; Parameter_Schedule_End_Time: string; Parameter_Schedule_ID: number; Parameter_Schedule_Type: string }) => ({
           ...h,
           label: `${h.Parameter_Schedule_Start_Time} - ${h.Parameter_Schedule_End_Time} (Temprano)`,
           value: h.Parameter_Schedule_ID,
           tipo: 'Temprano'
         })),
-        ...horariosTarde.map(h => ({
+        ...horariosTarde.map((h: { Parameter_Schedule_Start_Time: string; Parameter_Schedule_End_Time: string; Parameter_Schedule_ID: number; Parameter_Schedule_Type: string }) => ({
           ...h,
           label: `${h.Parameter_Schedule_Start_Time} - ${h.Parameter_Schedule_End_Time} (Tarde)`,
           value: h.Parameter_Schedule_ID,

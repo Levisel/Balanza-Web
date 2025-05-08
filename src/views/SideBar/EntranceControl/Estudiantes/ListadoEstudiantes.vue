@@ -144,7 +144,7 @@ import Message from "primevue/message";
 import Toast from "primevue/toast";
 import { useToast } from "primevue/usetoast";
 import EditStudentsModal from "@/components/EditStudentsModal.vue";
-import { API, type UserXPeriodDVM, type Period } from "@/ApiRoute";
+import { API, type UserXPeriodDVM, type Period,type Internal_User  } from "@/ApiRoute";
 import axios from "axios";
 import { useSubjects } from "@/useSubjects";
 
@@ -263,7 +263,7 @@ const estudiantesFiltrados = computed(() => {
 
 // Variables reactivas para el modal de edición
 const m = ref(false); // Controla la visibilidad del modal
-const selectedInternalUser = ref<UserXPeriodDVM | null>(null);
+const selectedInternalUser = ref<Internal_User | null>(null);
 
 // Cargar datos al montar
 onMounted(async () => {
@@ -309,7 +309,13 @@ const eliminarEstudiante = async (cedula: string) => {
 const editarEstudiante = (cedula: string) => {
   const estudiante = usersXPeriod.value.find(e => e.Internal_ID === cedula);
   if (estudiante) {
-    selectedInternalUser.value = { ...estudiante };
+    selectedInternalUser.value = {
+      ...estudiante,
+      Internal_Type: estudiante.Internal_Type || "",
+      Internal_Phone: estudiante.Internal_Phone || "",
+      Internal_Status: estudiante.Internal_Status || "",
+      Internal_Picture: estudiante.Internal_Picture || "",
+    };
     m.value = true;
   }
 };
@@ -317,12 +323,6 @@ const editarEstudiante = (cedula: string) => {
 // Función que se dispara cuando el modal notifica la actualización
 const handleStudentUpdated = async () => {
   await fetchAllUsersXPeriod();
-  /*toast.add({
-    severity: "success",
-    summary: "Actualizado",
-    detail: "Estudiante actualizado correctamente",
-    life: 3000,
-  });*/
 };
 
 // Variables para el diálogo de confirmación de eliminación

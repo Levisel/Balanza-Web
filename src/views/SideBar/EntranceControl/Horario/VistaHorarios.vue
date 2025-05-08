@@ -255,7 +255,31 @@ async function exportarAExcel() {
       return;
     }
 
-    const dataParaExcel = dataParaExportar.map(item => ({
+    interface HorarioItem {
+      Internal_ID: string;
+      Internal_Name: string;
+      Internal_LastName: string;
+      Internal_Area: string;
+      Schedule_Mode: string;
+      Schedule_IsDeleted: number;
+      Monday_Start?: string;
+      Monday_End?: string;
+      Monday_Type?: string;
+      Tuesday_Start?: string;
+      Tuesday_End?: string;
+      Tuesday_Type?: string;
+      Wednesday_Start?: string;
+      Wednesday_End?: string;
+      Wednesday_Type?: string;
+      Thursday_Start?: string;
+      Thursday_End?: string;
+      Thursday_Type?: string;
+      Friday_Start?: string;
+      Friday_End?: string;
+      Friday_Type?: string;
+    }
+    
+    const dataParaExcel = dataParaExportar.map((item: HorarioItem) => ({
       Cedula: item.Internal_ID,
       Nombre: item.Internal_Name,
       Apellido: item.Internal_LastName,

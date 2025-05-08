@@ -50,7 +50,9 @@
     </div>
 
     <!-- DataTable de registros abiertos -->
-    <DataTable :value="filteredRecords" paginator rows="10" class="w-full">
+    <DataTable :value="filteredRecords" 
+    paginator :rows="10" 
+    class="w-full">
       <Column field="userXPeriod.user.Internal_ID" header="Cédula" sortable></Column>
       <Column header="Nombre" sortable>
         <template #body="slotProps">
@@ -150,7 +152,21 @@ import axios from "axios";
 const router = useRouter();
 const toast = useToast();
 
-const records = ref([]);
+interface Record {
+  userXPeriod?: {
+    user?: {
+      Internal_ID?: string;
+      Internal_Name?: string;
+      Internal_LastName?: string;
+      Internal_Email?: string;
+    };
+  };
+  Attendance_Entry?: string;
+  Attendance_Type?: string;
+  Attendance_ID?: string;
+}
+
+const records = ref<Record[]>([]);
 
 // Filtros
 const filterCedula = ref("");

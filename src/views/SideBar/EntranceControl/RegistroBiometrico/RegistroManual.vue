@@ -168,7 +168,16 @@
 
   
   // Variables para períodos y UsuarioXPeriodo
-  const periodoActual = ref(null);
+  interface Periodo {
+    period: {
+      Period_Name: string;
+      Period_Start: string;
+      Period_End: string;
+    };
+    UserXPeriod_ID: string;
+  }
+  
+  const periodoActual = ref<Periodo | null>(null);
   const usuarioXPeriodoId = ref("");
   
   // Variables para registro manual, pre-llenando con la fecha de hoy (hora "00:00")
