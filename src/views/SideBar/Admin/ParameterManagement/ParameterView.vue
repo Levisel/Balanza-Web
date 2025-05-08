@@ -836,28 +836,38 @@ onMounted(() => {
     <div v-for="col in editableColumns" :key="col.field" class="field">
       <FloatLabel variant="in">
         <!-- Combobox para Field_Of_Activity_Name -->
-        <Select
-          v-if="col.field === 'Field_Of_Activity_Name'"
-          :id="col.field"
-          v-model="selectedRecord[col.field]"
-          :options="[{ label: 'Descripción de Actividad', value: 'Descripción de Actividad' }, { label: 'Fecha de Actividad', value: 'Fecha de Actividad' }]"
-          optionLabel="label"
-          optionValue="value"
-          class="w-full"
-          :pt="{ root: { class: 'border-round' } }"
-        />
+<Select
+  v-if="col.field === 'Field_Of_Activity_Name'"
+  :id="col.field"
+  v-model="selectedRecord[col.field]"
+  :options="[
+    { label: 'Descripción de Actividad', value: 'Descripción de Actividad' },
+    { label: 'Fecha de Actividad', value: 'Fecha de Actividad' },
+    { label: 'Lugar', value: 'Lugar' },
+    { label: 'Tiempo de Ejecución', value: 'Tiempo de Ejecución' }
+  ]"
+  optionLabel="label"
+  optionValue="value"
+  class="w-full"
+  :pt="{ root: { class: 'border-round' } }"
+/>
 
-        <!-- Combobox para Field_Of_Activity_Type -->
-        <Select
-          v-else-if="col.field === 'Field_Of_Activity_Type'"
-          :id="col.field"
-          v-model="selectedRecord[col.field]"
-          :options="[{ label: 'Fecha', value: 'Fecha' }, { label: 'Texto', value: 'Texto' }]"
-          optionLabel="label"
-          optionValue="value"
-          class="w-full"
-          :pt="{ root: { class: 'border-round' } }"
-        />
+<!-- Combobox para Field_Of_Activity_Type -->
+<Select
+  v-else-if="col.field === 'Field_Of_Activity_Type'"
+  :id="col.field"
+  v-model="selectedRecord[col.field]"
+  :options="[
+    { label: 'Fecha', value: 'Fecha' },
+    { label: 'Texto', value: 'Texto' },
+    { label: 'Lugar', value: 'Lugar' },
+    { label: 'Tiempo', value: 'Tiempo' }
+  ]"
+  optionLabel="label"
+  optionValue="value"
+  class="w-full"
+  :pt="{ root: { class: 'border-round' } }"
+/>
 
         <!-- Otros campos -->
         <InputText
@@ -948,28 +958,38 @@ onMounted(() => {
     <div v-for="col in editableColumns" :key="col.field" class="field">
       <FloatLabel variant="in">
         <!-- Combobox para Field_Of_Activity_Name -->
-        <Select
-          v-if="col.field === 'Field_Of_Activity_Name'"
-          :id="col.field"
-          v-model="selectedRecord[col.field]"
-          :options="[{ label: 'Descripción de Actividad', value: 'Descripción de Actividad' }, { label: 'Fecha de Actividad', value: 'Fecha de Actividad' }]"
-          optionLabel="label"
-          optionValue="value"
-          class="w-full"
-          :pt="{ root: { class: 'border-round' } }"
-        />
+<Select
+  v-if="col.field === 'Field_Of_Activity_Name'"
+  :id="col.field"
+  v-model="selectedRecord[col.field]"
+  :options="[
+    { label: 'Descripción de Actividad', value: 'Descripción de Actividad' },
+    { label: 'Fecha de Actividad', value: 'Fecha de Actividad' },
+    { label: 'Lugar', value: 'Lugar' },
+    { label: 'Tiempo de Ejecución', value: 'Tiempo de Ejecución' }
+  ]"
+  optionLabel="label"
+  optionValue="value"
+  class="w-full"
+  :pt="{ root: { class: 'border-round' } }"
+/>
 
-        <!-- Combobox para Field_Of_Activity_Type -->
-        <Select
-          v-else-if="col.field === 'Field_Of_Activity_Type'"
-          :id="col.field"
-          v-model="selectedRecord[col.field]"
-          :options="[{ label: 'Fecha', value: 'Fecha' }, { label: 'Texto', value: 'Texto' }]"
-          optionLabel="label"
-          optionValue="value"
-          class="w-full"
-          :pt="{ root: { class: 'border-round' } }"
-        />
+<!-- Combobox para Field_Of_Activity_Type -->
+<Select
+  v-else-if="col.field === 'Field_Of_Activity_Type'"
+  :id="col.field"
+  v-model="selectedRecord[col.field]"
+  :options="[
+    { label: 'Fecha', value: 'Fecha' },
+    { label: 'Texto', value: 'Texto' },
+    { label: 'Lugar', value: 'Lugar' },
+    { label: 'Tiempo de Ejecución', value: 'Tiempo de Ejecución' }
+  ]"
+  optionLabel="label"
+  optionValue="value"
+  class="w-full"
+  :pt="{ root: { class: 'border-round' } }"
+/>
 
         <!-- Otros campos -->
         <InputText
