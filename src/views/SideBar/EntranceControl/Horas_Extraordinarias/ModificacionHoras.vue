@@ -314,5 +314,4 @@ const volver = () => {
 </script>
   
 <style scoped>
-/* Puedes agregar estilos adicionales o personalizar clases aquí */
 </style>

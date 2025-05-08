@@ -115,7 +115,7 @@
           mode="decimal"
           :step="0.1"
           :useGrouping="false"
-          showButtons="false"
+          :showButtons="false"
         />
       </div>
 
@@ -130,7 +130,7 @@
           mode="decimal"
           :step="0.1"
           :useGrouping="false"
-          showButtons="false"
+          :showButtons="false"
         />
       </div>
 
@@ -442,5 +442,4 @@ onMounted(() => {
   border-top: 1px solid #374151;
 }
 
-/* Puedes agregar estilos personalizados aquí si lo requieres */
 </style>

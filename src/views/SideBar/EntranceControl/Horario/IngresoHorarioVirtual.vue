@@ -140,13 +140,42 @@
     </Dialog>
 
     <!-- Modal de confirmación de cambio administrativo -->
-    <Dialog v-model:visible="dialogoCambioAdministrativo" header="Confirmar Cambio">
-      <p>¿El cambio se realiza antes de iniciar registros de asistencia?</p>
-      <template #footer>
-        <Button label="Antes de registros" class="p-button-secondary" @click="guardarHorario(false)" />
-        <Button label="Cambio Administrativo" class="p-button-danger" @click="guardarHorario(true)" />
-      </template>
-    </Dialog>
+    <Dialog v-model:visible="dialogoCambioAdministrativo" header="Confirmar Acción">
+  <div class="flex items-center justify-between mb-3">
+    <p class="text-base font-medium">¿Qué deseas hacer con el horario virtual del estudiante?</p>
+    <Button
+      icon="pi pi-question-circle"
+      class="p-button-text p-button-sm"
+      @click="mostrarAyudaCambio = true"
+      tooltip="¿Cuál es la diferencia?"
+      tooltipOptions="{ position: 'top' }"
+    />
+  </div>
+  <template #footer>
+    <Button
+      label="Modificar (antes de registrar asistencia)"
+      class="p-button-secondary"
+      @click="guardarHorario(false)"
+    />
+    <Button
+      label="Cambio Administrativo (con historial)"
+      class="p-button-danger"
+      @click="guardarHorario(true)"
+    />
+  </template>
+</Dialog>
+
+<Dialog v-model:visible="mostrarAyudaCambio" header="¿Qué significa cada opción?">
+  <div class="leading-relaxed">
+    <p><strong>Modificar:</strong> Solo cambia los horarios actuales <em>si aún no se ha comenzado a registrar asistencia</em>.</p>
+    <p class="mt-2"><strong>Cambio Administrativo:</strong> Guarda un registro del horario anterior, lo deja como inactivo y crea uno nuevo.</p>
+  </div>
+  <template #footer>
+    <Button label="Entendido" class="p-button-primary" @click="mostrarAyudaCambio = false" />
+  </template>
+</Dialog>
+
+
 
     <Dialog v-model:visible="mostrarDialogoMaxHoras" header="Cambiar máximo de horas permitidas">
   <div class="p-4">
@@ -201,6 +230,7 @@ const areaSeleccionada = ref<string | null>(null)
 const busquedaNombre = ref('')
 const busquedaCedula = ref('')
 const { subjects: opcionesAreas, fetchSubjects } = useSubjects()
+const mostrarAyudaCambio = ref(false);
 
 const maxHorasVirtuales = ref(8); // valor por defecto
 const mostrarDialogoMaxHoras = ref(false);
@@ -512,26 +542,41 @@ function calcularHorasTotales(): number {
 
 // Validar y guardar: se verifica que no supere 8 horas virtuales y que no se solape con presencial
 async function validarYGuardar() {
-  if (isGuardando.value) return
-if (calcularHorasTotales() > maxHorasVirtuales.value) {
-  dialogoErrorVisible.value = true;
-  return;
-}
+  if (isGuardando.value) return;
+
+  // 🔒 Validación nueva
+  const hayAlMenosUno = Object.values(horariosSeleccionados.value).some(h => h && h.value);
+  if (!hayAlMenosUno) {
+    toast.add({
+      severity: 'warn',
+      summary: 'Horario vacío',
+      detail: 'Debe seleccionar al menos un horario antes de guardar.',
+      life: 3000
+    });
+    return;
+  }
+
+  if (calcularHorasTotales() > maxHorasVirtuales.value) {
+    dialogoErrorVisible.value = true;
+    return;
+  }
 
   if (await verificarSolapamientoConPresencial()) {
     toast.add({
       severity: 'error',
       summary: 'Solapamiento',
       detail: 'El horario virtual se cruza con el horario presencial.'
-    })
-    return
+    });
+    return;
   }
+
   if (horarioGuardado.value) {
-    dialogoCambioAdministrativo.value = true
+    dialogoCambioAdministrativo.value = true;
   } else {
-    await guardarHorario(false)
+    await guardarHorario(false);
   }
 }
+
 
 // Verificar que ningún turno virtual se solape con el turno presencial asignado
 async function verificarSolapamientoConPresencial(): Promise<boolean> {
@@ -653,5 +698,4 @@ function limpiarFiltros() {
 </script>
 
 <style scoped>
-/* Ajusta estilos según prefieras, sin fondos agresivos */
 </style>

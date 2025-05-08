@@ -216,7 +216,7 @@ const removerEstudiantes = async () => {
   }
 };
 
-// 🔹 Observa cambios de período
+// Observa cambios de período
 watch(periodoSeleccionado, (nuevoPeriodo) => {
   if (nuevoPeriodo) {
     console.log('nuevoPeriodo.Period_ID', nuevoPeriodo.Period_ID);
@@ -226,6 +226,6 @@ watch(periodoSeleccionado, (nuevoPeriodo) => {
   }
 });
 
-// 🔹 Cargar inicial
+// Cargar inicial
 onMounted(fetchPeriodos);
 </script>

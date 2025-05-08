@@ -290,6 +290,12 @@ const seguimientoHorasClass = computed(() => [
   route.path === "/ResumenSemanalEstudiante" ? "text-green-400" : "",
   isDarkTheme.value ? "hover:bg-gray-700" : "hover:bg-gray-100",
 ]);
+
+const alertClass = computed(() => [
+  "select-none flex items-center cursor-pointer p-4 rounded text-surface-700 transition-colors",
+  route.path === "/Alertas" ? "text-green-400" : "",
+  isDarkTheme.value ? "hover:bg-gray-700" : "hover:bg-gray-100",
+]);
 </script>
 
 <template>
@@ -889,6 +895,22 @@ const seguimientoHorasClass = computed(() => [
                     </li>
                   </ul>
                 </li>
+
+                <!-- Sección: Alertas independiente un solo icono-->
+                <li>
+                  <router-link
+                    to="/AlertasView"
+                    draggable="false"
+                    v-ripple
+                    :class="alertClass"
+                  >
+                    <i class="pi pi-bell mr-2"></i>
+                    <span class="font-medium text-lg">Alertas</span>
+                  </router-link>
+                </li>
+
+
+                 
                 <!--front final-->
               </ul>
             </li>
@@ -926,6 +948,19 @@ const seguimientoHorasClass = computed(() => [
         <span class="font-medium text-lg">Seguimiento de Horas</span>
       </router-link>
     </li>
+
+     <!-- Sección: Alertas independiente un solo icono-->
+     <li>
+                  <router-link
+                    to="/AlertasView"
+                    draggable="false"
+                    v-ripple
+                    :class="alertClass"
+                  >
+                    <i class="pi pi-bell mr-2"></i>
+                    <span class="font-medium text-lg">Alertas</span>
+                  </router-link>
+                </li>
   </ul>
 </div>
 

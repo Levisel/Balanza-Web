@@ -134,10 +134,18 @@ const estudiantesFiltrados = computed(() =>
 
 // Computed: horarios del estudiante seleccionado (filtrados por Internal_ID)
 const schedulesSeleccionados = computed(() => {
-  if (!estudianteSeleccionado.value) return []
-  const ced = estudianteSeleccionado.value.user.Internal_ID
-  return horariosCompletos.value.filter((registro: any) => registro.Internal_ID === ced)
-})
+  if (!estudianteSeleccionado.value) return [];
+
+  const cedula = estudianteSeleccionado.value.user.Internal_ID;
+
+  return horariosCompletos.value.filter(
+    h => h.Internal_ID === cedula && h.Schedule_IsDeleted === 0
+  );
+});
+
+
+
+
 
 // Referencia para scroll (opcional)
 const dataTableContainer = ref<HTMLElement | null>(null)
@@ -311,5 +319,5 @@ function limpiarFiltros() {
 </script>
 
 <style scoped>
-/* Personaliza tus estilos aquí */
+
 </style>

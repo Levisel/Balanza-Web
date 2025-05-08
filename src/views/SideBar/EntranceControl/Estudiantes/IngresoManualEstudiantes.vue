@@ -7,16 +7,15 @@ import { API } from "@/ApiRoute";
 import InputMask from "primevue/inputmask";
 import InputText from "primevue/inputtext";
 import Select from 'primevue/select';
-import Password from "primevue/password";
 import Button from "primevue/button";
 import axios from "axios";
-import type { boolean } from "zod";
 
 
 const toast = useToast();
 const selectedIdType = ref<string>("");
 const bandera = ref<boolean>(false);
 const userRegistered = ref<boolean>(false);
+
 
 const internalUser = ref<Internal_User>({
   Internal_ID: "",
@@ -28,16 +27,10 @@ const internalUser = ref<Internal_User>({
   Internal_Area: "",
   Internal_Phone: "",
   Internal_Status: "",
+  Internal_Picture: "",
 });
 
-const types = ref([
-  { label: "Estudiante", value: "Estudiante" },
-  { label: "Administrador", value: "Administrador"},
-  { label: "Abogado", value: "Abogado"  },
-  { label: "Secretaría", value: "Secretaría" },
-  { label: "Conserje", value: "Conserje" },
-  { label: "Otro", value: "Otro" },
-]);
+
 
 import { useSubjects } from '@/useSubjects';
 const { subjects: areas } = useSubjects();

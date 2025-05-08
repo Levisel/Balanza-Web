@@ -120,26 +120,6 @@
               :tooltipOptions="{ position: 'top', showDelay: 300 }"
             />
 
-            <!-- Botón para registrar asistencia -->
-          <!--  <Button
-              v-if="slotProps.data.Internal_Huella"
-              icon="pi pi-address-book"
-              class="p-button-rounded p-button-success"
-              @click="irRegistroAsistencia(slotProps.data.Internal_ID)"
-              v-tooltip.bottom="{
-                value: 'Registrar Asistencia',
-                pt: {
-                  arrow: {
-                    style: {
-                      borderBottomColor: 'var(--p-success-color)'
-                    }
-                  },
-                  text: '!bg-green-600 !text-white !font-medium'
-                }
-              }"
-              :tooltipOptions="{ position: 'top', showDelay: 300 }"
-              :disabled="!periodoSeleccionado"
-            /> -->
 
             <!-- Botón para borrar huella -->
             <Button
@@ -343,7 +323,8 @@ const borrarHuella = async () => {
   try {
     const cedula = estudianteSeleccionado.value.Internal_ID;
     await axios.put(`${API}/internal-user/${cedula}`, {
-      Internal_Huella: null
+      Internal_Huella: null,
+      Internal_Email: estudianteSeleccionado.value.Internal_Email,
     });
 
     const index = usuariosXPeriodoDVM.value.findIndex(
@@ -382,5 +363,4 @@ const irRegistroAsistencia = (cedula: string) => {
 </script>
 
 <style scoped>
-/* Ajusta los estilos según tus necesidades */
 </style>

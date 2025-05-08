@@ -80,6 +80,7 @@ import RegistrosCerrados from "@/views/SideBar/EntranceControl/ControlAsistencia
 import ResumenSemanal from "@/views/SideBar/EntranceControl/Seguimiento/ResumenSemanal.vue";
 import RegistroVirtual from "@/views/SideBar/EntranceControl/RegistroBiometrico/RegistroVirtual.vue";
 import VistaHorarioPersonal from "@/views/SideBar/EntranceControl/Horario/VistaHorarioPersonal.vue";
+import AlertasView from "../views/SideBar/EntranceControl/Alertas/AlertasView.vue";
 
 
 const routes: Array<RouteRecordRaw> = [
@@ -320,7 +321,13 @@ const routes: Array<RouteRecordRaw> = [
         path: 'RegistroVirtual',
         name: 'RegistroVirtual',
         component: RegistroVirtual,
+      },
+      {
+        path: 'AlertasView',
+        name: 'AlertasView',
+        component: AlertasView,
       }
+
       
     ],
   },

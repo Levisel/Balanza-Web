@@ -142,7 +142,7 @@ import Dialog from "primevue/dialog";
 import ProgressSpinner from "primevue/progressspinner";
 import Toast from "primevue/toast";
 import { useToast } from "primevue/usetoast";
-import { API, type Usuario } from "@/ApiRoute";
+import { API } from "@/ApiRoute";
 import { useDarkMode } from "@/components/ThemeSwitcher";
 import axios from "axios";
 // Router
@@ -188,7 +188,7 @@ const capturando = ref(false);
 
 // 🧪 SIMULACIÓN DE FECHA Y HORA
 // SIMULACIÓN DE FECHA Y HORA ACTUAL
-const modoSimulacion = true; // ⚠️ Cambia a false para usar la hora real
+const modoSimulacion = true; // Cambiar a false para usar la hora real
 const fechaSimulada = new Date("2025-04-23T13:51:00"); // Lunes 8:49 AM
 
 function getAhoraLocal(): Date {
@@ -325,6 +325,7 @@ const buscarEstudiante = async () => {
       withCredentials: true,
     });
     huellaGuardada.value = huellaData.huella || "";
+    console.log("Huella guardada:", huellaGuardada.value.length); //216 igual que al guardar en templateBase64
 
     // Obtener períodos del estudiante
     const { data: periodosData } = await axios.get(`${API}/usuarioXPeriodo/usuario/${cedula.value}`, {
@@ -495,7 +496,7 @@ const esAtraso = computed(() => {
   const programado = scheduledTimeUTC.value;
 
   const diffMinutos = (ahoraLocal.getTime() - programado.getTime()) / 60000;
-  return diffMinutos > 30;
+  return diffMinutos > 10; // Si es mayor a 10 minutos, se considera atraso
 });
 
 
@@ -636,14 +637,21 @@ const iniciarCaptura = async () => {
       params.append("Licstr", "");
       params.append("TemplateFormat", "ISO");
 
+      console.log("Template1 (BD):", huellaGuardada.value.length);
+console.log("Template2 (capturada):", huellaBase64.value.length);
+
+
+
       const resMatch = await fetch("/SGIMatchScore", {
         method: "POST",
         headers: {
           "Content-Type": "application/x-www-form-urlencoded",
           Accept: "*/*",
+          "Access-Control-Allow-Origin": "*",
         },
         body: params,
       });
+
 
       if (!resMatch.ok) throw new Error("Error al comparar las huellas.");
       const matchData = await resMatch.json();
@@ -715,5 +723,4 @@ const volver = () => {
 </script>
 
 <style scoped>
-/* Personaliza tus estilos aquí */
 </style>
