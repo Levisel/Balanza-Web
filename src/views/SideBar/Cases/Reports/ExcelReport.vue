@@ -195,17 +195,6 @@ const downloadExcelActivityReport = async () => {
     });
     return;
   }
-  //We check if the start date is less than the end date
-  if (startDate.value < endDate.value) {
-    toast.add({
-      severity: "warn",
-      summary: "Advertencia",
-      detail: "La fecha de inicio no puede ser menor que la fecha de fin",
-      life: 3000,
-    });
-    return;
-  }
-
 
   const formatDate = (date: Date | null): string => {
     if (!date) return '';
@@ -220,7 +209,7 @@ const downloadExcelActivityReport = async () => {
   const formattedEndDate = formatDate(endDate.value);
 
   axios.get(
-    `${API}/activities/report/excel?startDate=${formattedStartDate}&endDate=${formattedEndDate}`,
+    `${API}/activity/report/excel?startDate=${formattedStartDate}&endDate=${formattedEndDate}`,
     {
       responseType: "blob",
     }
