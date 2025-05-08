@@ -75,7 +75,7 @@ function inicializarMatriz() {
 
 // Función para recorrer cada horario recibido y marcar en la matriz los rangos correspondientes
 function parsearHorarios() {
-  for (const schedule of props.schedules) {
+  for (const schedule of props.schedules as Array<{ Schedule_Mode: string; [key: string]: any }>) {
     const modCode = schedule.Schedule_Mode?.toLowerCase() === 'virtual' ? 2 : 1;
 
     for (const dia of diasSemana) {
