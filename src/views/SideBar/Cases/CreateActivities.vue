@@ -1071,44 +1071,49 @@ onMounted(() => {
             <!-- Cards de Actividades -->
     <div v-if="actividades.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
       <div v-for="actividad in actividades" :key="actividad.Activity_ID" 
-           class="card flex flex-col h-full shadow-lg rounded-lg bg-white border border-gray-200">
-        
-        <!-- Cabecera de la Card -->
-        <div class="card-header p-4 border-b border-gray-200 bg-white rounded-t-lg min-h-[72px] flex items-center justify-center">
-          <h3 class="text-xl font-semibold text-center text-gray-800" :title="actividad.Activity_Type">
-            {{ actividad.Activity_Type }}
-          </h3>
-        </div>
+     class="card flex flex-col h-full shadow-lg rounded-lg bg-white border border-gray-200">
 
-        <!-- Cuerpo de la Card -->
-        <div class="card-body p-4 flex-grow overflow-y-auto" style="max-height: 200px;"> <!-- Limita altura y permite scroll -->
-          <ul class="space-y-2 text-sm text-gray-700">
-            <template v-for="campo in camposVisiblesEnCard" :key="campo.key">
-              <li v-if="actividad[campo.key] !== null && actividad[campo.key] !== undefined && String(actividad[campo.key]).trim() !== ''">
-                <strong class="font-bold text-gray-600">{{ campo.label }}: </strong>
-                <span class="break-words">{{ actividad[campo.key] }}</span>
-              </li>
-            </template>
-          </ul>
-        </div>
+  <!-- Cabecera de la Card -->
+  <div class="card-header p-4 border-b border-gray-200 bg-white rounded-t-lg min-h-[72px] flex items-center justify-center">
+    <h3 class="text-xl font-semibold text-center text-gray-800" :title="actividad.Activity_Type">
+      {{ actividad.Activity_Type }}
+    </h3>
+  </div>
 
-        <!-- Pie de la Card -->
-        <div class="card-footer p-4 border-t border-gray-200 bg-white rounded-b-lg mt-auto">
-          <div class="flex flex-col gap-2">
-            <Button
-              label="Completar"
-              icon="pi pi-check"
-              class="p-button-success w-full"
-              @click="abrirCompletarActividadDialog(actividad)" />
-            <Button
-              v-if="actividad.Activity_Document"
-              label="Ver Documento"
-              icon="pi pi-file-pdf"
-              class="p-button-info w-full"
-              @click="verDocumento(actividad.Activity_Document)" />
-          </div>
-        </div>
-      </div>
+  <!-- Cuerpo de la Card -->
+  <div class="card-body p-4 flex-grow overflow-y-auto" style="max-height: 200px;"> <!-- Limita altura y permite scroll -->
+    <ul class="space-y-2 text-sm text-gray-700">
+      <template v-for="campo in camposVisiblesEnCard" :key="campo.key">
+        <li v-if="actividad[campo.key] !== null && actividad[campo.key] !== undefined && String(actividad[campo.key]).trim() !== ''">
+          <strong class="font-bold text-gray-600">{{ campo.label }}: </strong>
+          <span class="break-words">{{ actividad[campo.key] }}</span>
+        </li>
+      </template>
+      <!-- Agregar el campo de estado -->
+      <li>
+        <strong class="font-bold text-gray-600">Estado: </strong>
+        <span class="break-words">{{ actividad.Activity_Status }}</span>
+      </li>
+    </ul>
+  </div>
+
+  <!-- Pie de la Card -->
+  <div class="card-footer p-4 border-t border-gray-200 bg-white rounded-b-lg mt-auto">
+    <div class="flex flex-col gap-2">
+      <Button
+        label="Completar"
+        icon="pi pi-check"
+        class="p-button-success w-full"
+        @click="abrirCompletarActividadDialog(actividad)" />
+      <Button
+        v-if="actividad.Activity_Document"
+        label="Ver Documento"
+        icon="pi pi-file-pdf"
+        class="p-button-info w-full"
+        @click="verDocumento(actividad.Activity_Document)" />
+    </div>
+  </div>
+</div>
     </div>
 
     <!-- Mensaje si no hay actividades -->
