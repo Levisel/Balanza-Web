@@ -120,7 +120,7 @@ const tableConfig = {
     { field: "Academic_Instruction_Status", header: "Estado", type: "boolean" },
   ],
   Number_Of_Attempts: [
-    { field: "Number_Of_Attempts", header: "Nombre", type: "string" },
+    { field: "Number_Of_Attempts", header: "Número de Intentos", type: "number" },
     { field: "Number_Of_Attempts_Status", header: "Estado", type: "boolean" },
   ],
   Complexity: [
@@ -186,6 +186,7 @@ const tableConfig = {
     { field: "Field_Of_Activity_Type", header: "Tipo", type: "string" },
     { field: "Field_Of_Activity_Status", header: "Estado", type: "boolean" },
   ],
+
 };
 
 // Función para resetear el registro seleccionado

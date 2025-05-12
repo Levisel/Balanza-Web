@@ -27,7 +27,7 @@ import FileUpload from "primevue/fileupload";
 import Paginator from "primevue/paginator";
 import Dialog from "primevue/dialog";
 import Knob from "primevue/knob";
-import Editor from "primevue/editor";
+import Editor, { type EditorTextChangeEvent } from "primevue/editor";
 import ConfirmDialog from "primevue/confirmdialog";
 import ProgressSpinner from "primevue/progressspinner";
 import ToggleSwitch from "primevue/toggleswitch";
@@ -70,6 +70,7 @@ const selectedActivity = ref<Activity[]>([]);
 const selectedStudent = ref<string>("");
 
 const referenceDialog = ref(false);
+const isCreateLoading = ref(false);
 const healthDocumentDialog = ref(false);
 const bandera = ref<boolean>(false); //Revisa si la cedula tiene 10 digitos
 
@@ -1861,6 +1862,7 @@ const fetchActivities = async (initCode: string): Promise<void> => {
 //NEW CONSULTATION
 
 const createInitialConsultation = async () => {
+  isCreateLoading.value = true;
   // Validar que existan campos obligatorios, por ejemplo, User_ID
   if (!userID.value) {
     toast.add({
@@ -2042,6 +2044,7 @@ const createInitialConsultation = async () => {
       detail: "La consulta inicial ha sido creada con éxito.",
       life: 4000,
     });
+    isCreateLoading.value = false;
     restartUserForm();
   } catch (error) {
     toast.add({
@@ -2050,7 +2053,8 @@ const createInitialConsultation = async () => {
       detail: "No se pudo crear la consulta inicial",
       life: 4000,
     });
-  }
+    isCreateLoading.value = false;
+  } 
 };
 
 const requestNewConsultation = async () => {
@@ -2199,7 +2203,7 @@ const newUserConsultation = async () => {
       detail: "No se pudo crear la ficha, por favor inténtalo de nuevo.",
       life: 4000,
     });
-  }
+  } 
 };
 
 //EDIT CONSULTATION
@@ -2956,8 +2960,8 @@ const activityRows = ref(7); // Or any default number of rows per page
 
 // Function to get status severity for Tag component
 const getActivityStatusSeverity = (status: string) => {
-  switch (status?.toLowerCase()) {
-    case "completada":
+  switch (status.toLowerCase()) {
+    case "completado":
       return "success";
     case "en progreso":
       return "info";
@@ -2969,6 +2973,36 @@ const getActivityStatusSeverity = (status: string) => {
       return "secondary";
   }
 };
+
+
+const initNotesEditor = ref<any>(null);
+const MAX_INIT_NOTES_LENGTH = 823;
+
+const handleInitNotesChange = (event: EditorTextChangeEvent): void => {
+  const quill = event.instance
+  const text = (event.textValue ?? quill.getText()).slice(0, -1)
+  const length = text.length
+
+  if (length > MAX_INIT_NOTES_LENGTH) {
+    // eliminar el exceso
+    quill.deleteText(
+      MAX_INIT_NOTES_LENGTH,
+      length - MAX_INIT_NOTES_LENGTH,
+      'silent'
+    )
+    // sincronizar el v-model con el HTML corregido
+    initNotes.value = event.htmlValue
+    toast.add({
+      severity: 'warn',
+      summary: 'Límite de Caracteres',
+      detail: `Máximo ${MAX_INIT_NOTES_LENGTH} caracteres.`,
+      life: 3000
+      
+    })
+  }
+}
+
+
 </script>
 
 <template>
@@ -3006,7 +3040,7 @@ const getActivityStatusSeverity = (status: string) => {
           severity="info"
           @click="editUser"
           icon="pi pi-user-edit"
-          label="Editar"
+          label="Guardar"
           class="ml-2"
           :disabled="!doesUserExist || secretaryUser"
         />
@@ -4352,8 +4386,10 @@ const getActivityStatusSeverity = (status: string) => {
               <div class="flex flex-col">
                 <label for="initNotes" class="mb-2">Observación</label>
                 <Editor
+                  ref="initNotesEditor"
                   v-model="initNotes"
                   class="w-full"
+                  @text-change="handleInitNotesChange"
                   editorStyle="height: 239px"
                   :class="[
                     doesUserExist && !doesUserRequestOp
@@ -4609,8 +4645,8 @@ const getActivityStatusSeverity = (status: string) => {
                 style="min-width: 8rem"
               ></Column>
               <Column
-                field="Activity_Name"
-                header="Nombre"
+                field="Activity_Type"
+                header="Tipo"
                 sortable
                 style="min-width: 12rem"
               ></Column>
@@ -4629,7 +4665,11 @@ const getActivityStatusSeverity = (status: string) => {
                 header="Lugar"
                 sortable
                 style="min-width: 10rem"
-              ></Column>
+              >
+                <template #body="slotProps">
+                  {{ slotProps.data.Activity_Location || "No disponible" }}
+                </template>
+             </Column>
               <Column
                 header="Abogado"
                 sortable
@@ -4690,61 +4730,45 @@ const getActivityStatusSeverity = (status: string) => {
           </div>
 
           <!-- Diálogo para mostrar detalles de la actividad (remains the same) -->
-          <Dialog
+<Dialog
             v-model:visible="activityDialogVisible"
             modal
             header="📋 Detalles de la Actividad"
             :style="{ width: '60vw', maxWidth: '800px' }"
             class="p-6 rounded-2xl shadow-2xl bg-white"
           >
-            <div
-              v-if="selectedActivityDetails"
-              class="grid grid-cols-1 md:grid-cols-2 gap-4 text-lg"
-            >
-              <div>
-                <p class="mb-3">
-                  <strong>📌 Nombre:</strong>
-                  {{ selectedActivityDetails.Activity_Name }}
+            <div v-if="selectedActivityDetails" class="space-y-5 text-base">
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3">
+                <p>
+                  <strong>🏷️ Tipo:</strong>
+                  {{ selectedActivityDetails.Activity_Type || "No disponible" }}
                 </p>
-                <p class="mb-3">
+                <p>
                   <strong>📅 Fecha:</strong>
                   {{
-                    new Date(
-                      selectedActivityDetails.Activity_Start_Date
-                    ).toLocaleDateString()
+                    selectedActivityDetails.Activity_Date
+                      ? new Date(selectedActivityDetails.Activity_Date).toLocaleDateString()
+                      : "No disponible"
                   }}
                 </p>
-                <p class="mb-3">
-                  <strong>🕒 Hora:</strong>
-                  {{ selectedActivityDetails.Activity_Start_Time }}
+                <p>
+                  <strong>🧑‍🎓 Estudiante:</strong>
+                  {{ getInternalUserName(selectedActivityDetails.Internal_User_ID_Student) || "No disponible" }}
                 </p>
-                <p class="mb-3">
-                  <strong>📍 Lugar:</strong>
-                  {{ selectedActivityDetails.Activity_Location }}
+                 <p>
+                  <strong>🕒 Hora de Inicio:</strong>
+                  {{ selectedActivityDetails.Activity_StartTime || "No disponible" }}
                 </p>
-                <p class="mb-3">
-                  <strong>⏳ Duración:</strong>
-                  {{ selectedActivityDetails.Activity_Duration }}
+                <p>
+                  <strong>🧑‍⚖️ Abogado:</strong>
+                  {{ getInternalUserName(selectedActivityDetails.Internal_ID) || "No disponible" }}
                 </p>
-                <p class="mb-3">
-                  <strong>🤝 Contraparte:</strong>
-                  {{ selectedActivityDetails.Activity_Counterparty }}
+                <p>
+                  <strong>⏰ Hora Programada:</strong>
+                  {{ selectedActivityDetails.activityScheduledTime || "No disponible" }}
                 </p>
-              </div>
-
-              <div>
-                <p class="mb-3">
-                  <strong>🏛️ Juzgado:</strong>
-                  {{ selectedActivityDetails.Activity_Judged }}
-                </p>
-                <p class="mb-3">
-                  <strong>⚖️ Juez:</strong>
-                  {{
-                    selectedActivityDetails.Activity_Judge_Name || "No asignado"
-                  }}
-                </p>
-                <p class="mb-3">
-                  <strong>📌 Estado: </strong>
+                <p>
+                  <strong>🚦 Estado: </strong>
                   <Tag
                     :value="selectedActivityDetails.Activity_Status"
                     :severity="
@@ -4754,23 +4778,56 @@ const getActivityStatusSeverity = (status: string) => {
                     "
                   />
                 </p>
-                <p class="mb-3">
-                  <strong>📁 Referencia:</strong>
-                  {{ selectedActivityDetails.Activity_Reference_File }}
+                <p>
+                  <strong>📍 Lugar:</strong>
+                  {{ selectedActivityDetails.Activity_Location || "No disponible" }}
                 </p>
-                <p class="mb-3">
-                  <strong>⏱️ ¿A tiempo?: </strong>
-                  <span
-                    :class="
-                      selectedActivityDetails.Activity_OnTime
-                        ? 'text-green-600 font-semibold'
-                        : 'text-red-600 font-semibold'
-                    "
-                  >
-                    {{ selectedActivityDetails.Activity_OnTime ? "Sí" : "No" }}
-                  </span>
+                <p>
+                  <strong>🏛️ Tipo de Judicatura:</strong>
+                  {{ selectedActivityDetails.Activity_JurisdictionType || "No disponible" }}
+                </p>
+                <p>
+                  <strong>⏳ Última Actividad (CJP): </strong>
+                    {{
+                      selectedActivityDetails.Activity_lastCJGActivity || "No asignado"
+                    }}
+                </p>
+                <p>
+                  <strong>⚖️ Referencia Interna:</strong>
+                  {{
+                    selectedActivityDetails.Activity_InternalReference || "No asignado"
+                  }}
+                </p>
+                <p>
+                  <strong>🗓️ Fecha Última Actividad (CJP): </strong>
+                  {{
+                    selectedActivityDetails.Activity_lastCJGActivityDate
+                      ? new Date(selectedActivityDetails.Activity_lastCJGActivityDate).toLocaleDateString()
+                      : "No disponible"
+                  }}
+                </p>
+                <p class="md:col-span-2">
+                  <strong>🔢 Nro. Juzgado/Unidad Judicial:</strong>
+                  {{ selectedActivityDetails.Activity_CourtNumber || "No disponible" }}
                 </p>
               </div>
+
+              <div class="pt-1">
+                <p class="mb-1 font-semibold">📝 Descripción:</p>
+                <div class="p-3 card min-h-[80px] max-h-[200px] overflow-y-auto whitespace-pre-wrap break-words">
+                  {{ selectedActivityDetails.Activity_Description || "No disponible" }}
+                </div>
+              </div>
+
+              <div class="pt-1 text-base">
+                <p class="mb-1 font-semibold">💬 Observación:</p>
+                <div class="p-3 card min-h-[80px] max-h-[200px] overflow-y-auto whitespace-pre-wrap break-words">
+                  {{ selectedActivityDetails.Activity_Observation || "No disponible" }}
+                </div>
+              </div>
+            </div>
+            <div v-else class="text-center py-6">
+              <p>No hay detalles de actividad para mostrar.</p>
             </div>
           </Dialog>
         </TabPanel>
@@ -4785,7 +4842,8 @@ const getActivityStatusSeverity = (status: string) => {
         label="Crear Caso"
         icon="pi pi-folder-plus"
         @click="createInitialConsultation"
-        :disabled="areInputsDisabled"
+        :disabled="areInputsDisabled || isCreateLoading"
+        :loading="isCreateLoading"
       />
     </div>
 
