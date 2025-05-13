@@ -57,7 +57,6 @@ export interface User {
     User_Pensioner: string;
     User_HealthInsurance: string;
     User_VulnerableSituation: string;
-    User_SupportingDocuments: string;
     User_Disability: string;
     User_DisabilityPercentage: number;
     User_CatastrophicIllness: string;
@@ -101,37 +100,39 @@ export interface Evidence {
 
 
 // 📌 Initial_Consultation (The activities assigned to the student)
-export interface Activity {   
+  export interface Activity {   
     Activity_ID: number;
     Init_Code: string;
     Internal_ID: string;
-    Internal_Name: string;
-    Activity_Name: string;
-    Activity_Start_Date: Date;
-    Activity_Start_Time: string;
-    Activity_Location: string;
-    Activity_Duration: string;
-    Activity_Counterparty: string;
-    Activity_Judged: string;
-    Activity_Judge_Name: string;
-    Activity_Reference_File: string;
+    Activity_Type: string;
+    Activity_Description: string;
+    Activity_Location: string | null;
+    Activity_Date: Date;
+    Activity_StartTime: string | null;
+    activityScheduledTime: string | null;
     Activity_Status: string;
-    Activity_OnTime: boolean;
-    Activity_Document: File | null;
-}
+    Activity_JurisdictionType: string;
+    Activity_InternalReference: string;
+    Activity_CourtNumber: string;
+    Activity_lastCJGActivity: string;
+    Activity_lastCJGActivityDate: Date; // Cambiado a Date
+    Activity_Observation: string;
+    Internal_User_ID_Student: string; // ID del estudiante asignado a la actividad
+  }
 
 //------------------------------------------------------------------------------------------------------------------//
 //Control de Ingreso
 // 📌 Interface de Periodo
-export interface Periodo {
-    Periodo_ID: number;
-    PeriodoNombre: string;
-    PeriodoTipo: string;
-    Periodo_Inicio: Date;
-    Periodo_Fin: Date;
-    Periodo_Total_Horas: number;
-    Periodo_IsDeleted: boolean;
-}
+export interface Period {
+    Period_ID: number;
+    Period_Name: string;
+    Period_Type: string;
+    Period_Start: Date;
+    Period_End: Date;
+    Period_Total_Hours: number;
+    Period_IsDeleted: boolean;
+  }
+  
 
 // 📌 Interface de Usuario (sin `UsuarioXPeriodo_ID`)
 export interface Usuario {
@@ -148,27 +149,37 @@ export interface Usuario {
 }
 
 // 📌 Interface de UsuarioXPeriodo (con `UsuarioXPeriodo_ID`)
-export interface UsuarioXPeriodo {
-    UsuarioXPeriodo_ID: number;
-    Periodo_ID: number;
-    Usuario_Cedula: string;
-    UsuarioXPeriodo_IsDeleted: boolean;
+export interface UserXPeriod {
+    UserXPeriod_ID: number;
+    Period_ID: number;
+    Internal_ID: string;
+    UserXPeriod_IsDeleted: boolean;
 }
 
 // 📌 Interface de UsuarioXPeriodoDVM (Usado en la tabla para mostrar datos combinados)
-export interface UsuarioXPeriodoDVM {
+export interface UserXPeriodDVM {
     Internal_ID: string;
     Internal_Name: string;
     Internal_LastName: string;
     Internal_Email: string;
-    Internal_Phone: string | null;
-    Internal_Type: string | null;
-    Internal_Status: string | null;
-    Internal_Huella: Blob;
     Internal_Area: string;
-    Periodo_ID: number;
-    PeriodoNombre: string;
-}
+    Internal_Huella?: boolean; // Added this property
+    Internal_Phone?: string; // Added this property
+    Internal_Type?: string;
+    Internal_Status?: string;
+    Internal_Picture?: string; // Added this property
+    // Este campo se usa cuando haces `fetchUsersByPeriod`
+    Period_ID?: number;
+    Period_Name?: string;
+  
+    // Este campo se usa cuando haces `fetchAllUsersXPeriod`
+    periodos?: Array<{
+      Period_ID: number;
+      Period_Name: string;
+    }>;
+  }
+  
+  
 
 // 📌 Interface de Horarios (basado en tu esquema de la base de datos)
 export interface Horario {

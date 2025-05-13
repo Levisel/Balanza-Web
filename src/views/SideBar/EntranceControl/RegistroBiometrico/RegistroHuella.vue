@@ -111,6 +111,7 @@ import ProgressSpinner from "primevue/progressspinner";
 import { useToast } from "primevue/usetoast";
 import { API, type Usuario } from "@/ApiRoute";
 import { useDarkMode } from "@/components/ThemeSwitcher";
+import axios from "axios";
 
 const router = useRouter();
 const route = useRoute();
@@ -121,6 +122,17 @@ const { isDarkTheme } = useDarkMode();
 const estudianteId = computed(() =>
   route.params.cedula ? String(route.params.cedula) : route.params.id ? String(route.params.id) : null
 );
+
+const getLectorURL = (path: string): string => {
+  if (import.meta.env.DEV) {
+    // Desarrollo: usa proxy
+    return path;
+  } else {
+    // Producción: usa la IP local o hostname de la máquina cliente
+    return `https://${window.location.hostname}:8443${path}`;
+  }
+};
+
 
 // Variables del estudiante
 const cedula = ref("");
@@ -157,9 +169,7 @@ const cargarEstudiante = async () => {
   }
   cargando.value = true;
   try {
-    const response = await fetch(`${API}/internal-user/${estudianteId.value}`);
-    if (!response.ok) throw new Error("Error al obtener el estudiante");
-    const data: Usuario = await response.json();
+    const { data } = await axios.get(`${API}/internal-user/${estudianteId.value}`);
     cedula.value = data.Internal_ID;
     nombres.value = data.Internal_Name;
     apellidos.value = data.Internal_LastName;
@@ -173,6 +183,7 @@ const cargarEstudiante = async () => {
   }
 };
 
+
 // Función para iniciar la captura de huella
 const iniciarCaptura = async () => {
   if (capturando.value) {
@@ -184,14 +195,12 @@ const iniciarCaptura = async () => {
   try {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 15000);
-    const response = await fetch("/SGIFPCapture", {
+    const response = await fetch(getLectorURL("/SGIFPCapture"), {
       method: "POST",
       mode: "cors",
       headers: {
         "Content-Type": "application/json",
-        Accept: "*/*",
-        Origin: "http://localhost:5173",
-        "Access-Control-Allow-Origin": "*",
+        Accept: "*/*"
       },
       body: JSON.stringify({
         Licstr: "",
@@ -207,6 +216,7 @@ const iniciarCaptura = async () => {
       throw new Error(`Respuesta HTTP inválida: ${response.status}`);
     }
     const data = await response.json();
+    console.log("Respuesta de captura:", data);
     if (data.ErrorCode === 0 && data.TemplateBase64) {
       huellaBase64.value = data.TemplateBase64;
       huellaCapturada.value = true;
@@ -240,9 +250,7 @@ const cancelarCaptura = () => {
   capturando.value = false;
 };
 
-// Función para guardar la huella en la base de datos
-// Se realiza un PUT enviando la cédula como query y en el body se manda { Usuario_Huella: null }
-// Función para guardar la huella en la base de datos
+
 // Se realiza un PUT enviando la cédula en query y en el body { Usuario_Huella: huellaBase64 }
 // 📌 4️⃣ Guardar huella en la base de datos
 const guardarHuella = async () => {
@@ -256,23 +264,19 @@ const guardarHuella = async () => {
     return;
   }
   try {
-    const response = await fetch(`${API}/usuarios/actualizar-huella`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        usuarioCedula: cedula.value,
-        template: huellaBase64.value,
-      }),
+    await axios.put(`${API}/usuarios/actualizar-huella`, {
+      usuarioCedula: cedula.value,
+      template: huellaBase64.value,
     });
-    if (!response.ok) throw new Error("No se pudo guardar la huella.");
+
     toast.add({
       severity: "success",
       summary: "Huella Guardada",
       detail: "La huella digital se registró correctamente.",
       life: 3000,
     });
-  
-      router.push("/AsignacionHuella");
+
+    router.push("/AsignacionHuella");
 
   } catch (error) {
     console.error("Error al guardar la huella:", error);
@@ -284,6 +288,7 @@ const guardarHuella = async () => {
     });
   }
 };
+
 
 // Función para volver a la vista de Asignación de Huella
 const volverAsignacionHuella = () => {
@@ -297,5 +302,4 @@ onMounted(() => {
 </script>
 
 <style scoped>
-/* Agrega estilos adicionales si es necesario */
 </style>

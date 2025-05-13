@@ -27,7 +27,7 @@ import FileUpload from "primevue/fileupload";
 import Paginator from "primevue/paginator";
 import Dialog from "primevue/dialog";
 import Knob from "primevue/knob";
-import Editor from "primevue/editor";
+import Editor, { type EditorTextChangeEvent } from "primevue/editor";
 import ConfirmDialog from "primevue/confirmdialog";
 import ProgressSpinner from "primevue/progressspinner";
 import ToggleSwitch from "primevue/toggleswitch";
@@ -35,6 +35,8 @@ import axios from "axios";
 
 const route = useRoute();
 const authStore = useAuthStore();
+
+const secretaryUser = authStore.user?.type == 'Secretaria'; 
 
 onMounted(async () => {
   if (route.query.userID) {
@@ -65,8 +67,10 @@ const searchIDInput = ref<string>("");
 const selectedUser = ref<User>({} as User);
 const selectedEvidence = ref<Evidence>({} as Evidence);
 const selectedActivity = ref<Activity[]>([]);
+const selectedStudent = ref<string>("");
 
 const referenceDialog = ref(false);
+const isCreateLoading = ref(false);
 const healthDocumentDialog = ref(false);
 const bandera = ref<boolean>(false); //Revisa si la cedula tiene 10 digitos
 
@@ -98,6 +102,7 @@ const deleteDocument = () => {
             "internal-id": internalID,
           },
         });
+        healthDocumentDialog.value = false; // Cerrar el diálogo después de eliminar el documento
         toast.add({
           severity: "info",
           summary: "Eliminado",
@@ -968,7 +973,7 @@ const userReferencePhone = ref("");
 //DATOS DEMOGRÁFICOS
 
 const userSocialBenefit = ref(false);
-const userEconomicDependece = ref(false);
+const userEconomicDependence = ref(false);
 const userAcademicInstruction = ref<{ name: string; value: string } | null>(
   null
 );
@@ -1082,18 +1087,7 @@ axios.get(`${API}/vulnerable-situation`).then((response) => {
   }));
 });
 
-const userSupportingDocuments = ref<{ name: string; value: string } | null>(
-  null
-);
-const userSupportingDocumentsOptions = ref<{ name: string; value: string }[]>(
-  []
-);
-axios.get(`${API}/documentation-backups`).then((response) => {
-  userSupportingDocumentsOptions.value = response.data.map((item: any) => ({
-    name: item.Documentation_Backup_Name,
-    value: item.Documentation_Backup_Name,
-  }));
-});
+
 
 const userDisability = ref<{ name: string; value: string } | null>(null);
 const userDisabilityOptions = ref<{ name: string; value: string }[]>([]);
@@ -1375,7 +1369,7 @@ const restartUserForm = () => {
   userReferencePhone.value = "";
   //DATOS DEMOGRÁFICOS
   userSocialBenefit.value = false;
-  userEconomicDependece.value = false;
+  userEconomicDependence.value = false;
   userAcademicInstruction.value = null;
   userProfession.value = null;
   userMaritalStatus.value = null;
@@ -1390,7 +1384,6 @@ const restartUserForm = () => {
   userPensioner.value = null;
   userHealthInsurance.value = null;
   userVulnerableSituation.value = null;
-  userSupportingDocuments.value = null;
   userDisability.value = null;
   userDisabilityPercentage.value = 0;
   userCatastrophicIllness.value = null;
@@ -1434,20 +1427,6 @@ const restartConsultationForm = () => {
   initAlertNote.value = "";
   initSocialWork.value = false;
   initMandatorySW.value = false;
-};
-
-const searchIDButton = () => {
-  if (searchIDInput.value.trim() !== "") {
-    areInputsDisabled.value = false;
-    fetchUser();
-  } else {
-    toast.add({
-      severity: "error",
-      summary: "Error",
-      detail: "Ingrese un ID válido",
-      life: 3000,
-    });
-  }
 };
 
 const fetchUser = async () => {
@@ -1498,16 +1477,6 @@ const fetchUser = async () => {
         userEthnicity.value = option;
       }
     });
-    // userProvinceOptions.value.forEach((option) => {
-    //   if (option.name === selectedUser.value.User_Province) {
-    //     userProvince.value = option;
-    //   }
-    // });
-    // userCityOptions.value.forEach((option) => {
-    //   if (option.name === selectedUser.value.User_City) {
-    //     userCity.value = option;
-    //   }
-    // });
 
     const foundProvince = userProvinceOptions.value.find(
       (option) => option.name === selectedUser.value.User_Province
@@ -1555,7 +1524,7 @@ const fetchUser = async () => {
 
     //DATOS DEMOGRÁFICOS
     userSocialBenefit.value = selectedUser.value.User_SocialBenefit;
-    userEconomicDependece.value = selectedUser.value.User_EconomicDependence;
+    userEconomicDependence.value = selectedUser.value.User_EconomicDependence;
 
     userAcademicInstructionOptions.value.forEach((option) => {
       if (option.value === selectedUser.value.User_AcademicInstruction) {
@@ -1615,11 +1584,7 @@ const fetchUser = async () => {
         userVulnerableSituation.value = option;
       }
     });
-    userSupportingDocumentsOptions.value.forEach((option) => {
-      if (option.value === selectedUser.value.User_SupportingDocuments) {
-        userSupportingDocuments.value = option;
-      }
-    });
+
     userDisabilityOptions.value.forEach((option) => {
       if (option.value === selectedUser.value.User_Disability) {
         userDisability.value = option;
@@ -1651,12 +1616,42 @@ const fetchUser = async () => {
     isSearchButtonDisabled.value = true;
     isSearchInputDisabled.value = true;
     searchIDInput.value = "Buscar por Cédula o Pasaporte";
-    toast.add({
+    if(!secretaryUser){
+      toast.add({
       severity: "info",
       summary: "Usuario no registrado",
       detail:
         "Porfavor, completa el formulario para registrar al nuevo usuario y la consulta..",
       life: 6000,
+    });
+    }
+    else{
+      toast.add({
+        severity: "info",
+        summary: "Usuario no registrado",
+        detail:
+          "Porfavor, haz clic en el botón reiniciar para ingresar un nuevo ID.",
+        life: 7000,
+      });
+    }
+
+  }
+};
+
+const searchIDButton = async () => {
+  if (searchIDInput.value.trim() !== "") {
+    areInputsDisabled.value = false;
+    await fetchUser();
+    if(secretaryUser && doesUserExist.value === false) {
+      areInputsDisabled.value = true;
+    }
+
+  } else {
+    toast.add({
+      severity: "error",
+      summary: "Error",
+      detail: "Ingrese un ID válido",
+      life: 3000,
     });
   }
 };
@@ -1862,10 +1857,12 @@ const fetchActivities = async (initCode: string): Promise<void> => {
   }
 };
 
+
 //CONSULTATION OPERATIONS
 //NEW CONSULTATION
 
 const createInitialConsultation = async () => {
+  isCreateLoading.value = true;
   // Validar que existan campos obligatorios, por ejemplo, User_ID
   if (!userID.value) {
     toast.add({
@@ -1914,7 +1911,7 @@ const createInitialConsultation = async () => {
   formData.append("User_SocialBenefit", userSocialBenefit.value.toString());
   formData.append(
     "User_EconomicDependence",
-    userEconomicDependece.value.toString()
+    userEconomicDependence.value.toString()
   );
   formData.append(
     "User_AcademicInstruction",
@@ -1956,10 +1953,7 @@ const createInitialConsultation = async () => {
     "User_VulnerableSituation",
     userVulnerableSituation.value?.value || ""
   );
-  formData.append(
-    "User_SupportingDocuments",
-    userSupportingDocuments.value?.value || ""
-  );
+
   formData.append("User_Disability", userDisability.value?.value || "Ninguna");
   formData.append(
     "User_DisabilityPercentage",
@@ -2050,6 +2044,7 @@ const createInitialConsultation = async () => {
       detail: "La consulta inicial ha sido creada con éxito.",
       life: 4000,
     });
+    isCreateLoading.value = false;
     restartUserForm();
   } catch (error) {
     toast.add({
@@ -2058,7 +2053,8 @@ const createInitialConsultation = async () => {
       detail: "No se pudo crear la consulta inicial",
       life: 4000,
     });
-  }
+    isCreateLoading.value = false;
+  } 
 };
 
 const requestNewConsultation = async () => {
@@ -2207,7 +2203,7 @@ const newUserConsultation = async () => {
       detail: "No se pudo crear la ficha, por favor inténtalo de nuevo.",
       life: 4000,
     });
-  }
+  } 
 };
 
 //EDIT CONSULTATION
@@ -2261,45 +2257,68 @@ const editUserConsultation = async () => {
     return;
   }
 
+  // Get Original Consultation Data ---
+  const originalConsultation = consultations.value.find(
+    (c) => c.Init_Code === initCode.value
+  );
+
+  if (!originalConsultation) {
+    toast.add({
+      severity: "error",
+      summary: "Error",
+      detail: "No se encontró la consulta original para comparar.",
+      life: 4000,
+    });
+    return;
+  }
+
   // El índice actual antes de editar
   const currentPageBeforeEdit = first.value;
 
-  const consultationData = {
-    Init_Code: initCode.value,
-    Internal_ID: internalID,
-    Init_ClientType: initClientType.value?.value,
-    Init_Subject: initSubject.value?.value,
-    Init_Lawyer: initLawyer.value?.value,
+
+  const updatedConsultationData = {
+
+    Init_ClientType: initClientType.value?.value ?? originalConsultation.Init_ClientType,
+    Init_Subject: initSubject.value?.value ?? originalConsultation.Init_Subject,
+    Init_Lawyer: initLawyer.value?.value ?? originalConsultation.Init_Lawyer,
     Init_EndDate: initEndDate.value
-      ? initEndDate.value.toISOString().split("T")[0]
-      : null,
-    Init_Office: initOffice.value,
-    Init_Topic: initTopic.value?.value,
-    Init_Service: initService.value?.value,
-    Init_Referral: initReferral.value?.value,
-    Init_CaseStatus: initCaseStatus.value?.value,
-    Init_Notes: initNotes.value || "",
-    Init_Complexity: initComplexity.value?.value || "",
-    Init_Type: "",
+      ? initEndDate.value.toISOString().split("T")[0] 
+      : null, 
+    Init_Office: initOffice.value ?? originalConsultation.Init_Office,
+    Init_Topic: initTopic.value?.value ?? originalConsultation.Init_Topic,
+    Init_Service: initService.value?.value ?? originalConsultation.Init_Service,
+    Init_Referral: initReferral.value?.value ?? originalConsultation.Init_Referral,
+    Init_CaseStatus: initCaseStatus.value?.value ?? originalConsultation.Init_CaseStatus,
+    Init_Notes: initNotes.value ?? originalConsultation.Init_Notes, 
+    Init_Complexity: initComplexity.value?.value ?? originalConsultation.Init_Complexity,
+    Init_Type: "", 
     Init_SocialWork: initSocialWork.value,
-    Init_MandatorySW: initMandatorySW.value,
-    User_ID: userID.value,
+    Init_MandatorySW: initMandatorySW.value, 
+
   };
-  if (initService.value?.value === "Patrocinio") {
-    consultationData.Init_Type = "Por Asignar";
-  } else if (initMandatorySW.value === true) {
-    consultationData.Init_Type = "En espera";
+
+  // Recalculate Init_Type based on updated values
+  if (updatedConsultationData.Init_Service === "Patrocinio") {
+    updatedConsultationData.Init_Type = "Por Asignar";
+  } else if (updatedConsultationData.Init_MandatorySW === true) {
+    updatedConsultationData.Init_Type = "En espera";
   } else {
-    consultationData.Init_Type = "Por Revisar";
+    updatedConsultationData.Init_Type = "Por Revisar";
   }
 
-  if (initSocialWork.value === false) {
-    consultationData.Init_SocialWork = false;
-    consultationData.Init_MandatorySW = false;
+  // Apply conditional resets based on updated values
+  if (updatedConsultationData.Init_SocialWork === false) {
+    updatedConsultationData.Init_MandatorySW = false;
   }
+
+
 
   //Verificamos que la fecha de fin no sea menor a la fecha de inicio
-  if (initEndDate.value && initEndDate.value < initDate.value) {
+  // Use originalConsultation.Init_Date for comparison as initDate ref might change
+  const originalInitDate = new Date(originalConsultation.Init_Date);
+  originalInitDate.setMinutes(originalInitDate.getMinutes() + originalInitDate.getTimezoneOffset()); // Adjust timezone if needed
+
+  if (initEndDate.value && initEndDate.value < originalInitDate) {
     toast.add({
       severity: "error",
       summary: "Error",
@@ -2309,12 +2328,93 @@ const editUserConsultation = async () => {
     return;
   }
 
-  console.log("Datos enviados:", JSON.stringify(consultationData, null, 2));
+  // --- START: Comparison Logic ---
+  let hasChanges = false;
+
+  // Define keys to compare (exclude identifiers like Init_Code, User_ID, Internal_ID)
+  const keysToCompare: (keyof typeof updatedConsultationData)[] = [
+    'Init_ClientType', 'Init_Subject', 'Init_Lawyer', 'Init_EndDate',
+    'Init_Office', 'Init_Topic', 'Init_Service', 'Init_Referral',
+    'Init_CaseStatus', 'Init_Notes', 'Init_Complexity', 'Init_Type',
+    'Init_SocialWork', 'Init_MandatorySW'
+  ];
+
+  for (const key of keysToCompare) {
+    const updatedValue = updatedConsultationData[key];
+    const originalValue = originalConsultation[key as keyof Initial_Consultation]; // Type assertion
+
+    // Handle Date comparison specifically for Init_EndDate
+    if (key === 'Init_EndDate') {
+        const originalDatePart = originalValue ? String(originalValue).substring(0, 10) : null;
+        const updatedDatePart = updatedValue; // Already YYYY-MM-DD or null
+
+        if (originalDatePart !== updatedDatePart) {
+
+            hasChanges = true;
+            break;
+        }
+    }
+    // Handle boolean comparison directly
+    else if (typeof updatedValue === 'boolean' && typeof originalValue === 'boolean') {
+        if (updatedValue !== originalValue) {
+             console.log(`*** Change detected in BOOLEAN key: ${key} ***`);
+             console.log(`Original: ${originalValue}, Updated: ${updatedValue}`);
+             hasChanges = true;
+             break;
+        }
+    }
+    // Handle other types (including null/undefined vs empty string)
+    else {
+        // Normalize null/undefined/empty string for comparison
+        const normUpdated = updatedValue === null || updatedValue === undefined ? "" : String(updatedValue);
+        const normOriginal = originalValue === null || originalValue === undefined ? "" : String(originalValue);
+
+        if (normUpdated !== normOriginal) {
+            console.log(`*** Change detected in key: ${key} ***`);
+            console.log(`Original Value: '${originalValue}' (Type: ${typeof originalValue})`);
+            console.log(`Updated Value: '${updatedValue}' (Type: ${typeof updatedValue})`);
+            console.log(`Normalized Original: '${normOriginal}'`);
+            console.log(`Normalized Updated: '${normUpdated}'`);
+            hasChanges = true;
+            break;
+        }
+    }
+  }
+
+  if (!hasChanges) {
+    toast.add({
+      severity: "warn",
+      summary: "Sin Cambios",
+      detail: "No se detectaron cambios para actualizar la ficha.",
+      life: 4000,
+    });
+
+    // Reset UI states as if edit was cancelled
+    editConsultationButtonDisabled.value = true;
+    isInitStatusDisabled.value = true;
+    isInitEndDateDisabled.value = true;
+    doesUserRequestOp.value = false;
+    isSaveButtonDisabled.value = false;
+    isEditButtonDisabled.value = false;
+    isDeleteButtonDisabled.value = false;
+    isExportButtonDisabled.value = false;
+    doesUserRequestEditConsultation.value = false;
+    return; // Stop execution if no changes are found
+  }
+  // --- END: Comparison Logic ---
+
+
+  const dataToSend = {
+      ...updatedConsultationData,
+      Init_Code: initCode.value,
+      Internal_ID: internalID,
+      User_ID: userID.value,
+  };
 
   try {
     await axios.put(
       `${API}/initial-consultations/${initCode.value}`,
-      consultationData,
+      dataToSend, // Send the final data object
       {
         headers: {
           "internal-id": authStore.user?.id,
@@ -2328,6 +2428,8 @@ const editUserConsultation = async () => {
       detail: "La ficha ha sido actualizada con éxito.",
       life: 4000,
     });
+
+    // --- Reset UI states and fetch data
     editConsultationButtonDisabled.value = true;
     isInitStatusDisabled.value = true;
     isInitEndDateDisabled.value = true;
@@ -2337,30 +2439,42 @@ const editUserConsultation = async () => {
     isDeleteButtonDisabled.value = false;
     isExportButtonDisabled.value = false;
     doesUserRequestEditConsultation.value = false;
-    restartEvidence();
-    restartConsultationForm();
-    await fetchConsultations();
+    restartEvidence(); 
+    await fetchConsultations(); // Refetch to get updated list
+
+    // Find the index of the updated consultation
     const index = consultations.value.findIndex(
       (consulta) => consulta.Init_Code === initCode.value
     );
+
     if (index !== -1) {
+      // If found, update the paginator and form
       first.value = index;
-      // Forzamos la actualización manual del formulario
+      // Ensure the form reflects the *just fetched* data, not stale refs
+      await nextTick(); // Wait for DOM update if necessary
       updateFormWithConsultation(consultations.value[index]);
     } else {
+      // If not found (shouldn't happen often after PUT), go back to previous or last page
       first.value =
         currentPageBeforeEdit < consultations.value.length
           ? currentPageBeforeEdit
-          : consultations.value.length - 1;
-      updateFormWithConsultation(consultations.value[first.value]);
+          : Math.max(0, consultations.value.length - 1); // Ensure first is not negative
+      if (consultations.value.length > 0) {
+         updateFormWithConsultation(consultations.value[first.value]);
+      } else {
+         restartConsultationForm(); // No consultations left, clear form
+         restartEvidence();
+      }
     }
+    // --- End Reset UI ---
+
   } catch (error: any) {
     if ((error as any).response?.status === 404) {
       toast.add({
-        severity: "warn",
-        summary: "Advertencia",
+        severity: "error", 
+        summary: "Error",
         detail:
-          "Por favor, revisa que has hecho cambios antes de actualizar la ficha.",
+          "No se encontró la consulta para actualizar o ocurrió un error.", // Adjusted message
         life: 4000,
       });
     } else {
@@ -2431,89 +2545,78 @@ const editUser = async () => {
   // Crear objeto actualizado mezclando datos originales y cambios del formulario
   const updatedUser = {
     //DATOS PERSONALES
-    User_ID_Type: userIDType.value?.value || originalUser.User_ID_Type,
-    User_ID: userID.value || originalUser.User_ID,
-    User_Age: userAge.value || originalUser.User_Age,
-    User_FirstName: userFirstName.value || originalUser.User_FirstName,
-    User_LastName: userLastName.value || originalUser.User_LastName,
-    User_Gender: userGender.value?.value || originalUser.User_Gender,
+    User_ID_Type: userIDType.value?.value ?? originalUser.User_ID_Type,
+    User_ID: userID.value ?? originalUser.User_ID,
+    User_Age: userAge.value ?? originalUser.User_Age, // Keep as string from form or original number
+    User_FirstName: userFirstName.value ?? originalUser.User_FirstName,
+    User_LastName: userLastName.value ?? originalUser.User_LastName,
+    User_Gender: userGender.value?.value ?? originalUser.User_Gender,
     User_BirthDate: userBirthDate.value
-      ? userBirthDate.value.toISOString().split("T")[0]
-      : originalUser.User_BirthDate,
+      ? userBirthDate.value.toISOString().split("T")[0] // Format to YYYY-MM-DD
+      : originalUser.User_BirthDate, // Keep original if no change
     User_Nationality:
-      userNationality.value?.name || originalUser.User_Nationality,
-    User_Ethnicity: userEthnicity.value?.value || originalUser.User_Ethnicity,
-    User_Province: userProvince.value?.value || originalUser.User_Province,
-    User_City: userCity.value?.value || originalUser.User_City,
+      userNationality.value?.name ?? originalUser.User_Nationality,
+    User_Ethnicity: userEthnicity.value?.value ?? originalUser.User_Ethnicity,
+    User_Province: userProvince.value?.value ?? originalUser.User_Province,
+    User_City: userCity.value?.value ?? originalUser.User_City,
 
     //DATOS DE CONTACTO Y CONTACTO DE REFERENCIA
-    User_Phone: userPhone.value.replace(/\D/g, "") || originalUser.User_Phone,
-    User_Email: userEmail.value || originalUser.User_Email,
-    User_Address: userAddress.value || originalUser.User_Address,
-    User_Sector: userSector.value?.value || originalUser.User_Sector,
-    User_Zone: userZone.value?.value || originalUser.User_Zone,
+    User_Phone: userPhone.value.replace(/\D/g, "") ?? originalUser.User_Phone,
+    User_Email: userEmail.value ?? originalUser.User_Email,
+    User_Address: userAddress.value ?? originalUser.User_Address,
+    User_Sector: userSector.value?.value ?? originalUser.User_Sector,
+    User_Zone: userZone.value?.value ?? originalUser.User_Zone,
     User_ReferenceRelationship:
-      userReferenceRelationship.value ||
+      userReferenceRelationship.value ??
       originalUser.User_ReferenceRelationship,
     User_ReferenceName:
-      userReferenceName.value || originalUser.User_ReferenceName,
+      userReferenceName.value ?? originalUser.User_ReferenceName,
     User_ReferencePhone:
-      userReferencePhone.value.replace(/\D/g, "") ||
+      userReferencePhone.value.replace(/\D/g, "") ??
       originalUser.User_ReferencePhone,
 
     //DATOS DEMOGRÁFICOS
     User_SocialBenefit:
-      userSocialBenefit.value !== undefined
-        ? userSocialBenefit.value
-        : originalUser.User_SocialBenefit,
-    User_EconomicDependece:
-      userEconomicDependece.value !== undefined
-        ? userEconomicDependece.value
-        : originalUser.User_EconomicDependence,
+      userSocialBenefit.value ?? originalUser.User_SocialBenefit,
+    User_EconomicDependence: // Corrected name
+      userEconomicDependence.value ?? originalUser.User_EconomicDependence,
     User_AcademicInstruction:
-      userAcademicInstruction.value?.value ||
+      userAcademicInstruction.value?.value ??
       originalUser.User_AcademicInstruction,
     User_Profession:
-      userProfession.value?.value || originalUser.User_Profession,
+      userProfession.value?.value ?? originalUser.User_Profession,
     User_MaritalStatus:
-      userMaritalStatus.value?.value || originalUser.User_MaritalStatus,
+      userMaritalStatus.value?.value ?? originalUser.User_MaritalStatus,
     User_Dependents:
-      userDependents.value !== null
-        ? userDependents.value
-        : originalUser.User_Dependents,
+      userDependents.value ?? originalUser.User_Dependents,
     User_IncomeLevel:
-      userIncomeLevel.value?.value || originalUser.User_IncomeLevel,
+      userIncomeLevel.value?.value ?? originalUser.User_IncomeLevel,
     User_FamilyIncome:
-      userFamilyIncome.value?.value || originalUser.User_FamilyIncome,
+      userFamilyIncome.value?.value ?? originalUser.User_FamilyIncome,
     User_FamilyGroup: userFamilyGroup.value.map((option) => option.value),
     User_EconomicActivePeople:
-      userEconomicActivePeople.value !== null
-        ? userEconomicActivePeople.value
-        : originalUser.User_EconomicActivePeople,
+      userEconomicActivePeople.value ?? originalUser.User_EconomicActivePeople,
 
     //DATOS SOCIOECONÓMICOS Y DE SALUD
     User_OwnAssets: userOwnAssets.value.map((option) => option.value),
     User_HousingType:
-      userHousingType.value?.value || originalUser.User_HousingType,
-    User_Pensioner: userPensioner.value?.value || originalUser.User_Pensioner,
+      userHousingType.value?.value ?? originalUser.User_HousingType,
+    User_Pensioner: userPensioner.value?.value ?? originalUser.User_Pensioner,
     User_HealthInsurance:
-      userHealthInsurance.value?.value || originalUser.User_HealthInsurance,
+      userHealthInsurance.value?.value ?? originalUser.User_HealthInsurance,
     User_VulnerableSituation:
-      userVulnerableSituation.value?.value ||
+      userVulnerableSituation.value?.value ??
       originalUser.User_VulnerableSituation,
-    User_SupportingDocuments:
-      userSupportingDocuments.value?.value ||
-      originalUser.User_SupportingDocuments,
     User_Disability:
-      userDisability.value?.value || originalUser.User_Disability,
+      userDisability.value?.value ?? originalUser.User_Disability,
     User_DisabilityPercentage:
-      userDisabilityPercentage.value || originalUser.User_DisabilityPercentage,
+      userDisabilityPercentage.value ?? originalUser.User_DisabilityPercentage,
     User_CatastrophicIllness:
-      userCatastrophicIllness.value?.value ||
+      userCatastrophicIllness.value?.value ??
       originalUser.User_CatastrophicIllness,
   };
-  //Si se modifica el check a desactivado en discapacidad y enfermedad, se limpian los campos de discapacidad y enfermedad
-  // Validación antes de continuar con la edición
+
+  // Apply conditional disability/illness resets *before* comparison
   if (userHasDisability.value === false) {
     updatedUser.User_Disability = "Ninguna";
     updatedUser.User_DisabilityPercentage = 0;
@@ -2527,10 +2630,69 @@ const editUser = async () => {
     return; // Detiene la ejecución si la validación falla
   }
 
-  console.log("Datos enviados:", JSON.stringify(updatedUser, null, 2));
+  // --- START: Comparison logic ---
+  let hasChanges = false;
+
+  for (const key in updatedUser) {
+    // Ensure the key exists in originalUser as well to avoid errors
+    // If a key exists in updatedUser but not originalUser, it's considered a change (or handle as needed)
+    if (!originalUser.hasOwnProperty(key)) {
+        console.warn(`Key "${key}" exists in updatedUser but not in originalUser.`);
+        continue; // Skip keys not present in the original object for comparison
+    }
+
+    const updatedValue = updatedUser[key as keyof typeof updatedUser];
+    const originalValue = originalUser[key as keyof typeof originalUser];
+
+    // Handle array comparison
+    if (Array.isArray(updatedValue) && Array.isArray(originalValue)) {
+      const sortedUpdated = [...updatedValue].sort();
+      const sortedOriginal = [...originalValue].sort();
+      if (JSON.stringify(sortedUpdated) !== JSON.stringify(sortedOriginal)) {
+        hasChanges = true;
+        break;
+      }
+    }
+    // Handle Date comparison specifically
+    else if (key === 'User_BirthDate') {
+        const originalDatePart = String(originalValue).substring(0, 10);
+        const updatedDatePart = String(updatedValue).substring(0, 10);
+        if (originalDatePart !== updatedDatePart) {
+            hasChanges = true;
+            break;
+        }
+    }
+    // Handle other types (including null/undefined vs empty string)
+    else {
+        const normUpdated = updatedValue === null || updatedValue === undefined ? "" : String(updatedValue);
+        const normOriginal = originalValue === null || originalValue === undefined ? "" : String(originalValue);
+
+        if (normUpdated !== normOriginal) {
+            // Skip User_Age if the only difference is type (number vs string) but value is same
+            if (key === 'User_Age' && Number(normUpdated) === Number(normOriginal)) {
+                continue;
+            }
+            hasChanges = true;
+            break;
+        }
+    }
+  }
+
+  if (!hasChanges) {
+    toast.add({
+      severity: "warn",
+      summary: "Sin Cambios",
+      detail: "No se detectaron cambios para actualizar.",
+      life: 4000,
+    });
+    return; // Stop execution if no changes are found
+  }
 
   try {
-    await axios.put(`${API}/user/${selectedUser.value.User_ID}`, updatedUser, {
+    // Data to send is simply the updatedUser object now
+    const dataToSend = { ...updatedUser };
+
+    await axios.put(`${API}/user/${selectedUser.value.User_ID}`, dataToSend, {
       headers: {
         "internal-id": authStore.user?.id,
       },
@@ -2545,12 +2707,13 @@ const editUser = async () => {
 
     await fetchUser(); // Recargar datos después de la actualización
   } catch (error) {
+    // Keep existing error handling
     if ((error as any).response?.status === 404) {
       toast.add({
         severity: "warn",
         summary: "Advertencia",
         detail:
-          "Por favor, revisa que has hecho cambios antes de actualizar al usuario.",
+          "No se detectaron cambios para actualizar o el usuario no fue encontrado.",
         life: 4000,
       });
     } else {
@@ -2563,8 +2726,6 @@ const editUser = async () => {
     }
   }
 };
-
-//gaurdamos el documento en la variable User_HealthDocuments
 
 //-------------------------------------------------------------------------------------------------------------//
 //METODOS DE VALIDACION DE CÉDULA
@@ -2799,8 +2960,8 @@ const activityRows = ref(7); // Or any default number of rows per page
 
 // Function to get status severity for Tag component
 const getActivityStatusSeverity = (status: string) => {
-  switch (status?.toLowerCase()) {
-    case "completada":
+  switch (status.toLowerCase()) {
+    case "completado":
       return "success";
     case "en progreso":
       return "info";
@@ -2812,6 +2973,36 @@ const getActivityStatusSeverity = (status: string) => {
       return "secondary";
   }
 };
+
+
+const initNotesEditor = ref<any>(null);
+const MAX_INIT_NOTES_LENGTH = 823;
+
+const handleInitNotesChange = (event: EditorTextChangeEvent): void => {
+  const quill = event.instance
+  const text = (event.textValue ?? quill.getText()).slice(0, -1)
+  const length = text.length
+
+  if (length > MAX_INIT_NOTES_LENGTH) {
+    // eliminar el exceso
+    quill.deleteText(
+      MAX_INIT_NOTES_LENGTH,
+      length - MAX_INIT_NOTES_LENGTH,
+      'silent'
+    )
+    // sincronizar el v-model con el HTML corregido
+    initNotes.value = event.htmlValue
+    toast.add({
+      severity: 'warn',
+      summary: 'Límite de Caracteres',
+      detail: `Máximo ${MAX_INIT_NOTES_LENGTH} caracteres.`,
+      life: 3000
+      
+    })
+  }
+}
+
+
 </script>
 
 <template>
@@ -2849,9 +3040,9 @@ const getActivityStatusSeverity = (status: string) => {
           severity="info"
           @click="editUser"
           icon="pi pi-user-edit"
-          label="Editar"
+          label="Guardar"
           class="ml-2"
-          :disabled="!doesUserExist"
+          :disabled="!doesUserExist || secretaryUser"
         />
       </div>
     </div>
@@ -3186,6 +3377,7 @@ const getActivityStatusSeverity = (status: string) => {
                 icon="pi pi-check"
                 label="Guardar"
                 class="bg-blue-600 hover:bg-blue-700 text-white"
+                :disabled="secretaryUser"
                 @click="referenceDialog = false"
               />
             </div>
@@ -3218,7 +3410,7 @@ const getActivityStatusSeverity = (status: string) => {
           </div>
           <div class="flex items-center gap-2">
             <Checkbox
-              v-model="userEconomicDependece"
+              v-model="userEconomicDependence"
               binary
               :disabled="areInputsDisabled"
               class="-ml-40"
@@ -3526,19 +3718,6 @@ const getActivityStatusSeverity = (status: string) => {
             >
           </FloatLabel>
 
-          <!-- Documentos de respaldo -->
-          <FloatLabel variant="on" class="w-full md:w-70">
-            <Select
-              v-model="userSupportingDocuments"
-              inputId="userSupportingDocuments"
-              :options="userSupportingDocumentsOptions"
-              size="large"
-              optionLabel="name"
-              class="w-full text-left"
-              :disabled="areInputsDisabled"
-            />
-            <label for="userSupportingDocuments">Documentos de Respaldo</label>
-          </FloatLabel>
 
           <!-- Discapacidad -->
           <transition
@@ -3612,6 +3791,7 @@ const getActivityStatusSeverity = (status: string) => {
                 @select="onSelectedFiles"
                 :autoClear="false"
                 class="w-full md:w-100"
+                :disabled="secretaryUser"
               >
                 <!-- Header: solo se muestra el botón para elegir archivo -->
                 <template #header="{ chooseCallback, files }">
@@ -3625,6 +3805,11 @@ const getActivityStatusSeverity = (status: string) => {
                       v-tooltip="'Seleccionar archivo'"
                       outlined
                       severity="secondary"
+                      :class ="
+                        secretaryUser
+                          ? 'pointer-events-none cursor-not-allowed'
+                          : ''
+                      "
                       :disabled="!!userHealthDocuments && !!doesUserExist"
                     />
                   </div>
@@ -3677,7 +3862,7 @@ const getActivityStatusSeverity = (status: string) => {
                       >
                         {{ userHealthDocumentsName }}
                       </span>
-                      <div class="flex gap-2 mt-2">
+                      <div class="flex gap-2 mt-2"">
                         <Button
                           icon="pi pi-times"
                           label="Reemplazar"
@@ -3705,7 +3890,8 @@ const getActivityStatusSeverity = (status: string) => {
                         {{ selectedUser.User_HealthDocumentsName }}
                       </span>
                       <div class="flex gap-2 mt-2">
-                        <Button
+                        <div v-if="authStore.user?.type == 'Administrador' || authStore.user?.type == 'Coordinador'">
+                          <Button
                           icon="pi pi-times"
                           label="Reemplazar"
                           class="p-button-danger mt-2"
@@ -3713,11 +3899,12 @@ const getActivityStatusSeverity = (status: string) => {
                           outlined
                           rounded
                         />
+                        </div>
                         <div
                           v-if="
                             doesUserExist && userHealthDocumentsName != null
                           "
-                        >
+                         >
                           <Button
                             icon="pi pi-eye"
                             label="Ver"
@@ -3745,7 +3932,7 @@ const getActivityStatusSeverity = (status: string) => {
                     </p>
                   </div>
                   <div
-                    v-else-if="!userHealthDocuments && doesUserExist"
+                    v-else-if="!userHealthDocuments && doesUserExist && !secretaryUser"
                     class="flex items-center justify-center flex-col"
                   >
                     <i
@@ -3753,6 +3940,17 @@ const getActivityStatusSeverity = (status: string) => {
                     />
                     <p class="mt-6 mb-0">
                       Arrastra y suelta el archivo PDF aquí.
+                    </p>
+                  </div>
+                  <div
+                    v-else-if="!userHealthDocuments && doesUserExist && secretaryUser"
+                    class="flex items-center justify-center flex-col"
+                  >
+                    <i
+                      class="pi pi-info !border-2 !rounded-full !p-3.5 !text-4xl !text-muted-color"
+                    />
+                    <p class="mt-6 mb-0">
+                      No hay documento de salud cargado para este usuario.
                     </p>
                   </div>
                 </template>
@@ -3830,21 +4028,23 @@ const getActivityStatusSeverity = (status: string) => {
     <Tabs v-model:value="activeTab">
       <TabList>
         <Tab value="0">Asesorias </Tab>
-        <Tab value="1" v-if="authStore.user?.type == 'Administrador'"
-          >Patrocinios</Tab
+        <Tab value="1" v-if="authStore.user?.type != 'Estudiante'">
+          Actividades del Patrocinio</Tab
         >
         <div
           v-if="isAsesoriasTab"
           class="flex justify-between items-center w-full"
-          :class="authStore.user?.type == 'Estudiante' || authStore.user?.type == 'Abogado' ? 'ml-266' : 'ml-0'"
+          :class="authStore.user?.type != 'Administrador' && authStore.user?.type != 'Coordinador' && authStore.user?.type != 'Abogado' && authStore.user?.type != 'Secretaria' ? 'ml-266' : 'ml-0'"
         >
           <!-- Checkbox -->
           <div
             v-if="
               authStore.user?.type == 'Administrador' ||
-              authStore.user?.type == 'Coordinador'
+              authStore.user?.type == 'Coordinador' ||
+              authStore.user?.type == 'Abogado' ||
+              authStore.user?.type == 'Secretaria'
             "
-            class="flex items-center gap-4 ml-120"
+            class="flex items-center gap-4 ml-98"
           >
             <div class="flex items-center gap-2">
               <Checkbox
@@ -3884,10 +4084,9 @@ const getActivityStatusSeverity = (status: string) => {
           </div>
 
           <!-- Botones alineados al final -->
-          <div class="flex items-center gap-2 mr-10">
+          <div class="flex items-center gap-2 mr-10" :class="authStore.user?.type !== 'Administrador' && authStore.user?.type !== 'Coordinador' && authStore.user?.type !== 'Abogado' ? '-ml-12' : ''">
             <div
               v-if="
-                authStore.user?.type == 'Administrador' &&
                 doesUserExist &&
                 initAlertNote != ''
               "
@@ -3903,15 +4102,18 @@ const getActivityStatusSeverity = (status: string) => {
                 />
               </div>
             </div>
-            <Button
+            <div v-if="authStore.user?.type !== 'Secretaria'">
+              <Button
               icon="pi pi-file-plus"
               @click="requestNewConsultation()"
               v-tooltip.bottom="'Nueva Ficha'"
               rounded
               aria-label="Nueva Ficha"
               :disabled="!doesUserExist || isSaveButtonDisabled"
-            />
-            <div v-if="authStore.user?.type !== 'Estudiante' && authStore.user?.type !== 'Abogado'">
+              />
+            </div>
+
+            <div v-if="authStore.user?.type !== 'Estudiante' && authStore.user?.type !== 'Abogado' && authStore.user?.type !== 'Secretaria'">
               <Button
                 icon="pi pi-file-edit"
                 @click="requestEditConsultation()"
@@ -4043,7 +4245,11 @@ const getActivityStatusSeverity = (status: string) => {
               <FloatLabel variant="on" class="w-full">
                 <Select
                   v-model="initSubject"
-                  :options="initSubjectOptions"
+                  :options="
+                           initSubjectOptions.filter(
+                              (option) => option.name !== 'Primeras Consultas'
+                            )
+                      "
                   optionLabel="name"
                   class="w-full"
                   :class="
@@ -4051,6 +4257,7 @@ const getActivityStatusSeverity = (status: string) => {
                       ? 'mouse pointer-events-none'
                       : ''
                   "
+                  
                   size="large"
                   filter
                   resetFilterOnHide
@@ -4179,8 +4386,10 @@ const getActivityStatusSeverity = (status: string) => {
               <div class="flex flex-col">
                 <label for="initNotes" class="mb-2">Observación</label>
                 <Editor
+                  ref="initNotesEditor"
                   v-model="initNotes"
                   class="w-full"
+                  @text-change="handleInitNotesChange"
                   editorStyle="height: 239px"
                   :class="[
                     doesUserExist && !doesUserRequestOp
@@ -4225,7 +4434,7 @@ const getActivityStatusSeverity = (status: string) => {
                   @select="onSelectedFilesEvidence"
                   :autoClear="false"
                   class="w-full md:w-100"
-                  :disabled="areInputsDisabled"
+                  :disabled="areInputsDisabled || secretaryUser"
                 >
                   <!-- Header: solo se muestra el botón para elegir archivo -->
                   <template #header="{ chooseCallback, files }">
@@ -4240,7 +4449,7 @@ const getActivityStatusSeverity = (status: string) => {
                         outlined
                         severity="secondary"
                         :class="
-                          areInputsDisabled || evidenceFile
+                          areInputsDisabled || evidenceFile || secretaryUser
                             ? 'pointer-events-none'
                             : ''
                         "
@@ -4367,7 +4576,7 @@ const getActivityStatusSeverity = (status: string) => {
                       </p>
                     </div>
                     <div
-                      v-else-if="!evidenceFile && doesUserExist"
+                      v-else-if="!evidenceFile && doesUserExist && !secretaryUser"
                       class="flex items-center justify-center flex-col"
                     >
                       <i
@@ -4377,6 +4586,17 @@ const getActivityStatusSeverity = (status: string) => {
                         Arrastra y suelta el archivo PDF aquí.
                       </p>
                     </div>
+                    <div
+                    v-else-if="!evidenceFile && doesUserExist && secretaryUser"
+                    class="flex items-center justify-center flex-col"
+                  >
+                    <i
+                      class="pi pi-info !border-2 !rounded-full !p-3.5 !text-4xl !text-muted-color"
+                    />
+                    <p class="mt-6 mb-0">
+                      No hay documento de respaldo cargado para esta ficha.
+                    </p>
+                  </div>
                   </template>
                 </FileUpload>
               </div>
@@ -4425,19 +4645,19 @@ const getActivityStatusSeverity = (status: string) => {
                 style="min-width: 8rem"
               ></Column>
               <Column
-                field="Activity_Name"
-                header="Nombre"
+                field="Activity_Type"
+                header="Tipo"
                 sortable
                 style="min-width: 12rem"
               ></Column>
               <Column
                 header="Estudiante"
                 sortable
-                sortField="Internal_ID"
+                sortField="Internal_User_ID_Student"
                 style="min-width: 12rem"
               >
                 <template #body="slotProps">
-                  {{ getInternalUserName(slotProps.data.Internal_ID) }}
+                  {{ getInternalUserName(slotProps.data.Internal_User_ID_Student) }}
                 </template>
               </Column>
               <Column
@@ -4445,15 +4665,19 @@ const getActivityStatusSeverity = (status: string) => {
                 header="Lugar"
                 sortable
                 style="min-width: 10rem"
-              ></Column>
+              >
+                <template #body="slotProps">
+                  {{ slotProps.data.Activity_Location || "No disponible" }}
+                </template>
+             </Column>
               <Column
                 header="Abogado"
                 sortable
-                sortField="Activity_Judge_Name"
+                sortField="Internal_ID"
                 style="min-width: 12rem"
               >
-                <template #body="slotProps">
-                  {{ slotProps.data.Activity_Judge_Name || "No asignado" }}
+              <template #body="slotProps">
+                  {{ getInternalUserName(slotProps.data.Internal_ID) }}
                 </template>
               </Column>
               <Column
@@ -4506,61 +4730,45 @@ const getActivityStatusSeverity = (status: string) => {
           </div>
 
           <!-- Diálogo para mostrar detalles de la actividad (remains the same) -->
-          <Dialog
+<Dialog
             v-model:visible="activityDialogVisible"
             modal
             header="📋 Detalles de la Actividad"
             :style="{ width: '60vw', maxWidth: '800px' }"
             class="p-6 rounded-2xl shadow-2xl bg-white"
           >
-            <div
-              v-if="selectedActivityDetails"
-              class="grid grid-cols-1 md:grid-cols-2 gap-4 text-lg"
-            >
-              <div>
-                <p class="mb-3">
-                  <strong>📌 Nombre:</strong>
-                  {{ selectedActivityDetails.Activity_Name }}
+            <div v-if="selectedActivityDetails" class="space-y-5 text-base">
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3">
+                <p>
+                  <strong>🏷️ Tipo:</strong>
+                  {{ selectedActivityDetails.Activity_Type || "No disponible" }}
                 </p>
-                <p class="mb-3">
+                <p>
                   <strong>📅 Fecha:</strong>
                   {{
-                    new Date(
-                      selectedActivityDetails.Activity_Start_Date
-                    ).toLocaleDateString()
+                    selectedActivityDetails.Activity_Date
+                      ? new Date(selectedActivityDetails.Activity_Date).toLocaleDateString()
+                      : "No disponible"
                   }}
                 </p>
-                <p class="mb-3">
-                  <strong>🕒 Hora:</strong>
-                  {{ selectedActivityDetails.Activity_Start_Time }}
+                <p>
+                  <strong>🧑‍🎓 Estudiante:</strong>
+                  {{ getInternalUserName(selectedActivityDetails.Internal_User_ID_Student) || "No disponible" }}
                 </p>
-                <p class="mb-3">
-                  <strong>📍 Lugar:</strong>
-                  {{ selectedActivityDetails.Activity_Location }}
+                 <p>
+                  <strong>🕒 Hora de Inicio:</strong>
+                  {{ selectedActivityDetails.Activity_StartTime || "No disponible" }}
                 </p>
-                <p class="mb-3">
-                  <strong>⏳ Duración:</strong>
-                  {{ selectedActivityDetails.Activity_Duration }}
+                <p>
+                  <strong>🧑‍⚖️ Abogado:</strong>
+                  {{ getInternalUserName(selectedActivityDetails.Internal_ID) || "No disponible" }}
                 </p>
-                <p class="mb-3">
-                  <strong>🤝 Contraparte:</strong>
-                  {{ selectedActivityDetails.Activity_Counterparty }}
+                <p>
+                  <strong>⏰ Hora Programada:</strong>
+                  {{ selectedActivityDetails.activityScheduledTime || "No disponible" }}
                 </p>
-              </div>
-
-              <div>
-                <p class="mb-3">
-                  <strong>🏛️ Juzgado:</strong>
-                  {{ selectedActivityDetails.Activity_Judged }}
-                </p>
-                <p class="mb-3">
-                  <strong>⚖️ Juez:</strong>
-                  {{
-                    selectedActivityDetails.Activity_Judge_Name || "No asignado"
-                  }}
-                </p>
-                <p class="mb-3">
-                  <strong>📌 Estado: </strong>
+                <p>
+                  <strong>🚦 Estado: </strong>
                   <Tag
                     :value="selectedActivityDetails.Activity_Status"
                     :severity="
@@ -4570,23 +4778,56 @@ const getActivityStatusSeverity = (status: string) => {
                     "
                   />
                 </p>
-                <p class="mb-3">
-                  <strong>📁 Referencia:</strong>
-                  {{ selectedActivityDetails.Activity_Reference_File }}
+                <p>
+                  <strong>📍 Lugar:</strong>
+                  {{ selectedActivityDetails.Activity_Location || "No disponible" }}
                 </p>
-                <p class="mb-3">
-                  <strong>⏱️ ¿A tiempo?: </strong>
-                  <span
-                    :class="
-                      selectedActivityDetails.Activity_OnTime
-                        ? 'text-green-600 font-semibold'
-                        : 'text-red-600 font-semibold'
-                    "
-                  >
-                    {{ selectedActivityDetails.Activity_OnTime ? "Sí" : "No" }}
-                  </span>
+                <p>
+                  <strong>🏛️ Tipo de Judicatura:</strong>
+                  {{ selectedActivityDetails.Activity_JurisdictionType || "No disponible" }}
+                </p>
+                <p>
+                  <strong>⏳ Última Actividad (CJP): </strong>
+                    {{
+                      selectedActivityDetails.Activity_lastCJGActivity || "No asignado"
+                    }}
+                </p>
+                <p>
+                  <strong>⚖️ Referencia Interna:</strong>
+                  {{
+                    selectedActivityDetails.Activity_InternalReference || "No asignado"
+                  }}
+                </p>
+                <p>
+                  <strong>🗓️ Fecha Última Actividad (CJP): </strong>
+                  {{
+                    selectedActivityDetails.Activity_lastCJGActivityDate
+                      ? new Date(selectedActivityDetails.Activity_lastCJGActivityDate).toLocaleDateString()
+                      : "No disponible"
+                  }}
+                </p>
+                <p class="md:col-span-2">
+                  <strong>🔢 Nro. Juzgado/Unidad Judicial:</strong>
+                  {{ selectedActivityDetails.Activity_CourtNumber || "No disponible" }}
                 </p>
               </div>
+
+              <div class="pt-1">
+                <p class="mb-1 font-semibold">📝 Descripción:</p>
+                <div class="p-3 card min-h-[80px] max-h-[200px] overflow-y-auto whitespace-pre-wrap break-words">
+                  {{ selectedActivityDetails.Activity_Description || "No disponible" }}
+                </div>
+              </div>
+
+              <div class="pt-1 text-base">
+                <p class="mb-1 font-semibold">💬 Observación:</p>
+                <div class="p-3 card min-h-[80px] max-h-[200px] overflow-y-auto whitespace-pre-wrap break-words">
+                  {{ selectedActivityDetails.Activity_Observation || "No disponible" }}
+                </div>
+              </div>
+            </div>
+            <div v-else class="text-center py-6">
+              <p>No hay detalles de actividad para mostrar.</p>
             </div>
           </Dialog>
         </TabPanel>
@@ -4601,7 +4842,8 @@ const getActivityStatusSeverity = (status: string) => {
         label="Crear Caso"
         icon="pi pi-folder-plus"
         @click="createInitialConsultation"
-        :disabled="areInputsDisabled"
+        :disabled="areInputsDisabled || isCreateLoading"
+        :loading="isCreateLoading"
       />
     </div>
 
@@ -4627,7 +4869,7 @@ const getActivityStatusSeverity = (status: string) => {
         @click="cancelEditConsultation()"
       />
       <Button
-        label="Editar Ficha"
+        label="Guardar Ficha"
         icon="pi pi-file-edit"
         severity="info"
         @click="editUserConsultation()"
@@ -4640,7 +4882,7 @@ const getActivityStatusSeverity = (status: string) => {
     v-model:visible="watchHealthDocumentDialog"
     modal
     header="🏥🩺 Documento de Salud"
-    class="p-6 rounded-lg shadow-lg bg-white max-w-7xl w-full"
+    class="p-6 rounded-lg shadow-lg bg-white max-w-7xl w-full" 
   >
     <iframe :src="urlDocument" class="w-full h-250" frameborder="0"></iframe>
   </Dialog>
@@ -4700,13 +4942,16 @@ const getActivityStatusSeverity = (status: string) => {
       <p class="text-gray-700 text-lg">
         <strong>Fecha de la alerta:</strong> {{ initDate.toLocaleDateString() }}
       </p>
-      <Button
+      <div v-if="authStore.user?.type == 'Administrador' || authStore.user?.type == 'Coordinador'">
+        <Button
         label="Rechazar Patrocinio"
         icon="pi pi-envelope"
         class="mt-4 w-full md:w-50"
         @click="rejectCase()"
         severity="danger"
       />
+      </div>
+
     </div>
   </Dialog>
 </template>

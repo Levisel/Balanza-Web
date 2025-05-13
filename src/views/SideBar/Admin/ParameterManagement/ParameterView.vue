@@ -120,7 +120,7 @@ const tableConfig = {
     { field: "Academic_Instruction_Status", header: "Estado", type: "boolean" },
   ],
   Number_Of_Attempts: [
-    { field: "Number_Of_Attempts", header: "Nombre", type: "string" },
+    { field: "Number_Of_Attempts", header: "Número de Intentos", type: "number" },
     { field: "Number_Of_Attempts_Status", header: "Estado", type: "boolean" },
   ],
   Complexity: [
@@ -176,6 +176,17 @@ const tableConfig = {
     { field: "Client_Type_Name", header: "Nombre", type: "string" },
     { field: "Client_Type_Status", header: "Estado", type: "boolean" },
   ],
+  Type_Of_Activity: [
+    { field: "Type_Of_Activity_Name", header: "Nombre", type: "string" },
+    { field: "Type_Of_Activity_Status", header: "Estado", type: "boolean" },
+  ],
+  Field_Of_Activity: [
+    { field: "Type_Of_Activity_FK", header: "Tipo de Actividad", type: "string" },
+    { field: "Field_Of_Activity_Name", header: "Nombre", type: "string" },
+    { field: "Field_Of_Activity_Type", header: "Tipo", type: "string" },
+    { field: "Field_Of_Activity_Status", header: "Estado", type: "boolean" },
+  ],
+
 };
 
 // Función para resetear el registro seleccionado
@@ -223,6 +234,8 @@ const tableNames: { [key in keyof typeof tableConfig]: string } = {
   //EXTRA
   Number_Of_Attempts: "Número de Intentos",
   Protocols: "Protocolos",
+  Type_Of_Activity: "Tipo de Actividad",
+  Field_Of_Activity: "Campo de Actividad",
 };
 
 // Mapeo de campos de ID según la tabla
@@ -261,6 +274,8 @@ const idFieldMap: { [key in keyof typeof tableConfig]: string } = {
   Subject: "Subject_ID",
   Topic: "Topic_ID",
   Client_Type: "Client_Type_ID",
+  Type_Of_Activity: "Type_Of_Activity_ID",
+  Field_Of_Activity: "Field_Of_Activity_ID",
 };
 
 // Computamos la clave (key) a partir del label seleccionado
@@ -329,6 +344,8 @@ const loadForeignOptions = async () => {
             endpoint = `${API}/zone`;
           } else if (fkTable.toLowerCase() === "subject") {
             endpoint = `${API}/subjects`;
+          } else if (fkTable.toLowerCase() === "type_of_activity") {
+            endpoint = `${API}/type-of-activity`;
           } else {
             endpoint = `${API}/${fkTable.toLowerCase()}s`;
           }
@@ -392,6 +409,8 @@ const loadData = async () => {
         Subject: `${API}/subjects`,
         Topic: `${API}/topics`,
         Client_Type: `${API}/client-types`,
+        Type_Of_Activity: `${API}/type-of-activity`,
+        Field_Of_Activity: `${API}/field-of-activity`,
       };
       console.log("Cargando datos desde:", urlMap[selectedTableKey.value]);
       const { data } = await axios.get(urlMap[selectedTableKey.value]);
@@ -456,6 +475,8 @@ const createData = async () => {
         Subject: `${API}/subjects`,
         Topic: `${API}/topics`,
         Client_Type: `${API}/client-types`,
+        Type_Of_Activity: `${API}/type-of-activity`,
+        Field_Of_Activity: `${API}/field-of-activity`,
       };
       console.log("Enviando datos para creación:", selectedRecord.value);
       await axios.post(urlMap[selectedTableKey.value], selectedRecord.value);
@@ -519,6 +540,8 @@ const updateData = async () => {
         Subject: `${API}/subjects`,
         Topic: `${API}/topics`,
         Client_Type: `${API}/client-types`,
+        Type_Of_Activity: `${API}/type-of-activity`,
+        Field_Of_Activity: `${API}/field-of-activity`,
       };
       const idField = idFieldMap[selectedTableKey.value];
       const recordId = selectedRecord.value[idField] || selectedRecord.value.id;
@@ -604,6 +627,8 @@ const deleteData = async () => {
         Subject: `${API}/subjects`,
         Topic: `${API}/topics`,
         Client_Type: `${API}/client-types`,
+        Type_Of_Activity: `${API}/type-of-activity`,
+        Field_Of_Activity: `${API}/field-of-activity`,
       };
       const idField = idFieldMap[selectedTableKey.value];
       const recordId = selectedRecord.value[idField] || selectedRecord.value.id;
@@ -790,191 +815,248 @@ onMounted(() => {
 
     <!-- Modal de Creación -->
     <Dialog
-      v-model:visible="createDialogVisible"
-      :header="`Crear ${selectedTableLabel}`"
-      :style="{ width: '35rem' }"
-      :breakpoints="{ '960px': '75vw', '640px': '90vw' }"
-      modal
-      class="p-fluid"
-      appendTo="body"
-      :blockScroll="true"
-      @show="resetSelectedRecord"
-    >
-      <template #header>
-        <div class="flex align-items-center gap-2">
-          <span class="font-bold text-xl">{{
-            `Crear ${selectedTableLabel}`
-          }}</span>
-        </div>
-      </template>
+  v-model:visible="createDialogVisible"
+  :header="`Crear ${selectedTableLabel}`"
+  :style="{ width: '35rem' }"
+  :breakpoints="{ '960px': '75vw', '640px': '90vw' }"
+  modal
+  class="p-fluid"
+  appendTo="body"
+  :blockScroll="true"
+  @show="resetSelectedRecord"
+>
+  <template #header>
+    <div class="flex align-items-center gap-2">
+      <span class="font-bold text-xl">{{
+        `Crear ${selectedTableLabel}`
+      }}</span>
+    </div>
+  </template>
 
-      <form @submit.prevent="createRecord" class="grid gap-3">
-        <div v-for="col in editableColumns" :key="col.field" class="field">
-          <FloatLabel variant="in">
-            <InputText
-              v-if="col.type === 'string' && !col.field.endsWith('_FK')"
-              :id="col.field"
-              v-model="selectedRecord[col.field]"
-              autocomplete="off"
-              size="large"
-              class="w-full"
-              :pt="{
-                root: { class: 'border-round' },
-              }"
-            />
-            <div v-if="col.field.endsWith('_FK')">
-              <Select
-                :id="col.field"
-                v-model="selectedRecord[col.field]"
-                :options="foreignOptions[col.field.replace('_FK', '')]"
-                :optionLabel="col.field.replace('_FK', '') + '_Name'"
-                :optionValue="col.field.replace('_FK', '') + '_ID'"
-                class="w-full"
-                :pt="{ root: { class: 'border-round' } }"
-              />
-            </div>
+  <div class="grid gap-3">
+    <div v-for="col in editableColumns" :key="col.field" class="field">
+      <FloatLabel variant="in">
+        <!-- Combobox para Field_Of_Activity_Name -->
+<Select
+  v-if="col.field === 'Field_Of_Activity_Name'"
+  :id="col.field"
+  v-model="selectedRecord[col.field]"
+  :options="[
+    { label: 'Descripción de Actividad', value: 'Descripción de Actividad' },
+    { label: 'Fecha de Actividad', value: 'Fecha de Actividad' },
+    { label: 'Lugar', value: 'Lugar' },
+    { label: 'Tiempo de Ejecución', value: 'Tiempo de Ejecución' }
+  ]"
+  optionLabel="label"
+  optionValue="value"
+  class="w-full"
+  :pt="{ root: { class: 'border-round' } }"
+/>
 
-            <InputNumber
-              v-if="col.type === 'number'"
-              v-model="selectedRecord[col.field]"
-              mode="decimal"
-              showButtons
-              :min="1"
-              :max="col.field === 'Schedule_Limit' ? 60 : 100"
-              size="large"
-              class="w-full"
-              inputClass="w-full"
-              :pt="{
-                root: { class: 'border-round' },
-              }"
-            />
-            <label :for="col.field" class="font-medium">{{ col.header }}</label>
-          </FloatLabel>
-          <div
-            v-if="col.type === 'boolean'"
-            class="flex align-items-center gap-2 pt-2"
-          >
-            <Checkbox
-              v-model="selectedRecord[col.field]"
-              :binary="true"
-              :pt="{
-                root: { class: 'w-2rem h-2rem' },
-                box: { class: 'border-2 w-2rem h-2rem' },
-              }"
-            />
-            <label class="text-color-secondary">Activo</label>
-          </div>
-        </div>
+<!-- Combobox para Field_Of_Activity_Type -->
+<Select
+  v-else-if="col.field === 'Field_Of_Activity_Type'"
+  :id="col.field"
+  v-model="selectedRecord[col.field]"
+  :options="[
+    { label: 'Fecha', value: 'Fecha' },
+    { label: 'Texto', value: 'Texto' },
+    { label: 'Lugar', value: 'Lugar' },
+    { label: 'Tiempo', value: 'Tiempo' }
+  ]"
+  optionLabel="label"
+  optionValue="value"
+  class="w-full"
+  :pt="{ root: { class: 'border-round' } }"
+/>
 
-        <div class="flex justify-content-end gap-2 mt-5 ml-65">
-          <Button
-            label="Cancelar"
-            icon="pi pi-times"
-            severity="contrast"
-            @click="createDialogVisible = false"
-          />
-          <Button
-            label="Guardar"
-            icon="pi pi-check"
-            severity="primary"
-            type="submit"
+        <!-- Otros campos -->
+        <InputText
+          v-else-if="col.type === 'string' && !col.field.endsWith('_FK')"
+          :id="col.field"
+          v-model="selectedRecord[col.field]"
+          autocomplete="off"
+          size="large"
+          class="w-full"
+          :pt="{ root: { class: 'border-round' } }"
+        />
+        <div v-else-if="col.field.endsWith('_FK')">
+          <Select
+            :id="col.field"
+            v-model="selectedRecord[col.field]"
+            :options="foreignOptions[col.field.replace('_FK', '')]"
+            :optionLabel="col.field.replace('_FK', '') + '_Name'"
+            :optionValue="col.field.replace('_FK', '') + '_ID'"
+            class="w-full"
+            :pt="{ root: { class: 'border-round' } }"
           />
         </div>
-      </form>
-    </Dialog>
+
+        <InputNumber
+          v-else-if="col.type === 'number'"
+          v-model="selectedRecord[col.field]"
+          mode="decimal"
+          showButtons
+          :min="1"
+          :max="col.field === 'Schedule_Limit' ? 60 : 100"
+          size="large"
+          class="w-full"
+          inputClass="w-full"
+          :pt="{ root: { class: 'border-round' } }"
+        />
+        <label :for="col.field" class="font-medium">{{ col.header }}</label>
+      </FloatLabel>
+      <div
+        v-if="col.type === 'boolean'"
+        class="flex align-items-center gap-2 pt-2"
+      >
+        <Checkbox
+          v-model="selectedRecord[col.field]"
+          :binary="true"
+          :pt="{ root: { class: 'w-2rem h-2rem' }, box: { class: 'border-2 w-2rem h-2rem' } }"
+        />
+        <label class="text-color-secondary">Activo</label>
+      </div>
+    </div>
+
+    <div class="flex justify-content-end gap-2 mt-5 ml-65">
+      <Button
+        label="Cancelar"
+        icon="pi pi-times"
+        severity="contrast"
+        @click="createDialogVisible = false"
+      />
+      <Button
+        label="Guardar"
+        icon="pi pi-check"
+        severity="primary"
+        @click="createRecord"
+      />
+    </div>
+  </div>
+</Dialog>
 
     <!-- Modal de Edición -->
     <Dialog
-      v-model:visible="editDialogVisible"
-      :style="{ width: '35rem' }"
-      :breakpoints="{ '960px': '75vw', '640px': '90vw' }"
-      modal
-      class="p-fluid"
-      appendTo="body"
-      :blockScroll="true"
-    >
-      <template #header>
-        <div class="flex align-items-center gap-2">
-          <span class="font-bold text-xl">{{
-            `Editar ${selectedTableLabel}`
-          }}</span>
-        </div>
-      </template>
+  v-model:visible="editDialogVisible"
+  :header="`Editar ${selectedTableLabel}`"
+  :style="{ width: '35rem' }"
+  :breakpoints="{ '960px': '75vw', '640px': '90vw' }"
+  modal
+  class="p-fluid"
+  appendTo="body"
+  :blockScroll="true"
+>
+  <template #header>
+    <div class="flex align-items-center gap-2">
+      <span class="font-bold text-xl">{{
+        `Editar ${selectedTableLabel}`
+      }}</span>
+    </div>
+  </template>
 
-      <form @submit.prevent="editRecord" class="grid gap-3">
-        <div v-for="col in editableColumns" :key="col.field" class="field">
-          <FloatLabel variant="in">
-            <InputText
-              v-if="col.type === 'string' && !col.field.endsWith('_FK')"
-              :id="col.field"
-              v-model="selectedRecord[col.field]"
-              autocomplete="off"
-              size="large"
-              class="w-full"
-              :pt="{
-                root: { class: 'border-round' },
-              }"
-            />
-            <div v-if="col.field.endsWith('_FK')">
-              <Select
-                :id="col.field"
-                v-model="selectedRecord[col.field]"
-                :options="foreignOptions[col.field.replace('_FK', '')]"
-                :optionLabel="col.field.replace('_FK', '') + '_Name'"
-                :optionValue="col.field.replace('_FK', '') + '_ID'"
-                class="w-full"
-                :pt="{ root: { class: 'border-round' } }"
-              />
-            </div>
+  <div class="grid gap-3">
+    <div v-for="col in editableColumns" :key="col.field" class="field">
+      <FloatLabel variant="in">
+        <!-- Combobox para Field_Of_Activity_Name -->
+<Select
+  v-if="col.field === 'Field_Of_Activity_Name'"
+  :id="col.field"
+  v-model="selectedRecord[col.field]"
+  :options="[
+    { label: 'Descripción de Actividad', value: 'Descripción de Actividad' },
+    { label: 'Fecha de Actividad', value: 'Fecha de Actividad' },
+    { label: 'Lugar', value: 'Lugar' },
+    { label: 'Tiempo de Ejecución', value: 'Tiempo de Ejecución' }
+  ]"
+  optionLabel="label"
+  optionValue="value"
+  class="w-full"
+  :pt="{ root: { class: 'border-round' } }"
+/>
 
-            <InputNumber
-              v-if="col.type === 'number'"
-              v-model="selectedRecord[col.field]"
-              mode="decimal"
-              showButtons
-              :min="1"
-              :max="col.field === 'Schedule_Limit' ? 60 : 100"
-              size="large"
-              class="w-full"
-              inputClass="w-full"
-              :pt="{
-                root: { class: 'border-round' },
-              }"
-            />
-            <label :for="col.field" class="font-medium">{{ col.header }}</label>
-          </FloatLabel>
-          <div
-            v-if="col.type === 'boolean'"
-            class="flex align-items-center gap-2 pt-2"
-          >
-            <Checkbox
-              v-model="selectedRecord[col.field]"
-              :binary="true"
-              :pt="{
-                root: { class: 'w-2rem h-2rem' },
-                box: { class: 'border-2 w-2rem h-2rem' },
-              }"
-            />
-            <label class="text-color-secondary">Activo</label>
-          </div>
-        </div>
+<!-- Combobox para Field_Of_Activity_Type -->
+<Select
+  v-else-if="col.field === 'Field_Of_Activity_Type'"
+  :id="col.field"
+  v-model="selectedRecord[col.field]"
+  :options="[
+    { label: 'Fecha', value: 'Fecha' },
+    { label: 'Texto', value: 'Texto' },
+    { label: 'Lugar', value: 'Lugar' },
+    { label: 'Tiempo de Ejecución', value: 'Tiempo de Ejecución' }
+  ]"
+  optionLabel="label"
+  optionValue="value"
+  class="w-full"
+  :pt="{ root: { class: 'border-round' } }"
+/>
 
-        <div class="flex justify-end gap-2 mt-5">
-          <Button
-            label="Cancelar"
-            icon="pi pi-times"
-            severity="contrast"
-            @click="editDialogVisible = false"
-          />
-          <Button
-            label="Actualizar"
-            icon="pi pi-save"
-            severity="info"
-            type="submit"
+        <!-- Otros campos -->
+        <InputText
+          v-else-if="col.type === 'string' && !col.field.endsWith('_FK')"
+          :id="col.field"
+          v-model="selectedRecord[col.field]"
+          autocomplete="off"
+          size="large"
+          class="w-full"
+          :pt="{ root: { class: 'border-round' } }"
+        />
+        <div v-else-if="col.field.endsWith('_FK')">
+          <Select
+            :id="col.field"
+            v-model="selectedRecord[col.field]"
+            :options="foreignOptions[col.field.replace('_FK', '')]"
+            :optionLabel="col.field.replace('_FK', '') + '_Name'"
+            :optionValue="col.field.replace('_FK', '') + '_ID'"
+            class="w-full"
+            :pt="{ root: { class: 'border-round' } }"
           />
         </div>
-      </form>
-    </Dialog>
+
+        <InputNumber
+          v-else-if="col.type === 'number'"
+          v-model="selectedRecord[col.field]"
+          mode="decimal"
+          showButtons
+          :min="1"
+          :max="col.field === 'Schedule_Limit' ? 60 : 100"
+          size="large"
+          class="w-full"
+          inputClass="w-full"
+          :pt="{ root: { class: 'border-round' } }"
+        />
+        <label :for="col.field" class="font-medium">{{ col.header }}</label>
+      </FloatLabel>
+      <div
+        v-if="col.type === 'boolean'"
+        class="flex align-items-center gap-2 pt-2"
+      >
+        <Checkbox
+          v-model="selectedRecord[col.field]"
+          :binary="true"
+          :pt="{ root: { class: 'w-2rem h-2rem' }, box: { class: 'border-2 w-2rem h-2rem' } }"
+        />
+        <label class="text-color-secondary">Activo</label>
+      </div>
+    </div>
+
+    <div class="flex justify-end gap-2 mt-5">
+      <Button
+        label="Cancelar"
+        icon="pi pi-times"
+        severity="contrast"
+        @click="editDialogVisible = false"
+      />
+      <Button
+        label="Actualizar"
+        icon="pi pi-save"
+        severity="info"
+        @click="editRecord"
+      />
+    </div>
+  </div>
+</Dialog>
 
     <!-- Modal de Visualización -->
     <Dialog

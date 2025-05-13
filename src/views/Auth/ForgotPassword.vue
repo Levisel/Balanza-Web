@@ -28,6 +28,21 @@ const isEmailDisabled = computed(() => !email.value);
 const isCodeDisabled = computed(() => !code.value);
 const isNewPasswordDisabled = ref(true);
 
+const numberOfAttempts = ref<number>(0);
+
+const fetchNumberOfAttempts = async () => {
+  try {
+    const response = await axios.get<{ Number_Of_Attempts?: number }>(
+      `${API}/number-of-attempts/current`
+    );
+    const attempts = response.data?.Number_Of_Attempts;
+    numberOfAttempts.value = attempts ?? 3;
+  } catch (error) {
+    console.error("Error fetching attempts:", error);
+    numberOfAttempts.value = 3;
+  }
+};
+
 const instructionMessage = computed(() => {
   if (loading.value) return "⏳ Cargando...\nPor favor, espera un momento.";
 
@@ -85,7 +100,7 @@ const clearCode = () => {
 async function submitEmail() {
   loading.value = true;
   try {
-    await axios.post(`${API}/forgot-password`, { email: email.value });
+    await axios.post(`${API}/forgot-password`, { email: email.value.trim() });
     toast.add({
       severity: "success",
       summary: "Correo enviado",
@@ -107,7 +122,8 @@ async function submitEmail() {
 }
 
 async function resendEmail() {
-  if (codeResent.value < 3) {
+  await fetchNumberOfAttempts();
+  if (codeResent.value < numberOfAttempts.value) {
     codeResent.value++;
     await submitEmail();
   } else {
@@ -125,7 +141,7 @@ async function submitCode() {
   loading.value = false;
   try {
     await axios.post(`${API}/verify-code`, {
-      email: email.value,
+      email: email.value.trim(),
       code: code.value,
     });
     toast.add({
@@ -177,7 +193,7 @@ async function submitResetPassword() {
   loading.value = false;
   try {
     await axios.post(`${API}/reset-password`, {
-      email: email.value,
+      email: email.value.trim(),
       code: code.value,
       newPassword: repeatPassword.value,
     });

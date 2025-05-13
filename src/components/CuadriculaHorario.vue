@@ -52,7 +52,7 @@ const props = defineProps({
 })
 
 // Días y horas de la cuadrícula
-const diasSemana = ['Lunes', 'Martes', 'Miercoles', 'Jueves', 'Viernes']
+const diasSemana = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
 const horas = [9, 10, 11, 12, 13, 14, 15, 16, 17]
 
 // Matriz para la visualización. Cada celda es un arreglo (inicialmente vacío).
@@ -75,27 +75,30 @@ function inicializarMatriz() {
 
 // Función para recorrer cada horario recibido y marcar en la matriz los rangos correspondientes
 function parsearHorarios() {
-  // Para cada horario en el arreglo
-  for (const schedule of props.schedules) {
-    // Determinar el código de modalidad (2 para virtual, 1 para presencial)
-    const modCode = schedule.Horario_Modalidad?.toLowerCase() === 'virtual' ? 2 : 1
+  for (const schedule of props.schedules as Array<{ Schedule_Mode: string; [key: string]: any }>) {
+    const modCode = schedule.Schedule_Mode?.toLowerCase() === 'virtual' ? 2 : 1;
+
     for (const dia of diasSemana) {
-      const entradaKey = `${dia}_Entrada`
-      const salidaKey = `${dia}_Salida`
-      if (schedule[entradaKey] && schedule[salidaKey]) {
-        const startHour = parseInt(schedule[entradaKey].slice(0, 2), 10)
-        const endHour = parseInt(schedule[salidaKey].slice(0, 2), 10)
-        // Marcar las horas desde la de entrada hasta la anterior a la de salida
+      const startKey = `${dia}_Start`; // ej: Monday_Start
+      const endKey = `${dia}_End`;     // ej: Monday_End
+
+      const start = schedule[startKey];
+      const end = schedule[endKey];
+
+      if (start && end) {
+        const startHour = parseInt(start.slice(0, 2), 10);
+        const endHour = parseInt(end.slice(0, 2), 10);
+
         for (let h = startHour; h < endHour; h++) {
-          // Evitar duplicados en caso de que ya se haya asignado la misma modalidad
           if (!scheduleMatrix.value[dia][h].includes(modCode)) {
-            scheduleMatrix.value[dia][h].push(modCode)
+            scheduleMatrix.value[dia][h].push(modCode);
           }
         }
       }
     }
   }
 }
+
 
 // Inicializamos y parseamos al montar el componente
 onMounted(() => {

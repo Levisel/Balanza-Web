@@ -72,30 +72,29 @@ export default defineComponent({
 
     // --- FILTROS GLOBALES (antes de paginar) ---
     const filteredPendingCases = computed(() =>
-      cases.value.filter(
-        (caso) =>
-          caso.Init_Type === 'Por Asignar' &&
-          (selectedArea.value === '' || caso.Init_Subject === selectedArea.value) &&
-          // Aplicar filtro de búsqueda global
-          (filters.value.global === '' ||
-           Object.values(caso).some(val =>
-             String(val).toLowerCase().includes(filters.value.global.toLowerCase())
-           ))
-      )
-    );
+  cases.value.filter(
+    (caso) =>
+      caso.Init_Type === 'Por Asignar' &&
+      (authStore.user?.type === 'Administrador' || authStore.user?.type === 'SuperAdmin' || caso.Init_Subject === selectedArea.value) &&
+      (filters.value.global === '' ||
+       Object.values(caso).some(val =>
+         String(val).toLowerCase().includes(filters.value.global.toLowerCase())
+       ))
+  )
+);
 
-    const filteredAssignedCases = computed(() =>
-      cases.value.filter(
-        (caso) =>
-          caso.Init_Type === 'Asignado' &&
-          (selectedArea.value === '' || caso.Init_Subject === selectedArea.value) &&
-          // Aplicar filtro de búsqueda global
-          (filters.value.global === '' ||
-           Object.values(caso).some(val =>
-             String(val).toLowerCase().includes(filters.value.global.toLowerCase())
-           ))
-      )
-    );
+const filteredAssignedCases = computed(() =>
+  cases.value.filter(
+    (caso) =>
+      caso.Init_Type === 'Asignado' &&
+      (authStore.user?.type === 'Administrador' || authStore.user?.type === 'SuperAdmin' || caso.Init_Subject === selectedArea.value) &&
+      // Aplicar filtro de búsqueda global
+      (filters.value.global === '' ||
+       Object.values(caso).some(val =>
+         String(val).toLowerCase().includes(filters.value.global.toLowerCase())
+       ))
+  )
+);
     // --- FIN FILTROS GLOBALES ---
 
 
@@ -114,89 +113,99 @@ export default defineComponent({
     // --- FIN PROPIEDADES COMPUTADAS PARA PAGINACIÓN ---
 
     const fetchCases = async (): Promise<void> => {
-      loading.value = true; // Iniciar carga al principio
-      try {
-        if (!authStore.user?.area) {
-          console.error("El área del usuario no está definida.");
-          notificationMessage.value = 'No se pudo determinar el área del usuario.';
-          showNotification.value = true;
-          notificationType.value = 'error';
-          notificationTitle.value = 'Error de Configuración';
-          return;
-        }
+  loading.value = true; // Iniciar carga al principio
+  try {
+    const userType = authStore.user?.type;
 
-        // Construir URLs de forma segura
-        const baseUrl = 'http://localhost:3000';
-        const areaEncoded = encodeURIComponent(authStore.user.area);
-        const pendingUrl = `${baseUrl}/initial-consultations/type/${areaEncoded}/Por%20Asignar/Activo`;
-        const assignedUrl = `${baseUrl}/initial-consultations/type/${areaEncoded}/Asignado/Activo`;
+    let pendingUrl = '';
+    let assignedUrl = '';
 
-        // Realizar peticiones en paralelo
-        const [pendingResponse, assignedResponse] = await Promise.all([
-          axios.get(pendingUrl),
-          axios.get(assignedUrl)
-        ]);
-
-        const pendingCases: Case[] = pendingResponse.data || [];
-        const assignedCases: Case[] = assignedResponse.data || [];
-
-        // Procesar casos asignados para obtener detalles del estudiante
-        const processedAssignedCases = await Promise.all(
-          assignedCases.map(async (caso) => {
-            try {
-              console.log(`Fetching assignment for case: ${caso.Init_Code}`);
-              const assignmentResponse = await axios.get(
-                `${baseUrl}/assignment/student/initcode/${caso.Init_Code}`
-              );
-
-              if (typeof assignmentResponse.data === 'string' && assignmentResponse.data) {
-                const studentId = assignmentResponse.data;
-                caso.assignedStudentId = studentId;
-                caso.assignedTo = studentId; // Mantener consistencia
-
-                try {
-                  const studentResponse = await axios.get(`${baseUrl}/internal-user/${studentId}`);
-                  const studentData = studentResponse.data;
-                  caso.assignedStudentName = `${studentData.Internal_Name || ''} ${studentData.Internal_LastName || ''}`.trim();
-                } catch (studentError: any) {
-                   console.error(`Error fetching student details for ID ${studentId} (Case ${caso.Init_Code}):`, studentError);
-                   caso.assignedStudentName = 'Estudiante no encontrado';
-                }
-
-              } else {
-                console.warn(`No assignment found or unexpected format for case ${caso.Init_Code}. Response:`, assignmentResponse.data);
-                caso.assignedStudentName = 'No asignado';
-                caso.assignedTo = null;
-                caso.assignedStudentId = null;
-              }
-            } catch (error: any) {
-              console.error(`Error fetching assignment/student for case ${caso.Init_Code}:`, error);
-              if (error.response && error.response.status === 404) {
-                console.warn(`404: No assignment found for case ${caso.Init_Code}`);
-                caso.assignedStudentName = 'No asignado';
-              } else {
-                caso.assignedStudentName = 'Error al cargar';
-              }
-              caso.assignedTo = null;
-              caso.assignedStudentId = null;
-            }
-            return caso; // Devolver el caso procesado
-          })
-        );
-
-        // Unir ambos conjuntos de casos en la variable principal
-        cases.value = [...pendingCases, ...processedAssignedCases];
-
-      } catch (error: any) {
-        console.error("Error fetching cases:", error);
-        notificationMessage.value = 'Error al cargar los casos. ' + (error.message || '');
+    if (userType === 'Administrador' || userType === 'SuperAdmin') {
+      // URLs generales para Administrador o SuperAdmin
+      pendingUrl = 'http://localhost:3000/initial-consultations/review/Por%20Asignar/Activo';
+      assignedUrl = 'http://localhost:3000/initial-consultations/review/Asignado/Activo';
+    } else {
+      // URLs específicas para otros usuarios
+      if (!authStore.user?.area) {
+        console.error("El área del usuario no está definida.");
+        notificationMessage.value = 'No se pudo determinar el área del usuario.';
         showNotification.value = true;
         notificationType.value = 'error';
-        notificationTitle.value = 'Error de Red';
-      } finally {
-        loading.value = false;
+        notificationTitle.value = 'Error de Configuración';
+        return;
       }
-    };
+
+      const areaEncoded = encodeURIComponent(authStore.user.area);
+      pendingUrl = `http://localhost:3000/initial-consultations/type/${areaEncoded}/Por%20Asignar/Activo`;
+      assignedUrl = `http://localhost:3000/initial-consultations/type/${areaEncoded}/Asignado/Activo`;
+    }
+
+    // Realizar peticiones en paralelo
+    const [pendingResponse, assignedResponse] = await Promise.all([
+      axios.get(pendingUrl),
+      axios.get(assignedUrl)
+    ]);
+
+    const pendingCases: Case[] = pendingResponse.data || [];
+    const assignedCases: Case[] = assignedResponse.data || [];
+
+    // Procesar casos asignados para obtener detalles del estudiante
+    const processedAssignedCases = await Promise.all(
+      assignedCases.map(async (caso) => {
+        try {
+          console.log(`Fetching assignment for case: ${caso.Init_Code}`);
+          const assignmentResponse = await axios.get(
+            `http://localhost:3000/assignment/student/initcode/${caso.Init_Code}`
+          );
+
+          if (typeof assignmentResponse.data === 'string' && assignmentResponse.data) {
+            const studentId = assignmentResponse.data;
+            caso.assignedStudentId = studentId;
+            caso.assignedTo = studentId; // Mantener consistencia
+
+            try {
+              const studentResponse = await axios.get(`http://localhost:3000/internal-user/${studentId}`);
+              const studentData = studentResponse.data;
+              caso.assignedStudentName = `${studentData.Internal_Name || ''} ${studentData.Internal_LastName || ''}`.trim();
+            } catch (studentError: any) {
+              console.error(`Error fetching student details for ID ${studentId} (Case ${caso.Init_Code}):`, studentError);
+              caso.assignedStudentName = 'Estudiante no encontrado';
+            }
+
+          } else {
+            console.warn(`No assignment found or unexpected format for case ${caso.Init_Code}. Response:`, assignmentResponse.data);
+            caso.assignedStudentName = 'No asignado';
+            caso.assignedTo = null;
+            caso.assignedStudentId = null;
+          }
+        } catch (error: any) {
+          console.error(`Error fetching assignment/student for case ${caso.Init_Code}:`, error);
+          if (error.response && error.response.status === 404) {
+            console.warn(`404: No assignment found for case ${caso.Init_Code}`);
+            caso.assignedStudentName = 'No asignado';
+          } else {
+            caso.assignedStudentName = 'Error al cargar';
+          }
+          caso.assignedTo = null;
+          caso.assignedStudentId = null;
+        }
+        return caso; // Devolver el caso procesado
+      })
+    );
+
+    // Unir ambos conjuntos de casos en la variable principal
+    cases.value = [...pendingCases, ...processedAssignedCases];
+
+  } catch (error: any) {
+    console.error("Error fetching cases:", error);
+    notificationMessage.value = 'Error al cargar los casos. ' + (error.message || '');
+    showNotification.value = true;
+    notificationType.value = 'error';
+    notificationTitle.value = 'Error de Red';
+  } finally {
+    loading.value = false;
+  }
+};
 
     const fetchStudents = async (): Promise<void> => {
       if (!selectedArea.value) return; // No hacer fetch si no hay área

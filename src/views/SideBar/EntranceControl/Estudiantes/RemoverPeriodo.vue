@@ -9,11 +9,10 @@
       <Dropdown
         v-model="periodoSeleccionado"
         :options="periodos"
-        optionLabel="PeriodoNombre"
+        optionLabel="Period_Name"
         placeholder="Seleccionar Período"
         class="w-72"
       />
-
       <InputText
         v-model="busquedaNombre"
         placeholder="Buscar por Nombre y Apellido"
@@ -29,7 +28,7 @@
   v-model="areaSeleccionada"
   :options="opcionesAreas"
   optionLabel="label"
-  optionValue="value"
+  optionValue="label" 
   placeholder="Filtrar por Área"
   class="w-60"
 />
@@ -79,7 +78,7 @@
     <Dialog v-model:visible="dialogoVisible" header="Confirmar Remoción" :modal="true">
       <p class="mb-5">
         ¿Está seguro de remover a los estudiantes seleccionados del período
-        <strong>{{ periodoSeleccionado?.PeriodoNombre }}</strong>?
+        <strong>{{ periodoSeleccionado?.Period_Name }}</strong>?
       </p>
       <div class="flex justify-end gap-3">
         <Button label="Cancelar" class="p-button-text p-button-danger" @click="dialogoVisible = false" />
@@ -91,7 +90,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, computed, watch } from 'vue';
-import { API, type UsuarioXPeriodoDVM, type Periodo } from "@/ApiRoute";
+import { API, type UserXPeriodDVM, type Period } from "@/ApiRoute";
 import Toast from 'primevue/toast';
 import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
@@ -102,14 +101,14 @@ import Message from 'primevue/message';
 import Dialog from 'primevue/dialog';
 import { useToast } from 'primevue/usetoast';
 import { useSubjects } from '@/useSubjects';
-
+import axios from 'axios'; // Asegúrate de importar axios
 
 const toast = useToast();
 
-const usuariosXPeriodoDVM = ref<UsuarioXPeriodoDVM[]>([]);
-const estudiantesSeleccionados = ref<UsuarioXPeriodoDVM[]>([]);
-const periodos = ref<Periodo[]>([]);
-const periodoSeleccionado = ref<Periodo | null>(null);
+const usuariosXPeriodoDVM = ref<UserXPeriodDVM[]>([]);
+const estudiantesSeleccionados = ref<UserXPeriodDVM[]>([]);
+const periodos = ref<Period[]>([]);
+const periodoSeleccionado = ref<Period | null>(null);
 const busquedaNombre = ref('');
 const busquedaCedula = ref('');
 const errorMensaje = ref('');
@@ -123,28 +122,31 @@ const areaSeleccionada = ref<string | null>(null);
 // 🔹 Cargar períodos
 const fetchPeriodos = async () => {
   try {
-    const res = await fetch(`${API}/periodos`);
-    periodos.value = await res.json();
+    const res = await axios.get(`${API}/periodos`);
+    periodos.value = res.data;
+    console.log('periodos.value', periodos.value);
   } catch (error) {
     errorMensaje.value = 'Error al cargar períodos.';
   }
 };
 
 // 🔹 Cargar estudiantes del período seleccionado (usando campos Internal)
-const fetchEstudiantesDelPeriodo = async (periodoId: number) => {
+const fetchEstudiantesDelPeriodo = async (periodId: number) => {
+  console.log('periodId', periodId);
   try {
-    const res = await fetch(`${API}/usuarioxPeriodo/periodo/${periodoId}`);
-    const data = await res.json();
+    const res = await axios.get(`${API}/usuarioxPeriodo/periodo/${periodId}`);
+    const data = res.data;
 
     usuariosXPeriodoDVM.value = data.map((rel: any) => ({
-      Internal_ID: rel.usuario.Internal_ID,
-      Internal_Name: rel.usuario.Internal_Name,
-      Internal_LastName: rel.usuario.Internal_LastName,
-      Internal_Email: rel.usuario.Internal_Email,
-      Internal_Area: rel.usuario.Internal_Area || 'N/A',
-      Periodo_ID: rel.periodo.Periodo_ID,
-      PeriodoNombre: rel.periodo.PeriodoNombre,
+      Internal_ID: rel.user.Internal_ID,
+      Internal_Name: rel.user.Internal_Name,
+      Internal_LastName: rel.user.Internal_LastName,
+      Internal_Email: rel.user.Internal_Email,
+      Internal_Area: rel.user.Internal_Area || 'N/A',
+      Period_ID: rel.period.Period_ID,
+      Period_Name: rel.period.Period_Name,
     }));
+
   } catch (error) {
     errorMensaje.value = 'Error al cargar estudiantes.';
   }
@@ -189,9 +191,7 @@ const removerEstudiantes = async () => {
 
   try {
     for (const estudiante of estudiantesSeleccionados.value) {
-      await fetch(`${API}/usuarioxPeriodo/${periodoSeleccionado.value?.Periodo_ID}/${estudiante.Internal_ID}`, {
-        method: 'DELETE',
-      });
+      await axios.delete(`${API}/usuarioxPeriodo/${periodoSeleccionado.value?.Period_ID}/${estudiante.Internal_ID}`);
     }
 
     toast.add({
@@ -203,7 +203,8 @@ const removerEstudiantes = async () => {
 
     estudiantesSeleccionados.value = [];
     if (periodoSeleccionado.value) {
-      await fetchEstudiantesDelPeriodo(periodoSeleccionado.value.Periodo_ID);
+      console.log('periodoSeleccionado.value.Period_ID', periodoSeleccionado.value.Period_ID);
+      await fetchEstudiantesDelPeriodo(periodoSeleccionado.value.Period_ID);
     }
   } catch (error) {
     toast.add({
@@ -215,15 +216,16 @@ const removerEstudiantes = async () => {
   }
 };
 
-// 🔹 Observa cambios de período
+// Observa cambios de período
 watch(periodoSeleccionado, (nuevoPeriodo) => {
   if (nuevoPeriodo) {
-    fetchEstudiantesDelPeriodo(nuevoPeriodo.Periodo_ID);
+    console.log('nuevoPeriodo.Period_ID', nuevoPeriodo.Period_ID);
+    fetchEstudiantesDelPeriodo(nuevoPeriodo.Period_ID);
   } else {
     usuariosXPeriodoDVM.value = [];
   }
 });
 
-// 🔹 Cargar inicial
+// Cargar inicial
 onMounted(fetchPeriodos);
 </script>

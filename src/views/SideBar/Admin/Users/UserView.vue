@@ -8,16 +8,21 @@ import Column from "primevue/column";
 import InputText from "primevue/inputtext";
 import Button from "primevue/button";
 import Dialog from "primevue/dialog";
-import Select from "primevue/dropdown";
+import Select from "primevue/select";
 import Tag from "primevue/tag";
 import { useToast } from "primevue/usetoast";
 import { type Internal_User } from "@/ApiRoute";
 import { API } from "@/ApiRoute";
 import { useSubjects } from "@/useSubjects";
 
+import ProgressSpinner from 'primevue/progressspinner';
+
+import ProgressBar from 'primevue/progressbar';
+
 // PrimeVue Toast para notificaciones
 const toast = useToast();
-const { subjects: opcionesAreas, fetchSubjects } = useSubjects();
+const isLoading = ref(false); // Add loading state
+
 // Usuarios cargados desde la API
 const internalUser = ref<Internal_User[]>([]);
 // Usuario seleccionado para edición (se inicializa como objeto vacío)
@@ -79,10 +84,14 @@ const fetchUsers = async () => {
 
 // Guardar cambios en la API
 const saveUser = async () => {
+  isLoading.value = true;
+
   if (selectedInternalUser.value) {
     try {
       selectedInternalUser.value.Internal_Phone =
         selectedInternalUser.value.Internal_Phone.replace(/\D/g, ""); // Eliminar caracteres no numéricos
+
+      selectedInternalUser.value.Internal_Email = selectedInternalUser.value.Internal_Email.toLowerCase().trim(); // Convertir a minúsculas
       await axios.put(
         `${API}/internal-user/${selectedInternalUser.value.Internal_ID}`,
         selectedInternalUser.value
@@ -97,13 +106,33 @@ const saveUser = async () => {
       await fetchUsers();
       editDialogVisible.value = false;
       console.log(selectedInternalUser.value);
-    } catch (error) {
-      toast.add({
-        severity: "error",
-        summary: "Error",
-        detail: "No se ha podido actualizar al usuario.",
-        life: 3000,
-      });
+    } catch (error: any) {
+      if(error.response.status === 409) {
+        toast.add({
+          severity: "warn",
+          summary: "Advertencia",
+          detail: "El correo ingresado ya está registrado en otro usuario.",
+          life: 3000,
+        });
+      } else if (error.response.status === 404) {
+        toast.add({
+          severity: "warn",
+          summary: "Advertencia",
+          detail: "Verifica que hiciste cambios en el usuario para actualizar.",
+          life: 3000,
+        });
+      } 
+      else {
+          toast.add({
+          severity: "error",
+          summary: "Error",
+          detail: "No se ha podido actualizar al usuario.",
+          life: 3000,
+        });
+      }
+
+    } finally {
+      isLoading.value = false; // Reset loading state
     }
   }
 };
@@ -160,6 +189,14 @@ axios.get(`${API}/profile`).then((response) => {
   }));
 });
 
+const opcionesAreas = ref<{ name: string; value: string }[]>([]);
+axios.get(`${API}/subjects`).then((response) => {;
+    opcionesAreas.value = response.data.map((area: any) => ({
+      label: area.Subject_Name,
+      value: area.Subject_Name,
+    }));
+  });
+
 const defaultAvatar = '/src/components/icons/default-user.png'; 
 
 // Función para asignar la clase de color al Tag según el estado
@@ -177,7 +214,6 @@ const getSeverity = (status: string) => {
 onMounted(() => {
   fetchUsers();
   initFilters();
-  fetchSubjects();
 });
 </script>
 
@@ -377,122 +413,129 @@ onMounted(() => {
 
     <!-- Modal de información -->
     <Dialog
-      v-model:visible="viewDialogVisible"
-      header="Información de Usuario"
-      modal
-      class="p-6"
-      appendTo="body"
-      :blockScroll="true"
-    >
-      <div class="space-y-4">
-        <div>
-          <label for="id" class="block text-sm font-semibold"
-            >Cédula/Pasaporte</label
-          >
-          <InputText
-            id="id"
-            v-model="selectedInternalUser.Internal_ID"
-            class="w-full md:w-51 rounded border-gray-300 focus:ring-blue-500"
-            size="large"
-            :disabled="true"
-          />
-        </div>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label for="name" class="block text-sm font-semibold">Nombre</label>
-            <InputText
-              id="name"
-              v-model="selectedInternalUser.Internal_Name"
-              class="w-full rounded border-gray-300 focus:ring-blue-500"
-              size="large"
-              :disabled="true"
-            />
-          </div>
-          <div>
-            <label for="lastname" class="block text-sm font-semibold"
-              >Apellido</label
-            >
-            <InputText
-              id="lastname"
-              v-model="selectedInternalUser.Internal_LastName"
-              class="w-full rounded border-gray-300 focus:ring-blue-500"
-              size="large"
-              :disabled="true"
-            />
-          </div>
-        </div>
+  v-model:visible="viewDialogVisible"
+  header="Información de Usuario"
+  modal
+  class="p-6"
+  appendTo="body"
+  :blockScroll="true"
+>
 
-        <div>
-          <label for="email" class="block text-sm font-semibold">Email</label>
-          <InputText
-            id="email"
-            v-model="selectedInternalUser.Internal_Email"
-            class="w-full rounded border-gray-300 focus:ring-blue-500"
-            size="large"
-            :disabled="true"
-          />
-        </div>
+  <Avatar 
+    :image="selectedInternalUser.Internal_Picture || defaultAvatar"
+    shape="circle"
+    class="absolute shadow-lg ml-70 -mt-10"
+    style="width: 90px; height: 90px;   border: 2px solid hsla(0, 0%, 100%, 0.914);"
+  />
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label for="telefono" class="block text-sm font-semibold"
-              >Teléfono</label
-            >
-            <InputMask
-              id="telefono"
-              v-model="selectedInternalUser.Internal_Phone"
-              size="large"
-              class="w-full rounded border-gray-300 focus:ring-blue-500 bg-gray-100"
-              mask="(999)-999-9999"
-              :disabled="true"
-            />
-          </div>
+  <div class="space-y-4">
+    <div>
+      <label for="id" class="block text-sm font-semibold">
+        Cédula/Pasaporte
+      </label>
+      <InputText
+        id="id"
+        v-model="selectedInternalUser.Internal_ID"
+        class="w-full md:w-51 rounded border-gray-300 focus:ring-blue-500"
+        size="large"
+        :disabled="true"
+      />
+    </div>
 
-          <div>
-            <label for="area" class="block text-sm font-semibold">Área</label>
-            <Select
-              id="area"
-              v-model="selectedInternalUser.Internal_Area"
-              :options="opcionesAreas"
-              optionLabel="label"
-              optionValue="value"
-              class="w-full rounded border-gray-300 focus:ring-blue-500 bg-gray-100"
-              readonly
-              size="large"
-              :disabled="true"
-            />
-          </div>
-        </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label for="type" class="block text-sm font-semibold">Tipo</label>
-            <Select
-              id="type"
-              v-model="selectedInternalUser.Internal_Type"
-              :options="types"
-              class="w-full rounded border-gray-300 focus:ring-blue-500 bg-gray-100"
-              readonly
-              size="large"
-              :disabled="true"
-            />
-          </div>
-          <div>
-            <label for="status" class="block text-sm font-semibold"
-              >Estado</label
-            >
-            <Select
-              id="status"
-              v-model="selectedInternalUser.Internal_Status"
-              :options="statuses"
-              class="w-full rounded border-gray-300 focus:ring-blue-500"
-              size="large"
-              :disabled="true"
-            />
-          </div>
-        </div>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div>
+        <label for="name" class="block text-sm font-semibold">Nombre</label>
+        <InputText
+          id="name"
+          v-model="selectedInternalUser.Internal_Name"
+          class="w-full rounded border-gray-300 focus:ring-blue-500"
+          size="large"
+          :disabled="true"
+        />
       </div>
-    </Dialog>
+      <div>
+        <label for="lastname" class="block text-sm font-semibold">Apellido</label>
+        <InputText
+          id="lastname"
+          v-model="selectedInternalUser.Internal_LastName"
+          class="w-full rounded border-gray-300 focus:ring-blue-500"
+          size="large"
+          :disabled="true"
+        />
+      </div>
+    </div>
+
+    <div>
+      <label for="email" class="block text-sm font-semibold">Email</label>
+      <InputText
+        id="email"
+        v-model="selectedInternalUser.Internal_Email"
+        class="w-full rounded border-gray-300 focus:ring-blue-500"
+        size="large"
+        :disabled="true"
+      />
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div>
+        <label for="telefono" class="block text-sm font-semibold">Teléfono</label>
+        <InputMask
+          id="telefono"
+          v-model="selectedInternalUser.Internal_Phone"
+          size="large"
+          class="w-full rounded border-gray-300 focus:ring-blue-500 bg-gray-100"
+          mask="(999)-999-9999"
+          :disabled="true"
+        />
+      </div>
+
+      <div>
+        <label for="area" class="block text-sm font-semibold">Área</label>
+        <Select
+          id="area"
+          v-model="selectedInternalUser.Internal_Area"
+          :options="opcionesAreas"
+          optionLabel="label"
+          optionValue="label"
+          class="w-full rounded border-gray-300 focus:ring-blue-500 bg-gray-100"
+          readonly
+          size="large"
+          :disabled="true"
+        />
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div>
+        <label for="type" class="block text-sm font-semibold">Tipo</label>
+        <Select
+          id="type"
+          v-model="selectedInternalUser.Internal_Type"
+          :options="profileOptions"
+          optionLabel="name"
+          optionValue="value"
+          class="w-full rounded border-gray-300 focus:ring-blue-500 bg-gray-100"
+          readonly
+          size="large"
+          :disabled="true"
+        />
+      </div>
+
+      <div>
+        <label for="status" class="block text-sm font-semibold">Estado</label>
+        <Select
+          id="status"
+          v-model="selectedInternalUser.Internal_Status"
+          :options="statuses"
+          class="w-full rounded border-gray-300 focus:ring-blue-500"
+          size="large"
+          :disabled="true"
+        />
+      </div>
+    </div>
+  </div>
+</Dialog>
+
 
     <!-- Modal de edición -->
     <Dialog
@@ -503,6 +546,15 @@ onMounted(() => {
       appendTo="body"
       :blockScroll="true"
     >
+
+
+      <Avatar 
+    :image="selectedInternalUser.Internal_Picture || defaultAvatar"
+    shape="circle"
+    class="absolute shadow-lg ml-70 -mt-10"
+    style="width: 90px; height: 90px;   border: 2px solid hsla(0, 0%, 100%, 0.914);"
+  />
+  
       <div class="space-y-4">
         <div>
           <label for="id" class="block text-sm font-semibold"
@@ -607,20 +659,29 @@ onMounted(() => {
       </div>
 
       <template #footer>
-        <div class="flex justify-end gap-3 pt-4">
+        <!-- Show buttons when not loading -->
+        <div v-if="!isLoading" class="flex justify-end gap-3 pt-4">
           <Button
             label="Cancelar"
             icon="pi pi-times"
             class="p-button-text text-gray-600 hover:text-gray-800"
             severity="contrast"
             @click="editDialogVisible = false"
+            :disabled="isLoading" 
           />
           <Button
             label="Guardar"
             icon="pi pi-check"
             class="p-button-info"
             @click="saveUser()"
+            :disabled="isLoading" 
           />
+        </div>
+        <!-- Show progress bar when loading -->
+        <div v-if="isLoading" class="flex justify-center"> <!-- Add padding top to match button container -->
+          <ProgressSpinner style="width: 30px; height: 30px" strokeWidth="8" fill="transparent"
+              animationDuration=".5s" aria-label="Custom ProgressSpinner" />
+              <h4 class="text-gray-600 text-sm font-semibold ml-2 mt-2">Guardando...</h4>
         </div>
       </template>
     </Dialog>

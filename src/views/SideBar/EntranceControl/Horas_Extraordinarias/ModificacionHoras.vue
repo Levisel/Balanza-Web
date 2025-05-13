@@ -17,20 +17,6 @@
     
     <Toast />
   
-    <!-- Modal de error -->
-    <Dialog
-      v-model:visible="showErrorModal"
-      header="Error"
-      :modal="true"
-      :closable="true"
-      class="w-full max-w-md"
-      :class="isDarkTheme ? 'bg-gray-800 text-white' : 'bg-white text-gray-900'"
-    >
-      <p class="text-center">{{ errorModalMessage }}</p>
-      <div class="flex justify-center mt-4">
-        <Button label="Cerrar" @click="showErrorModal = false" />
-      </div>
-    </Dialog>
   
     <!-- Modal de confirmación -->
     <Dialog
@@ -67,7 +53,9 @@
         placeholder="Ingrese la cédula" 
         class="w-full p-3 border rounded-lg" 
         :class="isDarkTheme ? 'bg-gray-700 text-white border-gray-600' : ''"
+        @keyup.enter="buscarEstudiante"
       />
+
       <div class="flex justify-center mt-4">
         <Button label="Buscar" class="p-button-primary" @click="buscarEstudiante" />
       </div>
@@ -79,20 +67,15 @@
       <div :class="[cardClass, 'p-6 rounded-lg shadow-lg']">
         <h2 class="text-xl font-semibold text-center mb-4">Datos del Estudiante</h2>
         <div class="mb-4">
-          <p><strong>Cédula:</strong> {{ resumenDisplay.usuarioResumen.Internal_ID }}</p>
-          <p>
-            <strong>Nombre:</strong> 
-            {{ resumenDisplay.usuarioResumen.Internal_Name }} 
-            {{ resumenDisplay.usuarioResumen.Internal_LastName }}
-          </p>
-          <p><strong>Correo:</strong> {{ resumenDisplay.usuarioResumen.Internal_Email }}</p>
-          <p><strong>Área:</strong> {{ resumenDisplay.usuarioResumen.Internal_Area || "N/A" }}</p>
-        </div>
-        <div>
-          <h3 class="text-lg font-medium">Resumen de Horas</h3>
-          <p><strong>Total Horas:</strong> {{ resumenDisplay.Resumen_Horas_Totales }}</p>
-          <p><strong>Horas Adicionales:</strong> {{ resumenDisplay.Resumen_Horas_Adicionales }}</p>
-          <p><strong>Horas Reducidas:</strong> {{ resumenDisplay.Resumen_Horas_Reducidas }}</p>
+          <p><strong>Cédula:</strong> {{ resumenDisplay.userSummary.Internal_ID }}</p>
+            <p><strong>Nombre:</strong> {{ resumenDisplay.userSummary.Internal_Name }} {{ resumenDisplay.userSummary.Internal_LastName }}</p>
+            <p><strong>Correo:</strong> {{ resumenDisplay.userSummary.Internal_Email }}</p>
+            <p><strong>Área:</strong> {{ resumenDisplay.userSummary.Internal_Area || "N/A" }}</p>
+
+            <p><strong>Total Horas:</strong> {{ resumenDisplay.Summary_Total_Hours }}</p>
+            <p><strong>Horas Adicionales:</strong> {{ resumenDisplay.Summary_Extra_Hours }}</p>
+            <p><strong>Horas Reducidas:</strong> {{ resumenDisplay.Summary_Reduced_Hours }}</p>
+
         </div>
       </div>
       <!-- Tarjeta con formulario de ajuste -->
@@ -100,38 +83,43 @@
         <h2 class="text-xl font-semibold text-center mb-4">Registrar Ajuste</h2>
         <div class="mb-4">
           <label class="block font-medium mb-1">Horas a Ajustar</label>
-          <input 
-            v-model.number="ajusteHoras" 
-            type="number" 
-            step="0.1" 
-            min="0" 
-            class="w-full p-2 border rounded-lg" 
-            :class="isDarkTheme ? 'bg-gray-700 text-white border-gray-600' : ''"
-            placeholder="Ej: 1.5"
-          />
+          <InputNumber
+              v-model="ajusteHoras"
+              class="w-full"
+              inputId="ajusteHoras"
+              :min="0"
+              mode="decimal"
+              :step="0.1"
+              :useGrouping="false"
+              showButtons
+            />
         </div>
         <div class="mb-4">
           <label class="block font-medium mb-1">Tipo de Ajuste</label>
-          <select 
+          <Dropdown 
             v-model="ajusteTipo" 
-            class="w-full p-2 border rounded-lg" 
+            :options="tiposDeAjuste"
+            optionLabel="label"
+            optionValue="value"
+            placeholder="Seleccione un tipo"
+            class="w-full"
             :class="isDarkTheme ? 'bg-gray-700 text-white border-gray-600' : ''"
-          >
-            <option disabled value="">Seleccione un tipo</option>
-            <option value="adicional">Adicional</option>
-            <option value="reducida">Reducida</option>
-          </select>
+          />
         </div>
+
         <div class="mb-4">
           <label class="block font-medium mb-1">Comentario (opcional)</label>
-          <textarea 
+          <Textarea 
             v-model="ajusteComentario" 
             rows="3" 
-            class="w-full p-2 border rounded-lg" 
+            maxlength="150"
+            class="w-full p-2 border rounded-lg"
             :class="isDarkTheme ? 'bg-gray-700 text-white border-gray-600' : ''"
-            placeholder="Ingrese un comentario si es necesario"
-            maxlength="250"
-          ></textarea>
+            placeholder="Ingrese un comentario (opcional)"
+          />
+          <div class="text-sm text-right text-gray-500 mt-1">
+            {{ ajusteComentario.length }}/150
+          </div>
         </div>
         <div class="flex justify-center mt-4">
           <Button label="Guardar Ajuste" class="p-button-success" @click="openConfirmDialog" />
@@ -145,15 +133,26 @@
 import { ref, computed } from "vue";
 import { useRouter } from "vue-router";
 import Button from "primevue/button";
+import Dropdown from 'primevue/dropdown';
 import InputText from "primevue/inputtext";
 import Dialog from "primevue/dialog";
 import { useToast } from "primevue/usetoast";
 import { API, type Usuario } from "@/ApiRoute";
 import { useDarkMode } from "@/components/ThemeSwitcher";
+import { useAuthStore } from "@/stores/auth";
+import axios from "axios";
 
 const router = useRouter();
 const toast = useToast();
 const { isDarkTheme } = useDarkMode();
+const authStore = useAuthStore();
+
+
+const tiposDeAjuste = [
+  { label: "Adicional", value: "adicional" },
+  { label: "Reducida", value: "reducida" }
+];
+
 
 // Función para obtener la fecha de hoy en formato "YYYY-MM-DDT00:00"
 function getTodayDateLocal() {
@@ -173,10 +172,10 @@ const estudianteCargado = ref(false);
 const resumenData = ref(null);
 const resumenDisplay = computed(() => {
   return resumenData.value || {
-    Resumen_Horas_Totales: 0,
-    Resumen_Horas_Adicionales: 0,
-    Resumen_Horas_Reducidas: 0,
-    usuarioResumen: {
+    Summary_Total_Hours: 0,
+    Summary_Extra_Hours: 0,
+    Summary_Reduced_Hours: 0,
+    userSummary: {
       Internal_ID: usuarioData.value ? usuarioData.value.Internal_ID : "",
       Internal_Name: usuarioData.value ? usuarioData.value.Internal_Name : "",
       Internal_LastName: usuarioData.value ? usuarioData.value.Internal_LastName : "",
@@ -186,8 +185,9 @@ const resumenDisplay = computed(() => {
   };
 });
 
+
 // Variable para almacenar los datos del usuario (en caso de que no exista resumen)
-const usuarioData = ref(null);
+const usuarioData = ref<Usuario | null>(null);
 
 // Variables para ajustes
 const ajusteHoras = ref(0);
@@ -205,40 +205,36 @@ const cardClass = computed(() =>
 // Función para buscar y cargar el resumen con datos del estudiante
 const buscarEstudiante = async () => {
   if (!cedulaInput.value) {
-    toast.add({
-      severity: "warn",
-      summary: "Falta cédula",
-      detail: "Ingrese una cédula para buscar.",
-      life: 3000,
-    });
+    toast.add({ severity: "warn", summary: "Falta cédula", detail: "Ingrese una cédula para buscar.", life: 3000 });
     return;
   }
   try {
-    // Obtener datos del estudiante
-    const response = await fetch(`${API}/internal-user/${cedulaInput.value}`);
-    if (!response.ok) throw new Error("Estudiante no encontrado");
-    const usuario: Usuario = await response.json();
+    // Primero buscar los datos del estudiante
+    const { data: usuario } = await axios.get(`${API}/internal-user/${cedulaInput.value}`);
     usuarioData.value = usuario;
-    
-    // Consultar el resumen con datos básicos usando la ruta que devuelve usuarioResumen
-    const resResumen = await fetch(`${API}/resumenHoras/conDatos/${usuario.Internal_ID}`);
-    // Si no se encuentra el resumen, dejamos resumenData en null para usar el valor por defecto en resumenDisplay
-    if (resResumen.ok) {
-      const resumen = await resResumen.json();
-      resumenData.value = resumen;
-    } else {
-      resumenData.value = null;
+
+    // Luego intentar obtener el resumen
+    try {
+      const resResumen = await axios.get(`${API}/resumenHoras/conDatos/${usuario.Internal_ID}`);
+      resumenData.value = resResumen.data;
+    } catch (errorResumen: any) {
+      console.warn('No se encontró resumen, usando valores por defecto');
+      resumenData.value = null;  // Esto hará que use el computed con valores 0
     }
+
     estudianteCargado.value = true;
+
   } catch (error: any) {
     toast.add({
       severity: "error",
       summary: "Error",
-      detail: error.message || "Error al buscar el estudiante.",
+      detail: error.response?.data?.message || error.message || "Error al buscar el estudiante.",
       life: 5000,
     });
+    estudianteCargado.value = false;
   }
 };
+
 
 // Función para abrir el modal de confirmación
 const openConfirmDialog = () => {
@@ -251,8 +247,24 @@ const openConfirmDialog = () => {
     });
     return;
   }
+
+  // 🚨 Validación: si intenta reducir más horas de las que tiene
+  if (
+    ajusteTipo.value === "reducida" &&
+    ajusteHoras.value > resumenDisplay.value.Summary_Total_Hours
+  ) {
+    toast.add({
+      severity: "error",
+      summary: "Horas excedidas",
+      detail: `No puedes reducir más horas de las que tiene asignadas (${resumenDisplay.value.Summary_Total_Hours}).`,
+      life: 5000,
+    });
+    return;
+  }
+
   confirmDialogVisible.value = true;
 };
+
 
 // Función para cancelar la confirmación
 const cancelConfirm = () => {
@@ -264,24 +276,23 @@ const guardarAjuste = async () => {
   confirmDialogVisible.value = false;
   try {
     const ajusteData = {
-      Internal_ID: resumenDisplay.value.usuarioResumen.Internal_ID,
-      Horas_Num: ajusteHoras.value,
-      Horas_Tipo: ajusteTipo.value, // "adicional" o "reducida"
-      Horas_Fecha: new Date(), // Fecha actual en UTC (se recomienda usar ISO)
-      Horas_Comentario: ajusteComentario.value
+      Internal_ID: resumenDisplay.value.userSummary.Internal_ID,
+      Hours_Num: ajusteHoras.value,
+      Hours_Type: ajusteTipo.value,
+      Hours_Date: new Date(),
+      Hours_Comment: ajusteComentario.value,
+      Hours_Approved_By: authStore.user?.name || null
     };
-    const response = await fetch(`${API}/horasExtraordinarias/createConResumen`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(ajusteData)
-    });
-    if (!response.ok) throw new Error("No se pudo registrar el ajuste de horas extraordinarias.");
+
+    await axios.post(`${API}/horasExtraordinarias/createConResumen`, ajusteData);
+
     toast.add({
       severity: "success",
       summary: "Registrado",
       detail: "El ajuste fue registrado correctamente.",
       life: 3000,
     });
+
     setTimeout(() => {
       router.push("/SeguimientoGeneral");
     }, 3000);
@@ -289,11 +300,12 @@ const guardarAjuste = async () => {
     toast.add({
       severity: "error",
       summary: "Error",
-      detail: error.message || "Error al guardar el ajuste.",
+      detail: error.response?.data?.message || error.message || "Error al guardar el ajuste.",
       life: 5000,
     });
   }
 };
+
   
 // Función para volver
 const volver = () => {
@@ -302,5 +314,4 @@ const volver = () => {
 </script>
   
 <style scoped>
-/* Puedes agregar estilos adicionales o personalizar clases aquí */
 </style>

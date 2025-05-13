@@ -7,10 +7,11 @@ import Dropdown from 'primevue/dropdown';
 import Button from 'primevue/button';
 import axios from 'axios';
 import { API, type Internal_User } from '@/ApiRoute';
-
+import { useToast } from "primevue/usetoast";
 import { useSubjects } from '@/useSubjects';
 const { subjects: areas } = useSubjects();
-
+const isSaving = ref(false);
+const toast = useToast();
 
 const props = defineProps<{
   visible: boolean;
@@ -44,28 +45,126 @@ watch(() => props.visible, (newVal) => {
   }
 });
 
+
+
+
 const cancel = () => {
   modelVisible.value = false;
 };
 
 const saveChanges = async () => {
-  if (!editedUser.value) return;
-  // Limpiar el formato del teléfono
-  if (editedUser.value.Internal_Phone) {
-    editedUser.value.Internal_Phone = editedUser.value.Internal_Phone.replace(/\D/g, "");
+  if (isSaving.value || !editedUser.value || !props.user) return;
+  isSaving.value = true;
+
+  const originalUser = props.user;
+  const edited = editedUser.value;
+
+  const emailCambiado =
+    originalUser.Internal_Email.trim().toLowerCase() !==
+    edited.Internal_Email.trim().toLowerCase();
+
+  const otrosCambios =
+    originalUser.Internal_Name !== edited.Internal_Name ||
+    originalUser.Internal_LastName !== edited.Internal_LastName ||
+    originalUser.Internal_Phone !== edited.Internal_Phone ||
+    originalUser.Internal_Area !== edited.Internal_Area ||
+    originalUser.Internal_Status !== edited.Internal_Status;
+
+  // Validar si el nuevo correo ya está registrado
+  if (emailCambiado) {
+    try {
+      const res = await axios.get(
+        `${API}/internal-user/email/${edited.Internal_Email.trim().toLowerCase()}`
+      );
+      if (res.data && res.data.Internal_ID !== edited.Internal_ID) {
+        toast.add({
+          severity: 'warn',
+          summary: 'Correo duplicado',
+          detail: 'Este correo ya está en uso por otro usuario.',
+          life: 3000
+        });
+        isSaving.value = false;
+        return;
+      }
+    } catch (err: any) {
+      if (err.response?.status !== 404) {
+        console.error("Error al validar correo:", err);
+        toast.add({
+          severity: 'error',
+          summary: 'Error al validar correo',
+          detail: 'Ocurrió un error inesperado.',
+          life: 3000
+        });
+        isSaving.value = false;
+        return;
+      }
+    }
   }
+
+  // Limpiar el formato del teléfono
+  if (edited.Internal_Phone) {
+    edited.Internal_Phone = edited.Internal_Phone.replace(/\D/g, "");
+  }
+
   try {
-    await axios.put(`${API}/internal-user/${editedUser.value.Internal_ID}`, editedUser.value);
+    if (emailCambiado && !otrosCambios) {
+      // Solo correo cambiado
+      await axios.post(`${API}/internal-user/resend-credentials/${edited.Internal_ID}`, {
+        newEmail: edited.Internal_Email
+      });
+
+      toast.add({
+        severity: 'info',
+        summary: 'Nuevas credenciales enviadas',
+        detail: `Se ha enviado una nueva contraseña a ${edited.Internal_Email}.`,
+        life: 4000
+      });
+    } else {
+      // PUT (con o sin cambio de correo)
+      await axios.put(`${API}/internal-user/${edited.Internal_ID}`, edited);
+
+      if (emailCambiado) {
+        await axios.post(`${API}/internal-user/resend-credentials/${edited.Internal_ID}`, {
+          newEmail: edited.Internal_Email
+        });
+
+        toast.add({
+          severity: 'info',
+          summary: 'Nuevas credenciales enviadas',
+          detail: `Se ha enviado una nueva contraseña a ${edited.Internal_Email}.`,
+          life: 4000
+        });
+      }
+
+      toast.add({
+        severity: 'success',
+        summary: 'Usuario actualizado',
+        detail: 'El usuario ha sido actualizado correctamente.',
+        life: 3000
+      });
+    }
+
     emits('updated');
     modelVisible.value = false;
   } catch (error) {
     console.error('Error al actualizar usuario:', error);
-    // Aquí podrías agregar una notificación para el usuario si es necesario
+    toast.add({
+      severity: 'error',
+      summary: 'Error',
+      detail: 'No se pudo guardar el usuario. Intenta más tarde.',
+      life: 4000
+    });
+  } finally {
+    isSaving.value = false;
   }
 };
+
+
+
 </script>
 
 <template>
+  <Toast></Toast>
   <Dialog
     v-model:visible="modelVisible"
     header="Editar Usuario"
@@ -113,6 +212,10 @@ const saveChanges = async () => {
           class="w-full rounded border-gray-300 focus:ring-blue-500"
           size="large"
         />
+        <small v-if="editedUser.Internal_Email !== props.user?.Internal_Email" class="text-yellow-600 text-sm">
+          Se enviarán nuevas credenciales a este correo al guardar.
+        </small>
+
       </div>
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
@@ -128,15 +231,14 @@ const saveChanges = async () => {
         <div>
           <label for="Internal_Area" class="block text-sm font-semibold">Área</label>
           <Dropdown
-  id="Internal_Area"
-  v-model="editedUser.Internal_Area"
-  :options="areas"
-  optionLabel="label"
-  optionValue="value"
-  class="w-full rounded border-gray-300 focus:ring-blue-500 bg-gray-100"
-  size="large"
-/>
-
+          id="Internal_Area"
+          v-model="editedUser.Internal_Area"
+          :options="areas"
+          optionLabel="label"
+          optionValue="label"
+          class="w-full rounded border-gray-300 focus:ring-blue-500 bg-gray-100"
+          size="large"
+        />
 
         </div>
       </div>
@@ -163,10 +265,13 @@ const saveChanges = async () => {
           @click="cancel"
         />
         <Button
+          type="button"
           label="Guardar"
           icon="pi pi-check"
           class="p-button-info"
           @click="saveChanges"
+          :disabled="isSaving"
+          :loading="isSaving"
         />
       </div>
     </template>

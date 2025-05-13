@@ -18,9 +18,7 @@ const menu = ref();
 
 const userAvatar = computed(() => {
    const defaultAvatar = '/src/components/icons/default-user.png'; 
-   console.log("User Avatar:", authStore.user?.picture);
    return authStore.user?.picture || defaultAvatar;
-   
 });
 
 //User Menu Items
@@ -81,6 +79,16 @@ const caseNotificactionsClass = computed(() => [
 const activitiesClass = computed(() => [
   "select-none flex items-center cursor-pointer p-4 rounded text-surface-700 transition-colors",
   route.path === "/CrearActividades" ? "text-green-400" : "",
+  isDarkTheme.value ? "hover:bg-gray-700" : "hover:bg-gray-100",
+]);
+const assignedCasesClass = computed(() => [
+  "select-none flex items-center cursor-pointer p-4 rounded text-surface-700 transition-colors",
+  route.path === "/VerCasosAsignados" ? "text-green-400" : "",
+  isDarkTheme.value ? "hover:bg-gray-700" : "hover:bg-gray-100",
+]);
+const viewAllCasesClass = computed(() => [
+  "select-none flex items-center cursor-pointer p-4 rounded text-surface-700 transition-colors",
+  route.path === "/VerCasos" ? "text-green-400" : "",
   isDarkTheme.value ? "hover:bg-gray-700" : "hover:bg-gray-100",
 ]);
 
@@ -270,6 +278,24 @@ const vistaHorariosPersonalClass = computed(() => [
   route.path === "/VistaHorariosPersonal" ? "text-green-400" : "",
   isDarkTheme.value ? "hover:bg-gray-700" : "hover:bg-gray-100",
 ]);
+
+const registroVirtualClass = computed(() => [
+  "select-none flex items-center cursor-pointer p-4 rounded text-surface-700 transition-colors",
+  route.path === "/RegistroVirtual" ? "text-green-400" : "",
+  isDarkTheme.value ? "hover:bg-gray-700" : "hover:bg-gray-100",
+]);
+
+const seguimientoHorasClass = computed(() => [
+  "select-none flex items-center cursor-pointer p-4 rounded text-surface-700 transition-colors",
+  route.path === "/ResumenSemanalEstudiante" ? "text-green-400" : "",
+  isDarkTheme.value ? "hover:bg-gray-700" : "hover:bg-gray-100",
+]);
+
+const alertClass = computed(() => [
+  "select-none flex items-center cursor-pointer p-4 rounded text-surface-700 transition-colors",
+  route.path === "/Alertas" ? "text-green-400" : "",
+  isDarkTheme.value ? "hover:bg-gray-700" : "hover:bg-gray-100",
+]);
 </script>
 
 <template>
@@ -313,7 +339,8 @@ const vistaHorariosPersonalClass = computed(() => [
               authStore.user?.type == 'Administrador' ||
               authStore.user?.type == 'Estudiante' ||
               authStore.user?.type == 'Abogado' ||
-              authStore.user?.type == 'Coordinador'
+              authStore.user?.type == 'Coordinador' ||
+              authStore.user?.type == 'Secretaria'
             "
           >
             <div
@@ -327,7 +354,8 @@ const vistaHorariosPersonalClass = computed(() => [
                   authStore.user?.type == 'Administrador' ||
                   authStore.user?.type == 'Estudiante' ||
                   authStore.user?.type == 'Abogado' ||
-                  authStore.user?.type == 'Coordinador'
+                  authStore.user?.type == 'Coordinador' ||
+                  authStore.user?.type == 'Secretaria'
                 "
               >
                 <li>
@@ -409,6 +437,32 @@ const vistaHorariosPersonalClass = computed(() => [
                   </router-link>
                 </li>
               </div>
+              <div v-if="authStore.user?.type == 'Administrador' || authStore.user?.type == 'Coordinador' || authStore.user?.type == 'Secretaria'">
+                <li>
+                  <router-link
+                    to="/VerCasosAsignados"
+                    draggable="false"
+                    v-ripple
+                    :class="assignedCasesClass"
+                  >
+                    <i class="pi pi-th-large mr-2"></i>
+                    <span class="font-medium text-lg">Casos Asignados</span>
+                  </router-link>
+                </li>
+              </div>
+              <div v-if="authStore.user?.type == 'Administrador' || authStore.user?.type == 'Coordinador' || authStore.user?.type == 'Abogado' || authStore.user?.type == 'Secretaria'" >
+                <li>
+                  <router-link
+                    to="/VerCasos"
+                    draggable="false"
+                    v-ripple
+                    :class="viewAllCasesClass"
+                  >
+                    <i class="pi pi-book mr-2"></i>
+                    <span class="font-medium text-lg">Ver Casos</span>
+                  </router-link>
+                </li>
+              </div>
             </ul>
 
             <!-- Sección: REPORTES -->
@@ -435,7 +489,9 @@ const vistaHorariosPersonalClass = computed(() => [
                       v-if="
                         authStore.user?.type == 'Administrador' ||
                         authStore.user?.type == 'Abogado' ||
-                        authStore.user?.type == 'Estudiante'
+                        authStore.user?.type == 'Estudiante' ||
+                        authStore.user?.type == 'Coordinador' ||
+                        authStore.user?.type == 'Secretaria'
                       "
                     >
                       <li>
@@ -457,7 +513,8 @@ const vistaHorariosPersonalClass = computed(() => [
                       v-if="
                         authStore.user?.type == 'Administrador' ||
                         authStore.user?.type == 'Abogado' ||
-                        authStore.user?.type == 'Estudiante'
+                        authStore.user?.type == 'Estudiante' ||
+                        authStore.user?.type == 'Coordinador'
                       "
                     >
                       <li>
@@ -479,7 +536,8 @@ const vistaHorariosPersonalClass = computed(() => [
                       v-if="
                         authStore.user?.type == 'Administrador' ||
                         authStore.user?.type == 'Abogado' ||
-                        authStore.user?.type == 'Estudiante'
+                        authStore.user?.type == 'Estudiante' ||
+                        authStore.user?.type == 'Coordinador'
                       "
                     >
                       <li>
@@ -497,7 +555,8 @@ const vistaHorariosPersonalClass = computed(() => [
                   </ul>
                 </li>
                 <!-- Sección: NOTIFICACIONES -->
-                <li>
+                 <div>
+                  <li>
                   <router-link
                     to="/Notificaciones"
                     draggable="false"
@@ -506,13 +565,10 @@ const vistaHorariosPersonalClass = computed(() => [
                   >
                     <i class="pi pi-comments mr-2"></i>
                     <span class="font-medium text-lg">Notificaciones</span>
-                    <!-- <span
-                  class="inline-flex items-center justify-center ml-auto bg-blue-500 text-white rounded-full"
-                  style="min-width: 1.5rem; height: 1.5rem"
-                  >3</span
-                > -->
                   </router-link>
                 </li>
+                 </div>
+
               </ul>
             </div>
           </div>
@@ -839,6 +895,22 @@ const vistaHorariosPersonalClass = computed(() => [
                     </li>
                   </ul>
                 </li>
+
+                <!-- Sección: Alertas independiente un solo icono-->
+                <li>
+                  <router-link
+                    to="/AlertasView"
+                    draggable="false"
+                    v-ripple
+                    :class="alertClass"
+                  >
+                    <i class="pi pi-bell mr-2"></i>
+                    <span class="font-medium text-lg">Alertas</span>
+                  </router-link>
+                </li>
+
+
+                 
                 <!--front final-->
               </ul>
             </li>
@@ -864,30 +936,39 @@ const vistaHorariosPersonalClass = computed(() => [
                 </router-link>
               </li>
 
-              <li>
-                <router-link
-                  to="/RegistroVirtual"
-                  draggable="false"
-                  v-ripple
-                  :class="registroAsistenciaClass"
-                >
-                  <i class="pi pi-video mr-2"></i>
-                  <span class="font-medium text-lg">Registro Virtual</span>
-                </router-link>
-              </li>
-              <li>
-                <router-link
-                  to="/ResumenSemanalEstudiante"
-                  draggable="false"
-                  v-ripple
-                  :class="seguimientoGeneralClass"
-                >
-                  <i class="pi pi-book mr-2"></i>
-                  <span class="font-medium text-lg">Seguimiento de Horas</span>
-                </router-link>
-              </li>
-            </ul>
-          </div>
+    <li>
+      <router-link to="/RegistroVirtual" draggable="false" v-ripple :class="registroVirtualClass">
+        <i class="pi pi-video mr-2"></i>
+        <span class="font-medium text-lg">Registro Virtual</span>
+      </router-link>
+    </li>
+    <li>
+      <router-link to="/ResumenSemanalEstudiante" draggable="false" v-ripple :class="seguimientoHorasClass">
+        <i class="pi pi-book mr-2"></i>
+        <span class="font-medium text-lg">Seguimiento de Horas</span>
+      </router-link>
+    </li>
+
+     <!-- Sección: Alertas independiente un solo icono-->
+     <li>
+                  <router-link
+                    to="/AlertasView"
+                    draggable="false"
+                    v-ripple
+                    :class="alertClass"
+                  >
+                    <i class="pi pi-bell mr-2"></i>
+                    <span class="font-medium text-lg">Alertas</span>
+                  </router-link>
+                </li>
+  </ul>
+</div>
+
+
+          
+
+
+
 
           <!-- Sección: TRABAJO SOCIAL -->
           <div
@@ -947,8 +1028,7 @@ const vistaHorariosPersonalClass = computed(() => [
 
         <ul
           v-if="
-            authStore.user?.type == 'Administrador' ||
-            authStore.user?.type == 'Secretaria'
+            authStore.user?.type == 'Administrador' 
           "
           class="list-none p-4 m-0"
         >
@@ -969,7 +1049,7 @@ const vistaHorariosPersonalClass = computed(() => [
                 <span class="font-medium text-lg"> Configuración </span>
                 <i class="pi pi-chevron-down ml-auto"> </i>
               </a>
-              <ul class="submenu closed list-none p-0 m-0">
+              <ul class="submenu list-none p-0 m-0">
                 <!-- Sección: Nuevo Usuario -->
                 <li>
                   <router-link
@@ -984,7 +1064,7 @@ const vistaHorariosPersonalClass = computed(() => [
                 </li>
 
                 <!-- Sección: Tabla de Parámetros -->
-                <li>
+                  <li>
                   <router-link
                     to="/Parametros"
                     draggable="false"
@@ -997,18 +1077,6 @@ const vistaHorariosPersonalClass = computed(() => [
                     >
                   </router-link>
                 </li>
-
-                <!-- <li>
-                <router-link
-                  to="/Configuracion"
-                  draggable="false"
-                  v-ripple
-                  :class="configurationClass"
-                >
-                  <i class="pi pi-cog mr-2"></i>
-                  <span class="font-medium text-lg">Configuración</span>
-                </router-link>
-              </li> -->
               </ul>
             </div>
           </li>

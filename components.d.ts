@@ -11,6 +11,7 @@ declare module 'vue' {
     AuthLayout: typeof import('./src/components/layouts/AuthLayout.vue')['default']
     Avatar: typeof import('primevue/avatar')['default']
     Button: typeof import('primevue/button')['default']
+    Calendar: typeof import('primevue/calendar')['default']
     Card: typeof import('primevue/card')['default']
     Column: typeof import('primevue/column')['default']
     CuadriculaHorario: typeof import('./src/components/CuadriculaHorario.vue')['default']

@@ -31,12 +31,12 @@
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
         <!-- Nombre del Período -->
         <div class="flex flex-col sm:col-span-2">
-          <label for="nombrePeriodo" class="mb-2 text-lg font-medium">
+          <label for="periodName" class="mb-2 text-lg font-medium">
             Nombre del Período
           </label>
           <InputText
-            v-model="nombrePeriodo"
-            maxlength="35"
+            v-model="periodName"
+            maxlength="50"
             placeholder="Ej: Período Académico 2024-02"
             class="w-full p-3 rounded-lg"
             :class="inputClass"
@@ -44,11 +44,11 @@
         </div>
         <!-- Fecha de Inicio -->
         <div class="flex flex-col">
-          <label for="fechaInicio" class="mb-2 text-lg font-medium">
+          <label for="periodStart" class="mb-2 text-lg font-medium">
             Fecha de Inicio
           </label>
           <Calendar
-            v-model="fechaInicio"
+            v-model="periodStart"
             showIcon
             class="w-full"
             :class="inputClass"
@@ -56,11 +56,11 @@
         </div>
         <!-- Fecha de Fin -->
         <div class="flex flex-col">
-          <label for="fechaFin" class="mb-2 text-lg font-medium">
+          <label for="periodEnd" class="mb-2 text-lg font-medium">
             Fecha de Fin
           </label>
           <Calendar
-            v-model="fechaFin"
+            v-model="periodEnd"
             showIcon
             class="w-full"
             :class="inputClass"
@@ -68,11 +68,11 @@
         </div>
         <!-- Tipo de Período -->
         <div class="flex flex-col sm:col-span-2">
-          <label for="periodoTipo" class="mb-2 text-lg font-medium">
+          <label for="periodType" class="mb-2 text-lg font-medium">
             Tipo de Período
           </label>
           <Dropdown
-            v-model="periodoTipo"
+            v-model="periodType"
             :options="opcionesPeriodoTipo"
             optionLabel="label"
             optionValue="value"
@@ -108,13 +108,14 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
+import axios from 'axios';
 import InputText from "primevue/inputtext";
 import Calendar from "primevue/calendar";
 import Button from "primevue/button";
 import Message from "primevue/message";
 import Dropdown from "primevue/dropdown";
 import { useDarkMode } from "@/components/ThemeSwitcher";
-import { API, type Periodo } from "@/ApiRoute";
+import { API, type Period } from "@/ApiRoute";
 import { useToast } from "primevue/usetoast";
 
 const router = useRouter();
@@ -126,10 +127,10 @@ const { isDarkTheme } = useDarkMode();
 const periodoId = route.params.id ? Number(route.params.id) : null;
 
 // Estados del formulario
-const nombrePeriodo = ref("");
-const fechaInicio = ref<Date | null>(null);
-const fechaFin = ref<Date | null>(null);
-const periodoTipo = ref("");
+const periodName = ref("");
+const periodStart = ref<Date | null>(null);
+const periodEnd = ref<Date | null>(null);
+const periodType = ref("");
 const errorMensaje = ref("");
 const cargando = ref(false);
 
@@ -160,15 +161,16 @@ const cargarPeriodo = async () => {
   if (!periodoId) return;
   cargando.value = true;
   try {
-    const response = await fetch(`${API}/periodos/${periodoId}`);
-    if (!response.ok) throw new Error("Error al obtener el período");
-    const data: Periodo = await response.json();
-    nombrePeriodo.value = data.PeriodoNombre;
-    fechaInicio.value = new Date(data.Periodo_Inicio);
-    fechaFin.value = new Date(data.Periodo_Fin);
-    periodoTipo.value = data.PeriodoTipo;
+    const response = await axios.get(`${API}/periodos/${periodoId}`, { withCredentials: true });
+    const data: Period = response.data;
+    periodName.value = data.Period_Name;
+    periodStart.value = new Date(data.Period_Start);
+    periodEnd.value = new Date(data.Period_End);
+    periodType.value = data.Period_Type;
+    originalFechaInicio.value = new Date(data.Period_Start);
+
     // Guardamos la fecha de inicio original para comparar en caso de edición
-    originalFechaInicio.value = new Date(data.Periodo_Inicio);
+    originalFechaInicio.value = new Date(data.Period_Start);
   } catch (error: any) {
     console.error("Error al cargar el período:", error);
     errorMensaje.value = "Error al cargar los datos del período.";
@@ -201,14 +203,14 @@ function calcularSemanas(periodoId: number, inicio: Date, fin: Date) {
       weekEnd = new Date(endDate);
     }
     semanas.push({
-      Periodo_ID: periodoId,
-      Semana_Numero: weekNumber,
-      Semana_Ini: weekStart.toISOString(),
-      Semana_Fin: weekEnd.toISOString(),
-      Semana_Horas: 0,
-      Semana_Feriado: 0,
-      Semana_Observacion: null,
-      Semana_IsDeleted: false,
+        Period_ID: periodoId,
+        Week_Number: weekNumber,
+        Week_Start: weekStart.toISOString(),
+        Week_End: weekEnd.toISOString(),
+        Week_Hours: 0,
+        Week_Holiday: 0,
+        Week_Comment: null,
+        Week_IsDeleted: false,
     });
     weekNumber++;
     // Para la siguiente semana: el lunes siguiente al viernes actual (viernes +3 días)
@@ -222,146 +224,124 @@ function calcularSemanas(periodoId: number, inicio: Date, fin: Date) {
 // Función para validar y guardar (crear o editar)
 const validarYGuardar = async () => {
   errorMensaje.value = "";
-  if (!nombrePeriodo.value.trim()) {
+  
+  if (!periodName.value.trim()) {
     errorMensaje.value = "Debe ingresar el nombre del período.";
     return;
   }
-  if (!fechaInicio.value) {
+  if (!periodStart.value) {
     errorMensaje.value = "Debe seleccionar una fecha de inicio.";
     return;
   }
-  if (!fechaFin.value) {
+  if (!periodEnd.value) {
     errorMensaje.value = "Debe seleccionar una fecha de fin.";
     return;
   }
-  if (fechaFin.value < fechaInicio.value) {
+  if (periodEnd.value < periodStart.value) {
     errorMensaje.value = "La fecha de fin no puede ser antes de la fecha de inicio.";
     return;
   }
-  if (!periodoTipo.value) {
+  if (!periodType.value) {
     errorMensaje.value = "Debe seleccionar el tipo de período.";
     return;
   }
+
   cargando.value = true;
+
   const periodoData = {
-    PeriodoNombre: nombrePeriodo.value.trim(),
-    Periodo_Inicio: fechaInicio.value.toISOString(),
-    Periodo_Fin: fechaFin.value.toISOString(),
-    PeriodoTipo: periodoTipo.value,
+    Period_Name: periodName.value.trim(),
+    Period_Start: periodStart.value.toISOString(),
+    Period_End: periodEnd.value.toISOString(),
+    Period_Type: periodType.value,
   };
+
   try {
     let response;
     let nuevoPeriodo;
-    if (periodoId) {
-      // Modo edición: actualizamos el período
-      response = await fetch(`${API}/periodos/${periodoId}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(periodoData),
-      });
-      nuevoPeriodo = await response.json();
-      
-      // Verificar extensión al final (si fechaFin se extendió)
-      const seguimientoRes = await fetch(`${API}/seguimientos/last/${periodoId}`);
-      if (seguimientoRes.ok) {
-        const lastSeguimiento = await seguimientoRes.json();
-        const lastWeekEnd = new Date(lastSeguimiento.Semana_Fin);
-        if (fechaFin.value > lastWeekEnd) {
-          const nextDay = new Date(lastWeekEnd);
-          nextDay.setDate(nextDay.getDate() + 1);
-          const nuevasSemanas = calcularSemanas(periodoId, nextDay, fechaFin.value);
-          const semanasResponse = await fetch(`${API}/seguimientos/bulk`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(nuevasSemanas),
-          });
-          if (!semanasResponse.ok) {
-            throw new Error("Error al guardar el seguimiento semanal adicional (extensión fin)");
-          }
-        }
-      }
-      
-      // Si la nueva fechaInicio es anterior a la original, recalcular semanas al inicio
-      if (originalFechaInicio.value && fechaInicio.value < originalFechaInicio.value) {
-        const nuevasSemanasInicio = calcularSemanas(periodoId, fechaInicio.value, originalFechaInicio.value);
-        const semanasInicioResponse = await fetch(`${API}/seguimientos/bulk`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(nuevasSemanasInicio),
-        });
-        if (!semanasInicioResponse.ok) {
-          throw new Error("Error al guardar el seguimiento semanal adicional (extensión inicio)");
-        }
-      }
-      
-      // Reordenar todas las semanas: llamar al endpoint de reordenamiento
-      const reorderResponse = await fetch(`${API}/seguimientos/reorder/${periodoId}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          nuevaFechaInicio: fechaInicio.value.toISOString(),
-          fechaFin: fechaFin.value.toISOString()
-        }),
-      });
-      if (!reorderResponse.ok) {
-        throw new Error("Error al reordenar las semanas del seguimiento");
-      }
-      
-    } else {
-      // Creación de un nuevo período
-      response = await fetch(`${API}/periodos`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(periodoData),
-      });
-      nuevoPeriodo = await response.json();
-      const semanas = calcularSemanas(
-        nuevoPeriodo.Periodo_ID,
-        new Date(nuevoPeriodo.Periodo_Inicio),
-        new Date(nuevoPeriodo.Periodo_Fin)
-      );
-      const semanasResponse = await fetch(`${API}/seguimientos/bulk`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(semanas),
-      });
-      if (!semanasResponse.ok) {
-        throw new Error("Error al guardar el seguimiento semanal");
-      }
-    }
-    if (response.status === 400) {
-  errorMensaje.value = "Ya existe un período en esas fechas.";
-  return;
-} else if (!response.ok) {
-  throw new Error("Error al guardar los datos");
-}
 
+    if (periodoId) {
+      //  Edición de período
+      response = await axios.put(`${API}/periodos/${periodoId}`, periodoData, {
+        withCredentials: true
+      });
+      nuevoPeriodo = response.data;
+
+      // 🔵 Verificar extensión final
+      const seguimientoRes = await axios.get(`${API}/seguimientos/last/${periodoId}`, {
+        withCredentials: true
+      });
+
+      const lastSeguimiento = seguimientoRes.data;
+      const lastWeekEnd = new Date(lastSeguimiento.Semana_Fin);
+
+      if (periodEnd.value > lastWeekEnd) {
+        const nextDay = new Date(lastWeekEnd);
+        nextDay.setDate(nextDay.getDate() + 1);
+        const nuevasSemanas = calcularSemanas(periodoId, nextDay, periodEnd.value);
+
+        await axios.post(`${API}/seguimientos/bulk`, nuevasSemanas, {
+          withCredentials: true
+        });
+      }
+
+      // 🔵 Verificar extensión al inicio
+      if (originalFechaInicio.value && periodStart.value < originalFechaInicio.value) {
+        const nuevasSemanasInicio = calcularSemanas(periodoId, periodStart.value, originalFechaInicio.value);
+        await axios.post(`${API}/seguimientos/bulk`, nuevasSemanasInicio, {
+          withCredentials: true
+        });
+      }
+
+      // 🔵 Reordenar todas las semanas
+      await axios.put(`${API}/seguimientos/reorder/${periodoId}`, {
+        newStartDate: periodStart.value.toISOString(),
+        newEndDate: periodEnd.value.toISOString()
+      }, { withCredentials: true });
+
+    } else {
+      // 🛠 Creación de período
+      response = await axios.post(`${API}/periodos`, periodoData, {
+        withCredentials: true
+      });
+      nuevoPeriodo = response.data;
+
+      const semanas = calcularSemanas(
+        nuevoPeriodo.Period_ID,
+        new Date(nuevoPeriodo.Period_Start),
+        new Date(nuevoPeriodo.Period_End)
+      );
+
+      await axios.post(`${API}/seguimientos/bulk`, semanas, {
+        withCredentials: true
+      });
+    }
+
+    // ✅ Si llega aquí todo bien
     toast.add({
       severity: "success",
       summary: "Éxito",
       detail: "Período guardado correctamente.",
       life: 3000,
     });
+
     router.push("/Cronograma");
+
   } catch (error: any) {
     console.error("Error guardando el período:", error);
-  // Si es un objeto Response (de fetch fallido)
-  if (error?.name === "FetchError" || error instanceof Response) {
-    try {
-      const errorData = await error.json();
-      errorMensaje.value = errorData?.error || "Ocurrió un error al guardar.";
-    } catch {
-      errorMensaje.value = "Ocurrió un error inesperado al procesar la respuesta.";
+    if (error.response) {
+      if (error.response.status === 400) {
+        errorMensaje.value = "Ya existe un período en esas fechas.";
+      } else {
+        errorMensaje.value = error.response.data?.error || "Ocurrió un error inesperado.";
+      }
+    } else {
+      errorMensaje.value = "Error de conexión con el servidor.";
     }
-  } else if (error instanceof Error) {
-    errorMensaje.value = error.message;
-  } else {
-    errorMensaje.value = "Ocurrió un error al guardar.";
-  }
   } finally {
     cargando.value = false;
   }
 };
+
 
 const volverListado = () => {
   router.push("/Cronograma");

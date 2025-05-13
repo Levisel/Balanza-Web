@@ -11,56 +11,47 @@ import Toast from "primevue/toast";
 import { useToast } from "primevue/usetoast";
 import Dialog from "primevue/dialog";
 import InputText from "primevue/inputtext";
+import axios from "axios";
 
 import { API } from "@/ApiRoute";
 import { useDarkMode } from "@/components/ThemeSwitcher";
+// Importamos el composable que maneja los subjects (áreas)
+import { useSubjects } from "@/useSubjects";
 
-// Interfaz para cada estudiante
+// Interfaz para cada estudiante (sin teléfono)
 interface Internal_User {
-  Internal_ID: string;       // cédula
-  Internal_Name: string;     // nombres
-  Internal_LastName: string; // apellidos
-  Internal_Email: string;    // correo institucional
+  Internal_ID: string;       // Cédula
+  Internal_Name: string;     // Nombres
+  Internal_LastName: string; // Apellidos
+  Internal_Email: string;    // Correo institucional
   Internal_Password: string;
   Internal_Type: string;
-  Internal_Area: string;
-  Internal_Phone: string;    // teléfono o celular
+  Internal_Area: string;     // Área determinada según el NRC
   Internal_Huella: Blob | undefined;
   Internal_Status: string;
-  completo?: boolean;        // indica si el registro está completo
+  completo?: boolean;        // Indica si el registro está completo
 }
-
-// Ejemplo de mapeo NRC -> Área
-const nrcAreaMap: Record<string, string> = {
-  "8303": "Civil",
-  "8309": "Penal",
-  "8306": "Familia, Niñez y Adolescencia",
-  "8308": "Movilidad Humana",
-  "8311": "CEMASC",
-  "8310": "CDH",
-  // Agrega aquí todos los NRC que necesites
-};
 
 const toast = useToast();
 const { isDarkTheme } = useDarkMode();
 
-// Estados reactivas
+// Estados locales
 const periodos = ref<any[]>([]);
 const periodoSeleccionado = ref<any | null>(null);
 const estudiantes = ref<Internal_User[]>([]);
 const errorMensaje = ref("");
 const loading = ref(false);
 const archivoNombre = ref("");
-const datosTemp = ref<any[]>([]); // Data cruda del Excel
+const datosTemp = ref<any[]>([]);
 
 // Estados para el diálogo de edición
 const dialogVisible = ref(false);
 const registroEditando = ref<Internal_User | null>(null);
 
-/**
- * Asigna la clase de la fila según si está completa o no,
- * usando la variable isDarkTheme para escoger el color de fondo.
- */
+// Usamos el composable para obtener la info de "subjects" y armar el mapeo NRC -> Subject_Name
+const { nrcAreaMap, fetchSubjects } = useSubjects();
+
+// Función para asignar clase de fila según si el registro está completo
 const rowClass = (data: Internal_User) => {
   if (!data.completo) {
     return isDarkTheme.value ? "incomplete-row dark" : "incomplete-row light";
@@ -68,25 +59,28 @@ const rowClass = (data: Internal_User) => {
   return "";
 };
 
-/**
- * Obtiene los períodos desde la API
- */
+// Obtiene los períodos desde la API
 const fetchPeriodos = async () => {
   try {
-    const response = await fetch(`${API}/periodos`);
-    if (!response.ok) throw new Error("Error al obtener períodos");
-    periodos.value = await response.json();
+    const { data } = await axios.get(`${API}/periodos`);
+    periodos.value = data;
   } catch (err: any) {
-    errorMensaje.value = err.message;
+    errorMensaje.value = err.response?.data?.message || err.message;
   }
 };
-onMounted(fetchPeriodos);
+
+
+onMounted(() => {
+  fetchPeriodos();
+  fetchSubjects(); // Cargamos los subjects para formar el mapeo NRC -> Área
+});
 
 /**
  * Procesa el archivo Excel y lo mapea a la interfaz Internal_User.
+ * Se utiliza la columna NRC del Excel para obtener el nombre del área desde nrcAreaMap.
  */
 function procesarArchivo(event: any) {
-  // Evita que suban archivos si no hay un período seleccionado
+  // Verifica que esté seleccionado un período
   if (!periodoSeleccionado.value) {
     errorMensaje.value = "Primero selecciona un Período Académico.";
     return;
@@ -104,6 +98,7 @@ function procesarArchivo(event: any) {
   reader.onload = (e) => {
     const data = new Uint8Array(e.target!.result as ArrayBuffer);
     const workbook = XLSX.read(data, { type: "array" });
+    // Buscamos la hoja "consolidado"
     const sheetName = workbook.SheetNames.find(
       (name) => name.toLowerCase() === "consolidado"
     );
@@ -111,13 +106,9 @@ function procesarArchivo(event: any) {
       errorMensaje.value = "El archivo no contiene una hoja llamada 'consolidado'.";
       return;
     }
-
     const sheet = workbook.Sheets[sheetName];
     const jsonData = XLSX.utils.sheet_to_json(sheet);
-    datosTemp.value = jsonData; // Guardamos la data completa por si la necesitas
-
-    // Ejemplo de filtrado si lo requieres:
-    // .filter((row: any) => row["TITULO_DE_LA_ASIGNATURA"] === "Práct Preprof (Consultorios I)")
+    datosTemp.value = jsonData; // Opcional: guardar data completa
 
     const dataFiltrada = jsonData.map((row: any) => {
       let cedulaString = row["CEDULA"]?.toString().trim() || "N/A";
@@ -126,36 +117,42 @@ function procesarArchivo(event: any) {
         cedulaString = "0" + cedulaString;
       }
 
-      // Determina el área según el NRC
-      const area = nrcAreaMap[row["NRC"]] || "Sin Área";
+      // Se obtiene el área a partir del NRC usando el mapeo de useSubjects
+      // Nota: nrcAreaMap es un computed; por eso accedemos a su valor con .value
+      const area = nrcAreaMap.value[row["NRC"]] || "Sin Área";
 
-      // Campos obligatorios
+      // Definimos los campos obligatorios (sin considerar teléfono)
       const tieneDatosObligatorios =
         cedulaString !== "N/A" &&
         row["APELLIDOS"] &&
         row["NOMBRES"] &&
         row["Correo_institucional"] &&
-        (row["Telefono"] || row["Celular"]) &&
         row["NRC"];
 
-      const usuario: Internal_User = {
-        Internal_ID: cedulaString,
-        Internal_LastName: row["APELLIDOS"]?.toString().trim() || "N/A",
-        Internal_Name: row["NOMBRES"]?.toString().trim() || "N/A",
-        Internal_Email: row["Correo_institucional"]?.toString().trim() || "N/A",
-        Internal_Password: "",
-        Internal_Type: "Estudiante",
-        Internal_Area: area,
-        Internal_Phone:
-          "NA",
-        Internal_Huella: undefined,
-        Internal_Status: "Activo",
-        completo: !!tieneDatosObligatorios,
-      };
+        // Extraer primer nombre y primer apellido
+        const apellidosRaw = row["APELLIDOS"]?.toString().trim() || "";
+        const nombresRaw = row["NOMBRES"]?.toString().trim() || "";
+
+        const primerApellido = apellidosRaw.split(" ")[0] || "N/A";
+        const primerNombre = nombresRaw.split(" ")[0] || "N/A";
+
+        const usuario: Internal_User = {
+          Internal_ID: cedulaString,
+          Internal_LastName: primerApellido,
+          Internal_Name: primerNombre,
+          Internal_Email: row["Correo_institucional"]?.toString().trim() || "N/A",
+          Internal_Password: "",
+          Internal_Type: "Estudiante",
+          Internal_Area: area,
+          Internal_Huella: undefined,
+          Internal_Status: "Activo",
+          completo: !!tieneDatosObligatorios,
+        };
+
       return usuario;
     });
 
-    // Si es la primera carga, asignamos el array completo eliminando duplicados por Internal_ID
+    // Si es la primera carga, se eliminan duplicados y se asigna la data completa.
     if (estudiantes.value.length === 0) {
       const idSet = new Set();
       estudiantes.value = dataFiltrada.filter((est) => {
@@ -166,40 +163,32 @@ function procesarArchivo(event: any) {
         return false;
       });
     } else {
-      // Si ya hay registros, actualizamos únicamente los que estén incompletos
+      // Si ya hay registros, se actualizan aquellos que estén incompletos.
       const newDataMap = new Map<string, Internal_User>();
       dataFiltrada.forEach((est) => {
         newDataMap.set(est.Internal_ID, est);
       });
-
       estudiantes.value = estudiantes.value.map((est) => {
         if (!est.completo) {
           const newEst = newDataMap.get(est.Internal_ID);
-          if (newEst && newEst.completo) {
-            return newEst; // Se reemplaza con la info completa
-          } else {
-            return est;
-          }
+          return newEst && newEst.completo ? newEst : est;
         }
         return est;
       });
     }
 
-    // Ordenamos para que los incompletos aparezcan primero
+    // Ordenamos para que los registros incompletos aparezcan primero
     estudiantes.value.sort((a, b) => {
       if (a.completo === b.completo) return 0;
       return a.completo ? 1 : -1;
     });
 
-    // Mensaje si hay registros incompletos
-    const numIncompletos = estudiantes.value.filter(
-      (est) => !est.completo
-    ).length;
-    if (numIncompletos > 0) {
-      errorMensaje.value = `Existen ${numIncompletos} estudiantes con datos incompletos. Corrige el Excel o edita manualmente.`;
-    } else {
-      errorMensaje.value = "";
-    }
+    // Actualizamos el mensaje de error según la cantidad de registros incompletos.
+    const numIncompletos = estudiantes.value.filter((est) => !est.completo).length;
+    errorMensaje.value =
+      numIncompletos > 0
+        ? `Existen ${numIncompletos} estudiantes con datos incompletos. Corrige el Excel o edítalos manualmente.`
+        : "";
   };
   reader.readAsArrayBuffer(archivo);
 }
@@ -209,65 +198,35 @@ async function forzarCargaSinCorreo() {
     errorMensaje.value = "No hay estudiantes cargados.";
     return;
   }
-
-  // Actualizamos "completo" sin considerar el correo
   estudiantes.value.forEach((est) => {
     est.completo = !!(
       est.Internal_ID &&
       est.Internal_LastName &&
       est.Internal_Name &&
-      est.Internal_Phone &&
       est.Internal_Area
     );
   });
 
-  // Validación mínima
   const incompletos = estudiantes.value.filter((est) => !est.completo);
   if (incompletos.length > 0) {
     errorMensaje.value = `Aún hay ${incompletos.length} registros incompletos.`;
     return;
   }
 
-  // 💥 POST directo sin validación de correo
   try {
     loading.value = true;
     errorMensaje.value = "";
 
-    console.log("Enviando estudiantes (sin correo) al backend:", estudiantes.value);
+    // 1. Guardar estudiantes
+    await axios.post(`${API}/usuariointernoBulk/${periodoSeleccionado.value.Period_ID}`, estudiantes.value);
 
-    const responseUsuarios = await fetch(`${API}/usuariointernoBulk`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(estudiantes.value),
-    });
+    // 2. Asignarlos al período
+    const usuariosXPeriodo = estudiantes.value.map((est) => ({
+      Period_ID: periodoSeleccionado.value.Period_ID,
+      Internal_ID: est.Internal_ID,
+    }));
 
-    console.log("Response:", responseUsuarios);
-    if (!responseUsuarios.ok) {
-      const errorResponse = await responseUsuarios.json();
-      throw new Error(`Error al guardar estudiantes: ${errorResponse.message}`);
-       
-    }
-
-    // Asignar período
-    if (periodoSeleccionado.value ) {
-      const usuariosXPeriodo = estudiantes.value.map((est) => ({
-        Periodo_ID: periodoSeleccionado.value.Periodo_ID,
-        Internal_ID: est.Internal_ID,
-      }));
-
-      const responseAsignacion = await fetch(`${API}/usuarioXPeriodo`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(usuariosXPeriodo),
-      });
-
-      if (!responseAsignacion.ok) {
-        const errorResponse = await responseAsignacion.json();
-        throw new Error(
-          `Error al asignar estudiantes al período: ${errorResponse.message}`
-        );
-      }
-    }
+    await axios.post(`${API}/usuarioXPeriodo`, usuariosXPeriodo);
 
     toast.add({
       severity: "success",
@@ -277,27 +236,21 @@ async function forzarCargaSinCorreo() {
     });
 
     estudiantes.value = [];
-
   } catch (error: any) {
-    toast.add({ severity: "error", summary: "Error", detail: error.message, life: 5000 });
+    toast.add({ severity: "error", summary: "Error", detail: error.response?.data?.message || error.message, life: 5000 });
   } finally {
     loading.value = false;
   }
 }
 
 
-
-/**
- * Guarda los registros completos en la base de datos
- */
-const guardarEstudiantes = async () => {
+async function guardarEstudiantes() {
   if (estudiantes.value.length === 0) {
     errorMensaje.value = "No hay estudiantes para guardar.";
     return;
   }
   if (estudiantes.value.some((est) => !est.completo)) {
-    errorMensaje.value =
-      "No se puede guardar. Hay estudiantes con datos incompletos. Corrige antes de guardar.";
+    errorMensaje.value = "No se puede guardar. Hay estudiantes con datos incompletos.";
     return;
   }
 
@@ -305,41 +258,8 @@ const guardarEstudiantes = async () => {
     loading.value = true;
     errorMensaje.value = "";
 
-    console.log("Guardando estudiantes:", estudiantes.value);
-
-    const responseUsuarios = await fetch(`${API}/usuariointernoBulk`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(estudiantes.value),
-    });
-    const data = await responseUsuarios.json();
-    console.log("Data:", data);
-
-    if (!responseUsuarios.ok) {
-      const errorResponse = await responseUsuarios.json();
-      throw new Error(`Error al guardar estudiantes: ${errorResponse.message}`);
-    }
-
-
-
-    // Asignar período si está seleccionado
-    if (periodoSeleccionado.value) {
-      const usuariosXPeriodo = estudiantes.value.map((est) => ({
-        Periodo_ID: periodoSeleccionado.value.Periodo_ID,
-        Internal_ID: est.Internal_ID,
-      }));
-      const responseAsignacion = await fetch(`${API}/usuarioXPeriodo`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(usuariosXPeriodo),
-      });
-      if (!responseAsignacion.ok) {
-        const errorResponse = await responseAsignacion.json();
-        throw new Error(
-          `Error al asignar estudiantes al período: ${errorResponse.message}`
-        );
-      }
-    }
+    // Guardar estudiantes
+    await axios.post(`${API}/usuariointernoBulk/${periodoSeleccionado.value.Period_ID}`, estudiantes.value);
 
     toast.add({
       severity: "success",
@@ -347,19 +267,16 @@ const guardarEstudiantes = async () => {
       detail: "Estudiantes guardados correctamente.",
       life: 3000,
     });
+
     estudiantes.value = [];
   } catch (error: any) {
-    toast.add({ severity: "error", summary: "Error", detail: error.message, life: 5000 });
+    toast.add({ severity: "error", summary: "Error", detail: error.response?.data?.message || error.message, life: 5000 });
   } finally {
     loading.value = false;
   }
-};
+}
 
-/**
- * Computed para deshabilitar el botón de "Guardar"
- * Se deshabilita si no hay estudiantes, si hay registros incompletos,
- * o si no se ha seleccionado un período
- */
+
 const isGuardarDisabled = computed(() => {
   const noEstudiantes = estudiantes.value.length === 0;
   const hayIncompletos = estudiantes.value.some((est) => !est.completo);
@@ -367,55 +284,47 @@ const isGuardarDisabled = computed(() => {
   return noEstudiantes || hayIncompletos || sinPeriodo || loading.value;
 });
 
-/**
- * Funciones y estado para editar un registro incompleto
- */
+const nombreArchivoVisible = computed(() => {
+  if (!archivoNombre.value) return "";
+  return archivoNombre.value.length > 30
+    ? archivoNombre.value.slice(0, 30) + "..."
+    : archivoNombre.value;
+});
+
+
 function editarRegistro(usuario: Internal_User) {
-  // Creamos una copia del registro para no mutar directamente la tabla
   registroEditando.value = { ...usuario };
   dialogVisible.value = true;
 }
 
 function guardarEdicion() {
   if (!registroEditando.value) return;
-
-  // Buscar el índice del registro en la tabla
   const idx = estudiantes.value.findIndex(
     (est) => est.Internal_ID === registroEditando.value!.Internal_ID
   );
   if (idx !== -1) {
-    // Actualizamos con los nuevos valores
     estudiantes.value[idx] = { ...registroEditando.value };
-
-    // Recalcular "completo"
     const user = estudiantes.value[idx];
     user.completo = !!(
       user.Internal_ID &&
       user.Internal_LastName &&
       user.Internal_Name &&
       user.Internal_Email &&
-      user.Internal_Phone &&
       user.Internal_Area
     );
   }
-
-  // **Recalcular cuántos registros incompletos quedan**
   const numIncompletos = estudiantes.value.filter((est) => !est.completo).length;
-  if (numIncompletos > 0) {
-    errorMensaje.value = `Existen ${numIncompletos} estudiantes con datos incompletos. Corrige el Excel o editalos.`;
-  } else {
-    errorMensaje.value = "";
-  }
-
+  errorMensaje.value =
+    numIncompletos > 0
+      ? `Existen ${numIncompletos} estudiantes con datos incompletos. Corrige el Excel o edítalos manualmente.`
+      : "";
   dialogVisible.value = false;
 }
-
 </script>
 
 <template>
   <main class="flex flex-col items-center p-8 min-h-screen">
     <h1 class="text-3xl font-bold text-center mb-10">Ingreso de Estudiantes</h1>
-
     <!-- Mensajes Toast -->
     <Toast />
 
@@ -426,26 +335,26 @@ function guardarEdicion() {
         <Dropdown 
           v-model="periodoSeleccionado" 
           :options="periodos" 
-          optionLabel="PeriodoNombre" 
+          optionLabel="Period_Name" 
           placeholder="Seleccionar Período Académico"
           class="w-72" 
         />
       </div>
-
       <div class="flex flex-col">
         <label class="mb-2 text-lg font-medium">
           {{ estudiantes.length === 0 ? 'Cargar Excel' : 'Actualizar Excel' }}
         </label>
         <FileUpload 
-          mode="basic" 
-          accept=".xls,.xlsx" 
-          customUpload 
-          @select="procesarArchivo" 
-          chooseLabel="Seleccionar archivo xlsx"
-          :disabled="!periodoSeleccionado" 
-        />
-      </div>
+            mode="basic"
+            auto
+            customUpload
+            @select="procesarArchivo"
+            accept=".xls,.xlsx"
+            chooseLabel="Seleccionar archivo xlsx"
+            :disabled="!periodoSeleccionado"
+          />
 
+      </div>
       <Button 
         :disabled="isGuardarDisabled" 
         :label="loading ? 'Guardando...' : 'Guardar'" 
@@ -454,25 +363,25 @@ function guardarEdicion() {
         class="px-6 py-3 rounded-full bg-blue-600 text-white transition duration-300 hover:bg-blue-700 disabled:opacity-50"
         @click="guardarEstudiantes" 
       />
-
-      <Button
-  label="Cargar sin Email (prueba)"
-  icon="pi pi-exclamation-triangle"
-  class="mt-4 px-6 py-3 rounded-full bg-yellow-500 text-white hover:bg-yellow-600"
-  @click="forzarCargaSinCorreo"
-/>
-
+      <!-- <Button
+        label="Cargar sin Email (prueba)"
+        icon="pi pi-exclamation-triangle"
+        class="mt-4 px-6 py-3 rounded-full bg-yellow-500 text-white hover:bg-yellow-600"
+        @click="forzarCargaSinCorreo"
+      /> -->
     </div>
+
+    <div v-if="archivoNombre" class="text-sm italic text-gray-400 mb-2">
+  Archivo cargado: <span class="font-medium text-white">{{ nombreArchivoVisible }}</span>
+</div>
+
+
 
     <div class="flex flex-col items-center mt-2 mb-4">
       <label class="mb-1 text-lg font-medium">Total Estudiantes Cargados :</label>
       <div class="text-xl font-bold">{{ estudiantes.length }}</div>
     </div>
-
-    <!-- Mensaje de error en caso de datos incompletos -->
     <Message v-if="errorMensaje" severity="error" class="mb-4">{{ errorMensaje }}</Message>
-
-    <!-- Tabla de estudiantes (muestra teléfono y área) -->
     <DataTable 
       :value="estudiantes" 
       paginator 
@@ -484,13 +393,9 @@ function guardarEdicion() {
       <Column field="Internal_LastName" header="Apellidos" />
       <Column field="Internal_Name" header="Nombres" />
       <Column field="Internal_Email" header="Correo" />
-      <Column field="Internal_Phone" header="Teléfono" />
       <Column field="Internal_Area" header="Área" />
-
-      <!-- Columna para el botón de edición -->
       <Column header="Acciones">
         <template #body="slotProps">
-          <!-- Solo mostramos el botón si el registro está incompleto -->
           <Button
             class="p-button p-component p-button-icon-only p-button-info p-button-rounded p-button-outlined"
             icon="pi pi-pencil"
@@ -501,126 +406,108 @@ function guardarEdicion() {
         </template>
       </Column>
     </DataTable>
-
-      <!-- Dialog para editar un registro -->
-      <Dialog
-        v-model:visible="dialogVisible"
-        :style="{ width: '600px' }"
-        header="Editar Información del Estudiante"
-        :modal="true"
-        :breakpoints="{ '960px': '75vw', '640px': '90vw' }"
-        class="edit-dialog"
-      >
-        <div class="p-fluid" v-if="registroEditando">
-          <!-- Sección de datos personales -->
-          <div class="rounded-2xl shadow-md border border-gray-200 bg-white mb-6">
-            <div class="flex items-center gap-2 px-4 py-3 border-b border-gray-200 bg-gray-50 rounded-t-2xl">
-              <i class="pi pi-user-edit text-primary-600 text-lg"></i>
-              <h5 class="text-base font-semibold text-gray-700 m-0">Datos Personales</h5>
-            </div>
-            <div class="p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-              <!-- Cédula -->
-              <div>
-                <label for="cedula" class="block text-sm font-medium text-gray-700 mb-1">Cédula</label>
-                <InputText
-                  id="cedula"
-                  v-model="registroEditando.Internal_ID"
-                  disabled
-                  class="w-full"
-                  :class="{ 'p-invalid': !registroEditando.Internal_ID }"
-                />
-                <small v-if="!registroEditando.Internal_ID" class="text-red-500">La cédula es requerida</small>
-              </div>
-
-              <!-- Apellidos -->
-              <div>
-                <label for="apellidos" class="block text-sm font-medium text-gray-700 mb-1">Apellidos</label>
-                <InputText
-                  id="apellidos"
-                  v-model="registroEditando.Internal_LastName"
-                  class="w-full"
-                  :class="{ 'p-invalid': !registroEditando.Internal_LastName }"
-                />
-                <small v-if="!registroEditando.Internal_LastName" class="text-red-500">Los apellidos son requeridos</small>
-              </div>
-
-              <!-- Nombres -->
-              <div>
-                <label for="nombres" class="block text-sm font-medium text-gray-700 mb-1">Nombres</label>
-                <InputText
-                  id="nombres"
-                  v-model="registroEditando.Internal_Name"
-                  class="w-full"
-                  :class="{ 'p-invalid': !registroEditando.Internal_Name }"
-                />
-                <small v-if="!registroEditando.Internal_Name" class="text-red-500">Los nombres son requeridos</small>
-              </div>
-            </div>
+    <Dialog
+      v-model:visible="dialogVisible"
+      :style="{ width: '600px' }"
+      header="Editar Información del Estudiante"
+      :modal="true"
+      :breakpoints="{ '960px': '75vw', '640px': '90vw' }"
+      class="edit-dialog"
+    >
+      <div class="p-fluid" v-if="registroEditando">
+        <div class="rounded-2xl shadow-md border border-gray-200 bg-white mb-6">
+          <div class="flex items-center gap-2 px-4 py-3 border-b border-gray-200 bg-gray-50 rounded-t-2xl">
+            <i class="pi pi-user-edit text-primary-600 text-lg"></i>
+            <h5 class="text-base font-semibold text-gray-700 m-0">Datos Personales</h5>
           </div>
-
-          <!-- Sección de contacto -->
-          <div class="rounded-2xl shadow-md border border-gray-200 bg-white">
-            <div class="flex items-center gap-2 px-4 py-3 border-b border-gray-200 bg-gray-50 rounded-t-2xl">
-              <i class="pi pi-envelope text-primary-600 text-lg"></i>
-              <h5 class="text-base font-semibold text-gray-700 m-0">Información de Contacto</h5>
+          <div class="p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label for="cedula" class="block text-sm font-medium text-gray-700 mb-1">Cédula</label>
+              <InputText
+                id="cedula"
+                v-model="registroEditando.Internal_ID"
+                disabled
+                class="w-full"
+                :class="{ 'p-invalid': !registroEditando.Internal_ID }"
+              />
+              <small v-if="!registroEditando.Internal_ID" class="text-red-500">La cédula es requerida</small>
             </div>
-            <div class="p-4 grid grid-cols-1 md:grid-cols-3 gap-4">
-              <!-- Correo -->
-              <div class="md:col-span-2">
-                <label for="correo" class="block text-sm font-medium text-gray-700 mb-1">Correo Electrónico</label>
-                <InputText
-                  id="correo"
-                  v-model="registroEditando.Internal_Email"
-                  class="w-full"
-                  :class="{ 'p-invalid': !registroEditando.Internal_Email }"
-                />
-                <small v-if="!registroEditando.Internal_Email" class="text-red-500">El correo es requerido</small>
-              </div>
-
-              <!-- Teléfono -->
-              <div>
-                <label for="telefono" class="block text-sm font-medium text-gray-700 mb-1">Teléfono</label>
-                <InputText
-                  id="telefono"
-                  v-model="registroEditando.Internal_Phone"
-                  class="w-full"
-                  :class="{ 'p-invalid': !registroEditando.Internal_Phone }"
-                />
-                <small v-if="!registroEditando.Internal_Phone" class="text-red-500">El teléfono es requerido</small>
-              </div>
+            <div>
+              <label for="apellidos" class="block text-sm font-medium text-gray-700 mb-1">Apellidos</label>
+              <InputText
+                id="apellidos"
+                v-model="registroEditando.Internal_LastName"
+                class="w-full"
+                :class="{ 'p-invalid': !registroEditando.Internal_LastName }"
+              />
+              <small v-if="!registroEditando.Internal_LastName" class="text-red-500">Los apellidos son requeridos</small>
+            </div>
+            <div>
+              <label for="nombres" class="block text-sm font-medium text-gray-700 mb-1">Nombres</label>
+              <InputText
+                id="nombres"
+                v-model="registroEditando.Internal_Name"
+                class="w-full"
+                :class="{ 'p-invalid': !registroEditando.Internal_Name }"
+              />
+              <small v-if="!registroEditando.Internal_Name" class="text-red-500">Los nombres son requeridos</small>
             </div>
           </div>
         </div>
-
-        <!-- Footer del Dialog -->
-        <template #footer>
-          <div class="flex justify-between items-center w-full px-2 py-2">
-            <Button
-              label="Cancelar"
-              icon="pi pi-times"
-              class="p-button-outlined p-button-danger"
-              @click="dialogVisible = false"
-            />
-            <Button
-              label="Guardar Cambios"
-              icon="pi pi-check"
-              class="p-button-success"
-              @click="guardarEdicion"
-            />
+        <div class="rounded-2xl shadow-md border border-gray-200 bg-white">
+          <div class="flex items-center gap-2 px-4 py-3 border-b border-gray-200 bg-gray-50 rounded-t-2xl">
+            <i class="pi pi-envelope text-primary-600 text-lg"></i>
+            <h5 class="text-base font-semibold text-gray-700 m-0">Información de Contacto</h5>
           </div>
-        </template>
-      </Dialog>
-
+          <div class="p-4 grid grid-cols-1 gap-4">
+            <div>
+              <label for="correo" class="block text-sm font-medium text-gray-700 mb-1">Correo Electrónico</label>
+              <InputText
+                id="correo"
+                v-model="registroEditando.Internal_Email"
+                class="w-full"
+                :class="{ 'p-invalid': !registroEditando.Internal_Email }"
+              />
+              <small v-if="!registroEditando.Internal_Email" class="text-red-500">El correo es requerido</small>
+            </div>
+          </div>
+        </div>
+      </div>
+      <template #footer>
+        <div class="flex justify-between items-center w-full px-2 py-2">
+          <Button
+            label="Cancelar"
+            icon="pi pi-times"
+            class="p-button-outlined p-button-danger"
+            @click="dialogVisible = false"
+          />
+          <Button
+            label="Guardar Cambios"
+            icon="pi pi-check"
+            class="p-button-success"
+            @click="guardarEdicion"
+          />
+        </div>
+      </template>
+    </Dialog>
   </main>
 </template>
 
 <style scoped>
-/* Fila resaltada si incompleta */
 :deep(.incomplete-row.light) {
-  background-color: #ffe6e6 !important; /* rojo suave (modo claro) */
+  background-color: #ffe6e6 !important;
 }
 :deep(.incomplete-row.dark) {
-  background-color: #7f1d1d !important; /* rojo oscuro (modo oscuro) */
+  background-color: #7f1d1d !important;
 }
-</style>
 
+/* Oculta el nombre del archivo que PrimeVue muestra por defecto */
+:deep(.p-fileupload-filename) {
+  display: none !important;
+}
+
+:deep(.p-button + span) {
+  display: none !important;
+}
+
+</style>
