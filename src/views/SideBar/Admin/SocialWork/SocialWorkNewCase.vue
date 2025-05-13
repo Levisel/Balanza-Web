@@ -421,10 +421,14 @@
                   class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   :disabled="isFormLocked"
                 >
-                  <option value="propia">Vivienda propia</option>
-                  <option value="arrendada">Vivienda arrendada</option>
-                  <option value="prestada">Familiar</option>
-                  <option value="otro">Otro</option>
+                  <option value="">Seleccione</option>
+                  <option 
+                    v-for="type in housingTypes" 
+                    :key="type.id" 
+                    :value="type.name"
+                  >
+                    {{ type.name }}
+                  </option>
                 </select>
               </div>
             </div>
@@ -460,11 +464,13 @@
                   :disabled="isFormLocked"
                 >
                   <option value="">Seleccione</option>
-                  <option value="Soltero/a">Soltero/a</option>
-                  <option value="Casado/a">Casado/a</option>
-                  <option value="Unión libre">Unión libre</option>
-                  <option value="Divorciado/a">Divorciado/a</option>
-                  <option value="Viudo/a">Viudo/a</option>
+                  <option 
+                    v-for="status in civilStatuses" 
+                    :key="status.id" 
+                    :value="status.name"
+                  >
+                    {{ status.name }}
+                  </option>
                 </select>
               </div>
               <div class="form-group">
@@ -629,7 +635,9 @@ export default {
       isLoading: false,
       error: null,
       notasModalVisible: false,  // Added this missing state variable
-      selectedMemberIndex: null  // Added this missing state variable
+      selectedMemberIndex: null,  // Added this missing state variable
+      housingTypes: [],
+      civilStatuses: []
     };
   },
   computed: {
@@ -645,8 +653,56 @@ export default {
     } else {
       this.error = 'Faltan parámetros en la URL.';
     }
+
+    //Fetch dropdown options from the API
+    await this.fetchHousingTypes();
+    await this.fetchCivilStatuses();
   },
   methods: {
+    async fetchHousingTypes() {
+      try {
+        const response = await fetch('http://localhost:3000/type-of-housing');
+        if (!response.ok) throw new Error('Error fetching housing types');
+        
+        const data = await response.json();
+        console.log('Raw housing types response:', data);
+        
+        // Filter to only include items where Type_Of_Housing_Status is true
+        // AND map the API properties to what the template expects
+        this.housingTypes = data
+          .filter(item => item.Type_Of_Housing_Status === true)
+          .map(item => ({
+            id: item.Type_Of_Housing_ID,
+            name: item.Type_Of_Housing_Name
+          }));
+        
+        console.log('Transformed housing types:', this.housingTypes);
+      } catch (error) {
+        console.error('Error in fetchHousingTypes:', error);
+      }
+    },
+    async fetchCivilStatuses() {
+      try {
+        const response = await fetch('http://localhost:3000/civil-statuses');
+        if (!response.ok) throw new Error('Error fetching civil statuses');
+        
+        const data = await response.json();
+        console.log('Raw civil statuses response:', data);
+        
+        // Filter to only include items where Civil_Status_Status is true
+        // AND map the API properties to what the template expects
+        this.civilStatuses = data
+          .filter(item => item.Civil_Status_Status === true)
+          .map(item => ({
+            id: item.Civil_Status_ID,
+            name: item.Civil_Status_Name
+          }));
+        
+        console.log('Transformed civil statuses:', this.civilStatuses);
+      } catch (error) {
+        console.error('Error in fetchCivilStatuses:', error);
+      }
+    },
     validatePercentage() {
       if (this.caso.discapacidad.porcentaje > 100) {
         this.caso.discapacidad.porcentaje = 100; // Cap the value at 100
@@ -714,7 +770,7 @@ export default {
       }
 
       const data = await response.json();
-      console.log("Datos recibidos del backend:", data); // Add logging for debugging
+      console.log("Datos recibidos del backend:", data); 
 
       // Fetch living group members
       let grupoConvivencia = [];
@@ -723,7 +779,7 @@ export default {
         if (livingGroupResponse.ok) {
           const livingGroupData = await livingGroupResponse.json();
           grupoConvivencia = livingGroupData.map(member => ({
-            id: member.LG_LivingGroup_ID, // Store the ID for later reference
+            id: member.LG_LivingGroup_ID, 
             nombre: member.LG_Name,
             edad: member.LG_Age,
             parentesco: member.LG_Relationship,
@@ -780,9 +836,7 @@ export default {
         casoConocidoAnteriormente: data.SW_PreviouslyKnownCase || '',
         relatoHechos: data.SW_Notes || '',
         observaciones: data.SW_Observations || '',
-        // Add Internal_ID for auditing purposes
         Internal_ID: internalId,
-        // Add SW_Status to control locking
         SW_Status: data.SW_Status || ''
       };
 
@@ -794,9 +848,8 @@ export default {
       this.isLoading = false;
     }
   },
-    // Improved implementation for updating living group members
+
   async actualizarCaso() {
-  // First check if the form is locked and prevent submission
   if (this.isFormLocked) {
     alert("No se pueden realizar cambios en un caso archivado.");
     return;
@@ -1026,7 +1079,6 @@ watch: {
 </script>
   
 
-<!-- Add this CSS to your component's style section -->
 <style scoped>
 .form-locked {
   opacity: 0.85;
@@ -1056,5 +1108,3 @@ watch: {
   color: #666 !important;
 }
 </style>
-
-<!-- In your template, add a class binding to your form container -->

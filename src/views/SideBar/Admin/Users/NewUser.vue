@@ -12,11 +12,13 @@ import Button from "primevue/button";
 import axios from "axios";
 import type { boolean } from "zod";
 import { useSubjects } from "@/useSubjects";
+import { useNotificationStore } from "@/stores/notifications";
 
 const toast = useToast();
 const selectedIdType = ref<string>("");
 const bandera = ref<boolean>(false);
 const userRegistered = ref<boolean>(false);
+const notificationStore = useNotificationStore();
 
 const internalUser = ref<Internal_User>({
   Internal_ID: "",
@@ -214,6 +216,35 @@ const checkIdSize = (shouldShowToast: boolean = true): boolean => {
 };
 
 const onFormSubmit = async () => {
+  const restrictedWords = [
+    "manzana", "pera", "uva", "fresa", "mango", "melon", "sandia", "platano", "cereza", "naranja",
+    "limon", "papaya", "coco", "kiwi", "ciruela", "durazno", "guayaba", "mandarina", "toronja",
+    "granada", "frambuesa", "zarzamora", "arandano", "mora", "higo", "chirimoya", "maracuya",
+    "tamarindo", "zapote", "nispero", "caimito", "mamey", "guanabana", "guayabo", "anon", "pomelo",
+    "pina", "carambola", "parcha", "mamon", "tuna", "pitahaya", "chayote", "jicama", "chirimoia",
+    "nance", "naranjilla", "pepino", "calabaza", "calabacin", "berenjena", "tomate", "pimiento",
+    "papa", "yuca", "batata", "boniato", "maiz", "arroz", "trigo", "cebada", "avena", "centeno",
+    "sorgo", "mijo", "quinoa", "amaranto", "cafe", "cacao", "te", "mate", "manzanilla", "tilo",
+    "menta", "albahaca", "oregano", "perejil", "cilantro", "romero", "tomillo", "salvia", "laurel",
+    "hinojo", "eneldo", "anis", "comino", "curcuma", "pimienta", "mostaza", "nuez", "almendra",
+    "cacahuate", "pistache", "avellana", "macadamia", "sesamo", "linaza", "girasol"
+  ];
+
+  // Check if the password contains restricted words
+  const containsRestrictedWord = restrictedWords.some(word =>
+    internalUser.value.Internal_Password?.toLowerCase().includes(word)
+  );
+
+  if (containsRestrictedWord) {
+    // Add a notification to the notification store
+    notificationStore.addNotification({
+      id: Date.now(),
+      mensaje: "La contraseña contiene palabras restringidas. Por favor, cámbiala.",
+      fecha: new Date().toISOString(),
+      leida: false,
+      userId: internalUser.value.Internal_ID,
+    });
+  }
   // Make the API call
   try {
     const response = await axios.post<Internal_User>(`${API}/register`, {
