@@ -100,24 +100,25 @@ export interface Evidence {
 
 
 // 📌 Initial_Consultation (The activities assigned to the student)
-export interface Activity {   
+  export interface Activity {   
     Activity_ID: number;
     Init_Code: string;
     Internal_ID: string;
-    Internal_Name: string;
-    Activity_Name: string;
-    Activity_Start_Date: Date;
-    Activity_Start_Time: string;
-    Activity_Location: string;
-    Activity_Duration: string;
-    Activity_Counterparty: string;
-    Activity_Judged: string;
-    Activity_Judge_Name: string;
-    Activity_Reference_File: string;
+    Activity_Type: string;
+    Activity_Description: string;
+    Activity_Location: string | null;
+    Activity_Date: Date;
+    Activity_StartTime: string | null;
+    activityScheduledTime: string | null;
     Activity_Status: string;
-    Activity_OnTime: boolean;
-    Activity_Document: File | null;
-}
+    Activity_JurisdictionType: string;
+    Activity_InternalReference: string;
+    Activity_CourtNumber: string;
+    Activity_lastCJGActivity: string;
+    Activity_lastCJGActivityDate: Date; // Cambiado a Date
+    Activity_Observation: string;
+    Internal_User_ID_Student: string; // ID del estudiante asignado a la actividad
+  }
 
 //------------------------------------------------------------------------------------------------------------------//
 //Control de Ingreso
@@ -163,6 +164,10 @@ export interface UserXPeriodDVM {
     Internal_Email: string;
     Internal_Area: string;
     Internal_Huella?: boolean; // Added this property
+    Internal_Phone?: string; // Added this property
+    Internal_Type?: string;
+    Internal_Status?: string;
+    Internal_Picture?: string; // Added this property
     // Este campo se usa cuando haces `fetchUsersByPeriod`
     Period_ID?: number;
     Period_Name?: string;

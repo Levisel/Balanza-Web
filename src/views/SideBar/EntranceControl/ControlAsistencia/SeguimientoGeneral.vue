@@ -205,7 +205,21 @@
   };
   
   // Estados
-  const resumenes = ref([]);
+  interface Resumen {
+    userSummary?: {
+      Internal_ID?: string;
+      Internal_Name?: string;
+      Internal_LastName?: string;
+      Internal_Area?: string;
+    };
+    Summary_Start?: string;
+    Summary_End?: string;
+    Summary_Total_Hours?: number;
+    Summary_IsComplete?: boolean;
+    Summary_ID?: number;
+  }
+  
+  const resumenes = ref<Resumen[]>([]);
   const busquedaCedula = ref("");
   const busquedaNombre = ref("");
   const areaSeleccionada = ref(""); // Dropdown: valor inicial vacío

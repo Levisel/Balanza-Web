@@ -13,8 +13,8 @@ import Dialog from 'primevue/dialog';
 import axios from "axios";
 
 
-const { isDarkTheme } = useDarkMode(); // 🔥 usa el modo oscuro global
-const toast = useToast(); // 🔥 usa el toast global
+const { isDarkTheme } = useDarkMode(); 
+const toast = useToast(); 
 const router = useRouter();
 const route = useRoute();
 
@@ -254,7 +254,7 @@ onMounted(() => {
         'rounded-2xl shadow-md p-4',
         isDarkTheme ? 'bg-[#1f1f1f] text-white' : 'bg-white text-gray-900'
       ]">
-        <DataTable :value="resumenesSemanales" paginator rows="10" class="w-full">
+        <DataTable :value="resumenesSemanales" paginator :rows="10" class="w-full">
           <Column field="Period_Name" header="Período" sortable />
           <Column field="Week_Number" header="Semana" sortable />
           <Column header="Inicio" sortable>

@@ -162,7 +162,7 @@
   const usuarioXPeriodoId = ref("");
   const periodoActual = ref<any>(null);
 
-  const modoSimulacion = true;
+  const modoSimulacion = false;
   const fechaSimulada = new Date("2025-04-22T13:09:00");
 
   // Constantes de ventana de validación (editable fácilmente)
@@ -254,7 +254,7 @@ const currentDayMessage = computed(() => {
 
   const now = getAhoraLocal();
   const todayKey = dayKeys[now.getDay()];
-  const dayLabel = dayLabels[todayKey] || todayKey;
+  const dayLabel = dayLabels[todayKey as keyof typeof dayLabels] || todayKey;
   const currentTime = now.toLocaleTimeString("es-EC", { timeZone: "America/Guayaquil", hour: "2-digit", minute: "2-digit" });
 
   return `${dayLabel} a las ${currentTime}`;

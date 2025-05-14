@@ -187,7 +187,7 @@ const resumenDisplay = computed(() => {
 
 
 // Variable para almacenar los datos del usuario (en caso de que no exista resumen)
-const usuarioData = ref(null);
+const usuarioData = ref<Usuario | null>(null);
 
 // Variables para ajustes
 const ajusteHoras = ref(0);

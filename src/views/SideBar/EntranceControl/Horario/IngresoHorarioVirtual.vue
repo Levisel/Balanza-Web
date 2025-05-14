@@ -1,6 +1,21 @@
 <template>
   <main class="flex flex-col items-center p-6 min-h-screen">
-    <h1 class="text-3xl font-bold mb-6">Asignar Horarios Virtuales</h1>
+    <div class="flex items-center gap-2 mb-6">
+  <h1 class="text-3xl font-bold">Asignar Horarios Virtuales</h1>
+  <Button
+    icon="pi pi-info-circle"
+    class="p-button-text p-button-md"
+    @click="mostrarInfoAsignar = true"
+    tooltip="¿Cómo iniciar?"
+    tooltipOptions="{ position: 'top' }"
+  />
+</div>
+<Dialog v-model:visible="mostrarInfoAsignar" header="¿Cómo empezar?" modal>
+  <p>Selecciona un <strong>Período</strong> y un <strong>Área</strong> para poder asignar horarios a los estudiantes.</p>
+  <template #footer>
+    <Button label="Entendido" class="p-button-primary" @click="mostrarInfoAsignar = false" />
+  </template>
+</Dialog>
     <Toast />
 
     <!-- Filtros -->
@@ -204,7 +219,17 @@
 
 <script setup lang="ts">
 import { ref, onMounted, computed, watch, nextTick } from 'vue'
-import { API, type UserXPeriod, type Period } from "@/ApiRoute"
+import { API, type Period } from "@/ApiRoute"
+
+// Extend UserXPeriod type to include missing properties
+type UserXPeriod = {
+  UserXPeriod_ID: number;
+  Period_ID: number;
+  Internal_ID: string;
+  UserXPeriod_IsDeleted: boolean;
+  Internal_Name?: string; // Add missing property
+  Internal_LastName?: string; // Add if needed
+};
 import { useToast } from 'primevue/usetoast'
 
 // Componentes PrimeVue
@@ -231,6 +256,7 @@ const busquedaNombre = ref('')
 const busquedaCedula = ref('')
 const { subjects: opcionesAreas, fetchSubjects } = useSubjects()
 const mostrarAyudaCambio = ref(false);
+const mostrarInfoAsignar = ref(false);
 
 const maxHorasVirtuales = ref(8); // valor por defecto
 const mostrarDialogoMaxHoras = ref(false);
@@ -380,15 +406,18 @@ function limpiarHorarios() {
 async function cargarHorarioPresencial() {
   if (!estudianteSeleccionado.value) return;
   try {
-    const resUXP = await axios.get(`${API}/usuarioXPeriodo/${periodoSeleccionado.value.Period_ID}/${estudianteSeleccionado.value.user.Internal_ID}`);
+    if (!periodoSeleccionado.value) {
+      throw new Error('Período seleccionado es nulo.');
+    }
+    const resUXP = await axios.get(`${API}/usuarioXPeriodo/${periodoSeleccionado.value.Period_ID}/${estudianteSeleccionado.value.Internal_ID}`);
     const dataUXP = resUXP.data;
     usuarioXPeriodoId.value = dataUXP.UserXPeriod_ID;
 
-    const resHor = await axios.get(`${API}/horarioEstudiantes/completo?periodId=${periodoSeleccionado.value.Period_ID}&area=${encodeURIComponent(areaSeleccionada.value)}`);
+    const resHor = await axios.get(`${API}/horarioEstudiantes/completo?periodId=${periodoSeleccionado.value.Period_ID}&area=${encodeURIComponent(areaSeleccionada.value || '')}`);
     const todosHorarios = resHor.data || [];
 
     const horariosEstudiante = todosHorarios.filter(
-      (h: any) => h.Internal_ID === estudianteSeleccionado.value.user.Internal_ID && h.Schedule_Mode === 'Presencial' && h.Schedule_IsDeleted === 0
+      (h: any) => estudianteSeleccionado.value && h.Internal_ID === estudianteSeleccionado.value.Internal_ID && h.Schedule_Mode === 'Presencial' && h.Schedule_IsDeleted === 0
     );
 
     const dias = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
@@ -432,9 +461,12 @@ async function cargarHorarioPresencial() {
 async function cargarHorarioVirtual() {
   if (!usuarioXPeriodoId.value) return;
   try {
-    const resHor = await axios.get(`${API}/horarioEstudiantes/completo?periodId=${periodoSeleccionado.value.Period_ID}&area=${encodeURIComponent(areaSeleccionada.value)}`);
+    if (!periodoSeleccionado.value) {
+      throw new Error('Período seleccionado es nulo.');
+    }
+    const resHor = await axios.get(`${API}/horarioEstudiantes/completo?periodId=${periodoSeleccionado.value.Period_ID}&area=${encodeURIComponent(areaSeleccionada.value ?? '')}`);
     const todosHorarios = resHor.data || [];
-    const horEstudiante = todosHorarios.filter((h: any) => h.Internal_ID === estudianteSeleccionado.value.user.Internal_ID);
+    const horEstudiante = todosHorarios.filter((h: any) => estudianteSeleccionado.value && h.Internal_ID === estudianteSeleccionado.value.Internal_ID);
     const virtual = horEstudiante.find(
       (h: any) => h.Schedule_Mode === 'Virtual' && h.Schedule_IsDeleted === 0
     );
@@ -492,9 +524,9 @@ async function obtenerParametroHorario(id: number) {
 /** Computed: filtra estudiantes por nombre/cédula */
 const estudiantesFiltrados = computed(() => {
   return estudiantes.value.filter(est => {
-    const nom = est.user.Internal_Name?.toLowerCase() || ''
-    const ape = est.user.Internal_LastName?.toLowerCase() || ''
-    const ced = est.user.Internal_ID || ''
+    const nom = est.Internal_Name?.toLowerCase() || ''
+    const ape = est.Internal_LastName?.toLowerCase() || ''
+    const ced = est.Internal_ID || ''
     return (
       (nom.includes(busquedaNombre.value.toLowerCase()) ||
        ape.includes(busquedaNombre.value.toLowerCase())) &&
@@ -603,13 +635,21 @@ async function guardarHorario(esCambioAdministrativo: boolean) {
   if (isGuardando.value) return;
   isGuardando.value = true;
 
-  const nuevoHorario = {
-    Schedule_Day_Monday: horariosSeleccionados.value['Monday']?.value || null,
-    Schedule_Day_Tuesday: horariosSeleccionados.value['Tuesday']?.value || null,
-    Schedule_Day_Wednesday: horariosSeleccionados.value['Wednesday']?.value || null,
-    Schedule_Day_Thursday: horariosSeleccionados.value['Thursday']?.value || null,
-    Schedule_Day_Friday: horariosSeleccionados.value['Friday']?.value || null,
-    Schedule_Mode: 'Virtual'
+  const nuevoHorario: {
+      Schedule_Day_Monday: any;
+      Schedule_Day_Tuesday: any;
+      Schedule_Day_Wednesday: any;
+      Schedule_Day_Thursday: any;
+      Schedule_Day_Friday: any;
+      Schedule_Mode: string;
+      UserXPeriod_ID?: number | null;
+  } = {
+      Schedule_Day_Monday: horariosSeleccionados.value['Monday']?.value || null,
+      Schedule_Day_Tuesday: horariosSeleccionados.value['Tuesday']?.value || null,
+      Schedule_Day_Wednesday: horariosSeleccionados.value['Wednesday']?.value || null,
+      Schedule_Day_Thursday: horariosSeleccionados.value['Thursday']?.value || null,
+      Schedule_Day_Friday: horariosSeleccionados.value['Friday']?.value || null,
+      Schedule_Mode: 'Virtual'
   };
 
   try {

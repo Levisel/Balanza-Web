@@ -93,7 +93,7 @@
     <div class="flex flex-col gap-4">
       <div>
         <label class="block mb-2 font-medium">Semana Número:</label>
-        <InputText v-model="form.Week_Number" disabled class="w-full" />
+        <InputText :value="form.Week_Number.toString()" disabled class="w-full" />
       </div>
       <div>
         <label class="block mb-2 font-medium">Fecha Inicio:</label>

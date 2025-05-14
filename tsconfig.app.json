@@ -7,5 +7,6 @@
     "paths": {
       "@/*": ["./src/*"]
     }
-  }
+  },
+  "types": ["file-saver"]
 }

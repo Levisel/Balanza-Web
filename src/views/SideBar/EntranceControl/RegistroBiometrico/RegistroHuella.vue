@@ -123,6 +123,17 @@ const estudianteId = computed(() =>
   route.params.cedula ? String(route.params.cedula) : route.params.id ? String(route.params.id) : null
 );
 
+const getLectorURL = (path: string): string => {
+  if (import.meta.env.DEV) {
+    // Desarrollo: usa proxy
+    return path;
+  } else {
+    // Producción: usa la IP local o hostname de la máquina cliente
+    return `https://${window.location.hostname}:8443${path}`;
+  }
+};
+
+
 // Variables del estudiante
 const cedula = ref("");
 const nombres = ref("");
@@ -184,14 +195,12 @@ const iniciarCaptura = async () => {
   try {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 15000);
-    const response = await fetch("/SGIFPCapture", {
+    const response = await fetch(getLectorURL("/SGIFPCapture"), {
       method: "POST",
       mode: "cors",
       headers: {
         "Content-Type": "application/json",
-        Accept: "*/*",
-        Origin: "http://localhost:5173",
-        "Access-Control-Allow-Origin": "*",
+        Accept: "*/*"
       },
       body: JSON.stringify({
         Licstr: "",
@@ -241,9 +250,7 @@ const cancelarCaptura = () => {
   capturando.value = false;
 };
 
-// Función para guardar la huella en la base de datos
-// Se realiza un PUT enviando la cédula como query y en el body se manda { Usuario_Huella: null }
-// Función para guardar la huella en la base de datos
+
 // Se realiza un PUT enviando la cédula en query y en el body { Usuario_Huella: huellaBase64 }
 // 📌 4️⃣ Guardar huella en la base de datos
 const guardarHuella = async () => {

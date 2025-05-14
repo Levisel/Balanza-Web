@@ -25,8 +25,8 @@ const isAdminOrSecretaria = user?.type === "Administrador" || user?.type === "Se
 const internalId = user?.id;
 
 const alertas = ref<any[]>([]);
-const fechaInicio = ref<Date | null>(null);
-const fechaFin = ref<Date | null>(null);
+const fechaInicio = ref<string | null>(null);
+const fechaFin = ref<string | null>(null);
 const estadoSeleccionado = ref<string | null>(null);
 const modalMensajeVisible = ref(false);
 const mensajeSeleccionado = ref("");
@@ -90,8 +90,8 @@ const verMensajeCompleto = async (mensaje: string, alertaId: number, estadoActua
 const alertasFiltradas = computed(() => {
   return alertas.value.filter(alerta => {
     const fecha = new Date(alerta.Alert_Date);
-    const cumpleInicio = !fechaInicio.value || fecha >= fechaInicio.value;
-    const cumpleFin = !fechaFin.value || fecha <= fechaFin.value;
+    const cumpleInicio = !fechaInicio.value || fecha >= new Date(fechaInicio.value);
+    const cumpleFin = !fechaFin.value || fecha <= new Date(fechaFin.value);
     const cumpleEstado = !estadoSeleccionado.value || alerta.Alert_Approval_Status === estadoSeleccionado.value;
     const cumpleCedula = !busquedaCedula.value || (alerta.Internal_ID ?? "").toString().includes(busquedaCedula.value.trim());
     return cumpleInicio && cumpleFin && cumpleEstado && cumpleCedula;
@@ -127,15 +127,16 @@ onMounted(() => {
       />
         </div>
   
-        <div class="flex flex-col">
-          <label class="ml-2 mb-1 text-sm font-medium">Fecha de Inicio</label>
-          <Calendar v-model="fechaInicio" dateFormat="dd/mm/yy" showIcon class="w-60 p-inputtext-sm" />
+                <div class="flex flex-col">
+          <label class="mb-1 text-sm font-medium">Fecha de Inicio Desde</label>
+          <InputText v-model="fechaInicio" type="date" class="w-60" />
         </div>
-  
+
         <div class="flex flex-col">
-          <label class="ml-2 mb-1 text-sm font-medium">Fecha de Fin</label>
-          <Calendar v-model="fechaFin" dateFormat="dd/mm/yy" showIcon class="w-60 p-inputtext-sm" />
+          <label class="mb-1 text-sm font-medium">Fecha de Fin Hasta</label>
+          <InputText v-model="fechaFin" type="date" class="w-60" />
         </div>
+
   
         <div class="flex flex-col">
           <label class="mb-1 text-sm font-medium">Estado</label>
