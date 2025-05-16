@@ -60,6 +60,8 @@ const finalizarCasoMotivo = ref(""); // Almacena el motivo seleccionado
 const finalizarCasoDetalles = ref(""); // Almacena los detalles adicionales
 const casoSeleccionado = ref<Caso | null>(null); // Almacena el caso que se está finalizando
 const isLoadingDynamicFields = ref<boolean>(false);
+const usuarioEvidenciaUrl = ref<string | null>(null);
+const usuarioDocumentoSaludUrl = ref<string | null>(null);
 
 const isCompletarActividadFormValid = computed(() => {
   return (
@@ -468,11 +470,53 @@ const obtenerNombreUsuario = async (userId: string | number): Promise<string> =>
   }
 }
 
-const verDetallesUsuario = async (cedula: string | number) => {
+const verDetallesUsuario = async (cedula: string | number, codigoCaso?: string) => {
   try {
+    console.log('Abriendo detalles usuario', cedula, codigoCaso);
+    // Obtener datos del usuario
     const response = await axios.get(`${API}/user/${cedula}`);
     usuarioDetalles.value = response.data;
+
+    // Procesar documento de salud si existe y es buffer
+    usuarioDocumentoSaludUrl.value = null;
+    const healthDoc = usuarioDetalles.value.User_HealthDocuments;
+    // Comprobar si healthDoc existe, es un objeto, tiene una propiedad 'data' y 'data' es un array
+    if (healthDoc && typeof healthDoc === 'object' && 'data' in healthDoc && Array.isArray(healthDoc.data)) {
+      const byteArray = new Uint8Array(healthDoc.data); // Usar healthDoc.data
+      const blob = new Blob([byteArray], { type: 'application/pdf' });
+      usuarioDocumentoSaludUrl.value = URL.createObjectURL(blob);
+      console.log('URL documento salud:', usuarioDocumentoSaludUrl.value);
+    } else {
+      // Opcional: loguear si el formato del documento no es el esperado o si no hay documento
+      if (healthDoc) {
+        console.log('Formato de User_HealthDocuments no esperado:', healthDoc);
+      } else {
+        console.log('No hay User_HealthDocuments para este usuario.');
+      }
+    }
+
+    // Obtener evidencia desde la API si hay código de caso
+    usuarioEvidenciaUrl.value = null;
+    if (codigoCaso) {
+      try {
+        const evidenciaResp = await axios.get(`${API}/evidence/consultation/${codigoCaso}`);
+        console.log('Respuesta evidencia:', evidenciaResp.data);
+        if (evidenciaResp.data && evidenciaResp.data.Evidence_File && evidenciaResp.data.Evidence_File.data) {
+          const byteArray = new Uint8Array(evidenciaResp.data.Evidence_File.data);
+          const blob = new Blob([byteArray], { type: 'application/pdf' });
+          usuarioEvidenciaUrl.value = URL.createObjectURL(blob);
+          console.log('URL de evidencia generada:', usuarioEvidenciaUrl.value);
+        } else {
+          console.log('No hay evidencia para este caso');
+        }
+      } catch (e) {
+        console.log('Error consultando evidencia, pero se mostrará el diálogo igual:', e);
+      }
+    }
+
+    // Siempre abrir el diálogo, aunque no haya evidencia ni documento
     visibleUsuarioDialog.value = true;
+    console.log('Dialogo de usuario abierto');
   } catch (error) {
     console.error('Error al obtener los detalles del usuario:', error);
     toast.add({
@@ -970,7 +1014,7 @@ onMounted(() => {
     <template #body="slotProps">
       <div class="flex items-center gap-2">
         {{ slotProps.data.usuario }}
-        <Button icon="pi pi-info-circle" class="p-button-text p-0" @click="verDetallesUsuario(slotProps.data.cedula)" />
+        <Button icon="pi pi-info-circle" class="p-button-text p-0" @click="verDetallesUsuario(slotProps.data.cedula, slotProps.data.codigo)" />
       </div>
     </template>
   </Column>
@@ -1011,7 +1055,7 @@ onMounted(() => {
             <template #body="slotProps">
               <div class="flex items-center gap-2">
                 {{ slotProps.data.usuario }}
-                <Button icon="pi pi-info-circle" class="p-button-text p-0" @click="verDetallesUsuario(slotProps.data.cedula)" />
+                <Button icon="pi pi-info-circle" class="p-button-text p-0" @click="verDetallesUsuario(slotProps.data.cedula, slotProps.data.codigo)" />
               </div>
             </template>
           </Column>
@@ -1073,10 +1117,12 @@ onMounted(() => {
   <div class="card-footer p-4 border-t border-gray-200 bg-white rounded-b-lg mt-auto">
     <div class="flex flex-col gap-2">
       <Button
-        label="Completar"
-        icon="pi pi-check"
-        class="p-button-success w-full"
-        @click="abrirCompletarActividadDialog(actividad)" />
+  label="Completar"
+  icon="pi pi-check"
+  class="p-button-success w-full"
+  @click="abrirCompletarActividadDialog(actividad)"
+  :disabled="actividad.Activity_Status === 'Completado'"
+/>
       <Button
         v-if="actividad.Activity_Document"
         label="Ver Documento"
@@ -1097,181 +1143,76 @@ onMounted(() => {
 
 
     <!-- Dialog de Detalles del Usuario -->
-    <Dialog v-model:visible="visibleUsuarioDialog" modal header="Detalles del Usuario" class="p-6 rounded-lg shadow-lg bg-white max-w-3xl w-full">
-      <div class="space-y-4">
-        <!-- Contenido del diálogo de detalles del usuario (sin cambios) -->
-        <div class="flex gap-4">
-          <div class="flex-1">
-            <label class="block text-sm font-semibold">Nombre</label>
-            <p>{{ usuarioDetalles.User_FirstName }} {{ usuarioDetalles.User_LastName }}</p>
-          </div>
-          <div class="flex-1">
-            <label class="block text-sm font-semibold">Cédula</label>
-            <p>{{ usuarioDetalles.User_ID }}</p>
-          </div>
+    <Dialog
+  v-model:visible="visibleUsuarioDialog"
+  modal
+  header="Detalles del Usuario"
+  class="p-0 rounded-lg shadow-lg bg-white max-w-4xl w-full"
+  :style="{ width: '95vw' }"
+>
+  <div class="p-8 rounded-lg">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div class="bg-white rounded-lg shadow p-4">
+        <h3 class="text-lg font-bold mb-2 text-blue-700">Datos Personales</h3>
+        <div class="mb-2"><span class="font-semibold">Nombre:</span> {{ usuarioDetalles.User_FirstName || 'N/A' }} {{ usuarioDetalles.User_LastName || 'N/A' }}</div>
+        <div class="mb-2"><span class="font-semibold">Cédula:</span> {{ usuarioDetalles.User_ID || 'N/A' }}</div>
+        <div class="mb-2"><span class="font-semibold">Edad:</span> {{ usuarioDetalles.User_Age || 'N/A' }}</div>
+        <div class="mb-2"><span class="font-semibold">Género:</span> {{ usuarioDetalles.User_Gender || 'N/A' }}</div>
+        <div class="mb-2"><span class="font-semibold">Fecha de Nacimiento:</span> {{ usuarioDetalles.User_BirthDate ? new Date(usuarioDetalles.User_BirthDate).toLocaleDateString() : 'N/A' }}</div>
+        <div class="mb-2"><span class="font-semibold">Nacionalidad:</span> {{ usuarioDetalles.User_Nationality || 'N/A' }}</div>
+        <div class="mb-2"><span class="font-semibold">Teléfono:</span> {{ usuarioDetalles.User_Phone || 'N/A' }}</div>
+        <div class="mb-2"><span class="font-semibold">Email:</span> {{ usuarioDetalles.User_Email || 'N/A' }}</div>
+      </div>
+      <div class="bg-white rounded-lg shadow p-4">
+        <h3 class="text-lg font-bold mb-2 text-blue-700">Ubicación y Referencias</h3>
+        <div class="mb-2"><span class="font-semibold">Dirección:</span> {{ usuarioDetalles.User_Address || 'N/A' }}</div>
+        <div class="mb-2"><span class="font-semibold">Ciudad:</span> {{ usuarioDetalles.User_City || 'N/A' }}</div>
+        <div class="mb-2"><span class="font-semibold">Provincia:</span> {{ usuarioDetalles.User_Province || 'N/A' }}</div>
+        <div class="mb-2"><span class="font-semibold">Sector:</span> {{ usuarioDetalles.User_Sector || 'N/A' }}</div>
+        <div class="mb-2"><span class="font-semibold">Zona:</span> {{ usuarioDetalles.User_Zone || 'N/A' }}</div>
+        <div class="mb-2"><span class="font-semibold">Relación de Referencia:</span> {{ usuarioDetalles.User_ReferenceRelationship || 'N/A' }}</div>
+        <div class="mb-2"><span class="font-semibold">Nombre de Referencia:</span> {{ usuarioDetalles.User_ReferenceName || 'N/A' }}</div>
+        <div class="mb-2"><span class="font-semibold">Teléfono de Referencia:</span> {{ usuarioDetalles.User_ReferencePhone || 'N/A' }}</div>
+      </div>
+      <div class="bg-white rounded-lg shadow p-4">
+        <h3 class="text-lg font-bold mb-2 text-blue-700">Información Social y Económica</h3>
+        <div class="mb-2"><span class="font-semibold">Beneficio Social:</span> {{ usuarioDetalles.User_SocialBenefit !== undefined ? (usuarioDetalles.User_SocialBenefit ? 'Sí' : 'No') : 'N/A' }}</div>
+        <div class="mb-2"><span class="font-semibold">Dependencia Económica:</span> {{ usuarioDetalles.User_EconomicDependence !== undefined ? (usuarioDetalles.User_EconomicDependence ? 'Sí' : 'No') : 'N/A' }}</div>
+        <div class="mb-2"><span class="font-semibold">Instrucción Académica:</span> {{ usuarioDetalles.User_AcademicInstruction || 'N/A' }}</div>
+        <div class="mb-2"><span class="font-semibold">Profesión:</span> {{ usuarioDetalles.User_Profession || 'N/A' }}</div>
+        <div class="mb-2"><span class="font-semibold">Estado Civil:</span> {{ usuarioDetalles.User_MaritalStatus || 'N/A' }}</div>
+        <div class="mb-2"><span class="font-semibold">Dependientes:</span> {{ usuarioDetalles.User_Dependents || 'N/A' }}</div>
+        <div class="mb-2"><span class="font-semibold">Nivel de Ingresos:</span> {{ usuarioDetalles.User_IncomeLevel || 'N/A' }}</div>
+        <div class="mb-2"><span class="font-semibold">Ingreso Familiar:</span> {{ usuarioDetalles.User_FamilyIncome || 'N/A' }}</div>
+        <div class="mb-2"><span class="font-semibold">Personas Económicamente Activas:</span> {{ usuarioDetalles.User_EconomicActivePeople || 'N/A' }}</div>
+        <div class="mb-2"><span class="font-semibold">Tipo de Vivienda:</span> {{ usuarioDetalles.User_HousingType || 'N/A' }}</div>
+      </div>
+      <div class="bg-white rounded-lg shadow p-4">
+        <h3 class="text-lg font-bold mb-2 text-blue-700">Salud y Vulnerabilidad</h3>
+        <div class="mb-2"><span class="font-semibold">Pensionado:</span> {{ usuarioDetalles.User_Pensioner || 'N/A' }}</div>
+        <div class="mb-2"><span class="font-semibold">Seguro de Salud:</span> {{ usuarioDetalles.User_HealthInsurance || 'N/A' }}</div>
+        <div class="mb-2"><span class="font-semibold">Situación Vulnerable:</span> {{ usuarioDetalles.User_VulnerableSituation || 'N/A' }}</div>
+        <div class="mb-2"><span class="font-semibold">Discapacidad:</span> {{ usuarioDetalles.User_Disability || 'N/A' }}</div>
+        <div class="mb-2"><span class="font-semibold">Porcentaje de Discapacidad:</span> {{ usuarioDetalles.User_DisabilityPercentage !== undefined && usuarioDetalles.User_DisabilityPercentage !== null ? usuarioDetalles.User_DisabilityPercentage + '%' : 'N/A' }}</div>
+        <div class="mb-2"><span class="font-semibold">Enfermedad Catastrófica:</span> {{ usuarioDetalles.User_CatastrophicIllness || 'N/A' }}</div>
+        <div class="mb-2">
+          <span class="font-semibold">Documentos de Salud:</span>
+          <span v-if="usuarioDocumentoSaludUrl">
+            <Button label="Ver Documento de Salud" icon="pi pi-file-pdf" class="p-button-info ml-2" @click="verDocumento(usuarioDocumentoSaludUrl as string)" />
+          </span>
+          <span v-else class="text-gray-500 ml-2">N/A</span>
         </div>
-        <!-- ... resto de los campos de detalles del usuario ... -->
-         <div class="flex gap-4">
-          <div class="flex-1">
-            <label class="block text-sm font-semibold">Edad</label>
-            <p>{{ usuarioDetalles.User_Age }}</p>
-          </div>
-          <div class="flex-1">
-            <label class="block text-sm font-semibold">Género</label>
-            <p>{{ usuarioDetalles.User_Gender }}</p>
-          </div>
-        </div>
-        <div class="flex gap-4">
-          <div class="flex-1">
-            <label class="block text-sm font-semibold">Fecha de Nacimiento</label>
-            <p>{{ usuarioDetalles.User_BirthDate ? new Date(usuarioDetalles.User_BirthDate).toLocaleDateString() : 'N/A' }}</p>
-          </div>
-          <div class="flex-1">
-            <label class="block text-sm font-semibold">Nacionalidad</label>
-            <p>{{ usuarioDetalles.User_Nationality }}</p>
-          </div>
-        </div>
-        <div class="flex gap-4">
-          <div class="flex-1">
-            <label class="block text-sm font-semibold">Teléfono</label>
-            <p>{{ usuarioDetalles.User_Phone }}</p>
-          </div>
-          <div class="flex-1">
-            <label class="block text-sm font-semibold">Email</label>
-            <p>{{ usuarioDetalles.User_Email }}</p>
-          </div>
-        </div>
-        <div class="flex gap-4">
-          <div class="flex-1">
-            <label class="block text-sm font-semibold">Dirección</label>
-            <p>{{ usuarioDetalles.User_Address }}</p>
-          </div>
-          <div class="flex-1">
-            <label class="block text-sm font-semibold">Ciudad</label>
-            <p>{{ usuarioDetalles.User_City }}</p>
-          </div>
-        </div>
-        <div class="flex gap-4">
-          <div class="flex-1">
-            <label class="block text-sm font-semibold">Provincia</label>
-            <p>{{ usuarioDetalles.User_Province }}</p>
-          </div>
-          <div class="flex-1">
-            <label class="block text-sm font-semibold">Sector</label>
-            <p>{{ usuarioDetalles.User_Sector }}</p>
-          </div>
-        </div>
-        <div class="flex gap-4">
-          <div class="flex-1">
-            <label class="block text-sm font-semibold">Zona</label>
-            <p>{{ usuarioDetalles.User_Zone }}</p>
-          </div>
-          <div class="flex-1">
-            <label class="block text-sm font-semibold">Relación de Referencia</label>
-            <p>{{ usuarioDetalles.User_ReferenceRelationship }}</p>
-          </div>
-        </div>
-        <div class="flex gap-4">
-          <div class="flex-1">
-            <label class="block text-sm font-semibold">Nombre de Referencia</label>
-            <p>{{ usuarioDetalles.User_ReferenceName }}</p>
-          </div>
-          <div class="flex-1">
-            <label class="block text-sm font-semibold">Teléfono de Referencia</label>
-            <p>{{ usuarioDetalles.User_ReferencePhone }}</p>
-          </div>
-        </div>
-        <div class="flex gap-4">
-          <div class="flex-1">
-            <label class="block text-sm font-semibold">Beneficio Social</label>
-            <p>{{ usuarioDetalles.User_SocialBenefit ? 'Sí' : 'No' }}</p>
-          </div>
-          <div class="flex-1">
-            <label class="block text-sm font-semibold">Dependencia Económica</label>
-            <p>{{ usuarioDetalles.User_EconomicDependence ? 'Sí' : 'No' }}</p>
-          </div>
-        </div>
-        <div class="flex gap-4">
-          <div class="flex-1">
-            <label class="block text-sm font-semibold">Instrucción Académica</label>
-            <p>{{ usuarioDetalles.User_AcademicInstruction }}</p>
-          </div>
-          <div class="flex-1">
-            <label class="block text-sm font-semibold">Profesión</label>
-            <p>{{ usuarioDetalles.User_Profession }}</p>
-          </div>
-        </div>
-        <div class="flex gap-4">
-          <div class="flex-1">
-            <label class="block text-sm font-semibold">Estado Civil</label>
-            <p>{{ usuarioDetalles.User_MaritalStatus }}</p>
-          </div>
-          <div class="flex-1">
-            <label class="block text-sm font-semibold">Dependientes</label>
-            <p>{{ usuarioDetalles.User_Dependents }}</p>
-          </div>
-        </div>
-        <div class="flex gap-4">
-          <div class="flex-1">
-            <label class="block text-sm font-semibold">Nivel de Ingresos</label>
-            <p>{{ usuarioDetalles.User_IncomeLevel }}</p>
-          </div>
-          <div class="flex-1">
-            <label class="block text-sm font-semibold">Ingreso Familiar</label>
-            <p>{{ usuarioDetalles.User_FamilyIncome }}</p>
-          </div>
-        </div>
-        <div class="flex gap-4">
-          <div class="flex-1">
-            <label class="block text-sm font-semibold">Personas Económicamente Activas</label>
-            <p>{{ usuarioDetalles.User_EconomicActivePeople }}</p>
-          </div>
-          <div class="flex-1">
-            <label class="block text-sm font-semibold">Tipo de Vivienda</label>
-            <p>{{ usuarioDetalles.User_HousingType }}</p>
-          </div>
-        </div>
-        <div class="flex gap-4">
-          <div class="flex-1">
-            <label class="block text-sm font-semibold">Pensionado</label>
-            <p>{{ usuarioDetalles.User_Pensioner }}</p>
-          </div>
-          <div class="flex-1">
-            <label class="block text-sm font-semibold">Seguro de Salud</label>
-            <p>{{ usuarioDetalles.User_HealthInsurance }}</p>
-          </div>
-        </div>
-        <div class="flex gap-4">
-          <div class="flex-1">
-            <label class="block text-sm font-semibold">Situación Vulnerable</label>
-            <p>{{ usuarioDetalles.User_VulnerableSituation }}</p>
-          </div>
-          <div class="flex-1">
-            <label class="block text-sm font-semibold">Discapacidad</label>
-            <p>{{ usuarioDetalles.User_Disability }}</p>
-          </div>
-        </div>
-        <div class="flex gap-4">
-          <div class="flex-1">
-            <label class="block text-sm font-semibold">Porcentaje de Discapacidad</label>
-            <p>{{ usuarioDetalles.User_DisabilityPercentage }}%</p>
-          </div>
-          <div class="flex-1">
-            <label class="block text-sm font-semibold">Enfermedad Catastrófica</label>
-            <p>{{ usuarioDetalles.User_CatastrophicIllness }}</p>
-          </div>
-        </div>
-        <div class="flex gap-4">
-          <div class="flex-1">
-            <label class="block text-sm font-semibold">Documentos de Salud</label>
-            <p>{{ usuarioDetalles.User_HealthDocuments }}</p>
-          </div>
-        </div>
-        <div class="flex justify-end gap-4">
-          <Button label="Cerrar" icon="pi pi-times" class="p-button-text" @click="visibleUsuarioDialog = false" />
+        <div class="mb-2">
+          <span class="font-semibold">Evidencias:</span>
+          <span v-if="usuarioEvidenciaUrl">
+            <Button label="Ver Evidencia" icon="pi pi-file-pdf" class="p-button-info ml-2" @click="verDocumento(usuarioEvidenciaUrl)" />
+          </span>
+          <span v-else class="text-gray-500 ml-2">N/A</span>
         </div>
       </div>
-    </Dialog>
+    </div>
+  </div>
+</Dialog>
 
     <!-- Dialog para Completar Actividad -->
     <Dialog v-model:visible="visibleCompletarActividadDialog" modal header="Completar Actividad" class="p-6 rounded-lg shadow-lg bg-white max-w-3xl w-full">
@@ -1353,19 +1294,22 @@ onMounted(() => {
     </template>
   </Dialog>
 
-<Dialog v-model:visible="visibleDocumentoDialog" modal header="Documento" class="p-6 rounded-lg shadow-lg bg-white max-w-4xl w-full">
-  <div class="h-96">
+<Dialog
+  v-model:visible="visibleDocumentoDialog"
+  modal
+  header="Documento"
+  class="p-0 rounded-lg shadow-lg bg-white max-w-6xl w-full"
+  :style="{ width: '90vw' }"
+>
+  <div class="bg-gray-900 flex items-center justify-center" style="height:80vh;">
     <iframe
       v-if="documentoUrl"
       :src="documentoUrl"
-      class="w-full h-full"
+      class="w-full h-full rounded-lg shadow-lg bg-white"
       frameborder="0"
     ></iframe>
-    <p v-else class="text-center text-gray-500">Cargando documento...</p>
+    <p v-else class="text-center text-gray-200 w-full">Cargando documento...</p>
   </div>
-  <template #footer>
-    <Button label="Cerrar" icon="pi pi-times" class="p-button-text" @click="visibleDocumentoDialog = false" />
-  </template>
 </Dialog>
 
 <!-- Dialog para Finalizar Caso -->
