@@ -145,13 +145,17 @@ const opcionesPeriodoTipo = ref([
 
 // Clases dinámicas para Dark Mode
 const cardClass = computed(() =>
-  isDarkTheme.value ? "bg-gray-800 text-white shadow-lg" : "bg-white text-gray-900 shadow-lg"
+  isDarkTheme.value
+    ? "bg-[#1f1f1f] text-white shadow-lg"
+    : "bg-white text-gray-900 shadow-lg"
 );
+
 const inputClass = computed(() =>
   isDarkTheme.value
-    ? "bg-gray-900 text-white border-gray-700 focus:border-blue-500"
-    : "bg-white text-gray-900 border-gray-300 focus:border-blue-500"
+    ? "bg-[#121212] text-white border border-gray-700 focus:border-gray-500 focus:ring-0"
+    : "bg-white text-gray-900 border border-gray-300 focus:border-gray-500 focus:ring-0"
 );
+
 const buttonClass = computed(() =>
   isDarkTheme.value ? "bg-orange-500 hover:bg-orange-600" : "bg-orange-400 hover:bg-orange-500"
 );

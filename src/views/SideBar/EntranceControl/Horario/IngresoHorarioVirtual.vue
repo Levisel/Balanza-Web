@@ -381,7 +381,7 @@ async function cargarParametros() {
     let data = res.data || [];
     data = data.filter((p: any) =>
       p.Parameter_Schedule_Start_Time >= '09:00:00' &&
-      p.Parameter_Schedule_End_Time <= '17:00:00'
+      p.Parameter_Schedule_End_Time <= '22:00:00'
     );
     allParametros.value = data;
   } catch (err) {

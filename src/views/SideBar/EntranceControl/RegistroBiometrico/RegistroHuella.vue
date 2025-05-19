@@ -153,13 +153,17 @@ const capturando = ref(false);
 
 // Clases dinámicas para dark mode
 const cardClass = computed(() =>
-  isDarkTheme.value ? "bg-gray-800 text-white shadow-lg" : "bg-white text-gray-900 shadow-lg"
+  isDarkTheme.value
+    ? "bg-[#1f1f1f] text-white shadow-md"
+    : "bg-white text-gray-900 shadow-md"
 );
+
 const inputClass = computed(() =>
   isDarkTheme.value
-    ? "bg-gray-900 text-white border-gray-700 focus:border-blue-500"
-    : "bg-white text-gray-900 border-gray-300 focus:border-blue-500"
+    ? "bg-[#121212] text-white border border-gray-700 focus:border-emerald-500"
+    : "bg-white text-gray-900 border border-gray-300 focus:border-emerald-500"
 );
+
 
 // Función para cargar los datos del estudiante
 const cargarEstudiante = async () => {
