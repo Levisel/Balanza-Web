@@ -58,7 +58,7 @@ export interface User {
     User_HealthInsurance: string;
     User_VulnerableSituation: string;
     User_Disability: string;
-    User_DisabilityPercentage: number;
+    User_DisabilityPercentage?: number | null;
     User_CatastrophicIllness: string;
     User_HealthDocuments: File | null;
     User_HealthDocumentsName: string | null;
