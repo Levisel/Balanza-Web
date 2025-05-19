@@ -1591,7 +1591,7 @@ const fetchUser = async () => {
       }
     });
     userDisabilityPercentage.value =
-      selectedUser.value.User_DisabilityPercentage;
+      selectedUser.value.User_DisabilityPercentage ?? 0;
     userCatastrophicIllnessOptions.value.forEach((option) => {
       if (option.value === selectedUser.value.User_CatastrophicIllness) {
         userCatastrophicIllness.value = option;
@@ -1599,7 +1599,7 @@ const fetchUser = async () => {
     });
 
     if (
-      selectedUser.value.User_DisabilityPercentage > 0 &&
+      (selectedUser.value.User_DisabilityPercentage ?? 0) > 0 &&
       selectedUser.value.User_Disability !== "Ninguna"
     ) {
       userHasDisability.value = true;
