@@ -60,6 +60,12 @@ const finalizarCasoMotivo = ref(""); // Almacena el motivo seleccionado
 const finalizarCasoDetalles = ref(""); // Almacena los detalles adicionales
 const casoSeleccionado = ref<Caso | null>(null); // Almacena el caso que se está finalizando
 const isLoadingDynamicFields = ref<boolean>(false);
+
+// Nuevos estados para el diálogo de detalles de actividad
+const visibleDetallesActividadDialog = ref(false);
+const actividadSeleccionadaDetalles = ref<Record<string, any> | null>(null);
+const isLoadingActivityDetails = ref(false);
+
 const usuarioEvidenciaUrl = ref<string | null>(null);
 const usuarioDocumentoSaludUrl = ref<string | null>(null);
 
@@ -997,6 +1003,63 @@ const verDocumento = (documentUrl: string): void => {
   }
 };
 
+// --- INICIO: Lógica para Ver Detalles de Actividad ---
+
+// Lista de campos a excluir del diálogo de detalles de actividad
+const camposExcluidosDetallesActividad: string[] = [
+  'Activity_ID',
+  'Internal_ID',
+  'activityScheduledTime', // Asegúrate que coincida con el nombre del campo en tu API
+  'Activity_Document',
+  // Añade aquí cualquier otro campo que la API pueda devolver y no quieras mostrar
+];
+
+// Mapa de traducciones para los nombres de los campos de actividad
+const traduccionesCamposActividad: Record<string, string> = {
+  Init_Code: "Código de Consulta",
+  Activity_Type: "Tipo de Actividad",
+  Activity_Description: "Descripción",
+  Activity_Location: "Lugar",
+  Activity_Date: "Fecha",
+  Activity_StartTime: "Hora de Inicio",
+  Activity_Status: "Estado",
+  Activity_JurisdictionType: "Tipo de Judicatura",
+  Activity_InternalReference: "Referencia Interna",
+  Activity_CourtNumber: "Número de Juzgado",
+  Activity_lastCJGActivity: "Última Actividad CJG",
+  Activity_lastCJGActivityDate: "Fecha Última Actividad CJG",
+  Activity_Observation: "Observaciones",
+  // Agrega más traducciones según los campos que devuelva tu API /activity/{id}
+};
+
+const traducirYFormatearNombreCampo = (nombreCampo: string): string => {
+  return traduccionesCamposActividad[nombreCampo] || formatFieldName(nombreCampo); // Usa la traducción si existe, sino formatea
+};
+
+// Función para obtener y mostrar los detalles de una actividad específica
+const verDetallesActividad = async (activityId: number | undefined) => {
+  if (!activityId) {
+    toast.add({ severity: 'warn', summary: 'Advertencia', detail: 'ID de actividad no válido.', life: 3000 });
+    return;
+  }
+
+  isLoadingActivityDetails.value = true;
+  actividadSeleccionadaDetalles.value = null;
+  visibleDetallesActividadDialog.value = true;
+
+  try {
+    const response = await axios.get(`${API}/activity/${activityId}`);
+    actividadSeleccionadaDetalles.value = response.data;
+  } catch (error) {
+    console.error(`Error al obtener los detalles de la actividad ${activityId}:`, error);
+    toast.add({ severity: 'error', summary: 'Error', detail: 'No se pudieron obtener los detalles de la actividad.', life: 3000 });
+    visibleDetallesActividadDialog.value = false;
+  } finally {
+    isLoadingActivityDetails.value = false;
+  }
+};
+// --- FIN: Lógica para Ver Detalles de Actividad ---
+
 onMounted(() => {
   fetchActivityTypes();
   obtenerCasos();
@@ -1157,6 +1220,13 @@ onMounted(() => {
         icon="pi pi-file-pdf"
         class="p-button-info w-full"
         @click="verDocumento(actividad.Activity_Document)" />
+      <Button
+        label="Ver Detalles"
+        icon="pi pi-list"
+        class="p-button-secondary w-full"
+        :disabled="actividad.Activity_Status !== 'Completado' || !actividad.Activity_ID"
+        @click="verDetallesActividad(actividad.Activity_ID)"
+      />
     </div>
   </div>
 </div>
@@ -1475,5 +1545,30 @@ onMounted(() => {
   </template>
 </Dialog>
 
+<!-- Dialog para Ver Detalles de Actividad Completada -->
+<Dialog
+  v-model:visible="visibleDetallesActividadDialog"
+  modal
+  header="Detalles de la Actividad"
+  class="p-6 rounded-lg shadow-lg bg-white max-w-3xl w-full"
+>
+  <div v-if="isLoadingActivityDetails" class="text-center py-4">
+    <i class="pi pi-spin pi-spinner" style="font-size: 2rem"></i>
+    <p class="mt-2">Cargando detalles...</p>
+  </div>
+  <div v-else-if="actividadSeleccionadaDetalles" class="flow-root">
+    <dl class="-my-4 divide-y divide-gray-200 text-base">
+      <template v-for="(value, key) in actividadSeleccionadaDetalles" :key="key">
+        <div v-if="!camposExcluidosDetallesActividad.includes(String(key))"
+             class="grid grid-cols-1 gap-x-4 gap-y-2 py-4 sm:grid-cols-4 items-baseline">
+          <dt class="font-semibold text-gray-700 capitalize sm:col-span-1">{{ traducirYFormatearNombreCampo(String(key)) }}:</dt>
+          <dd class="text-gray-800 sm:col-span-3 break-words">{{ value === null || value === undefined || String(value).trim() === '' ? 'N/A' : value }}</dd>
+        </div>
+      </template>
+    </dl>
+  </div>
+  <div v-else class="text-center text-gray-500 py-4">No hay detalles disponibles para mostrar o ocurrió un error al cargarlos.</div>
+  <template #footer><Button label="Cerrar" icon="pi pi-times" class="p-button-text" @click="visibleDetallesActividadDialog = false" /></template>
+</Dialog>
   </div>
 </template>
