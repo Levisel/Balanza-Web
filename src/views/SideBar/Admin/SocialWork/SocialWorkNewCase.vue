@@ -634,10 +634,11 @@ export default {
       },
       isLoading: false,
       error: null,
-      notasModalVisible: false,  // Added this missing state variable
-      selectedMemberIndex: null,  // Added this missing state variable
+      notasModalVisible: false, 
+      selectedMemberIndex: null,  
       housingTypes: [],
-      civilStatuses: []
+      civilStatuses: [],
+      toast
     };
   },
   computed: {
@@ -661,7 +662,9 @@ export default {
   methods: {
     async fetchHousingTypes() {
       try {
-        const response = await fetch('http://localhost:3000/type-of-housing');
+        const response = await fetch('http://localhost:3000/type-of-housing'
+          , {credentials: 'include',}
+        );
         if (!response.ok) throw new Error('Error fetching housing types');
         
         const data = await response.json();
@@ -683,7 +686,9 @@ export default {
     },
     async fetchCivilStatuses() {
       try {
-        const response = await fetch('http://localhost:3000/civil-statuses');
+        const response = await fetch('http://localhost:3000/civil-statuses'
+          , {credentials:'include'}
+        );
         if (!response.ok) throw new Error('Error fetching civil statuses');
         
         const data = await response.json();
@@ -706,16 +711,44 @@ export default {
     validatePercentage() {
       if (this.caso.discapacidad.porcentaje > 100) {
         this.caso.discapacidad.porcentaje = 100; // Cap the value at 100
+        this.toast.add({
+          severity: "warn",
+          summary: "Porcentaje ajustado",
+          detail: "El porcentaje no puede ser mayor a 100.",
+          life: 3000,
+        });
       } else if (this.caso.discapacidad.porcentaje < 0) {
         this.caso.discapacidad.porcentaje = 0; // Ensure the value is not negative
+        this.toast.add({
+          severity: "warn",
+          summary: "Porcentaje ajustado",
+          detail: "El porcentaje no puede ser negativo.",
+          life: 3000,
+        });
       }
     },
     validateID(ID) {
-      if (!/^\d{10}$/.test(ID)) return false; // Only allow 10 numeric digits
+      if (!/^\d{10}$/.test(ID)) {
+        this.toast.add({
+          severity: "error",
+          summary: "C.I. inválido",
+          detail: "El C.I. debe tener exactamente 10 dígitos numéricos.",
+          life: 3000,
+        });
+        return false;
+      }
 
       const digits = ID.split("").map(Number);
       const province = parseInt(ID.substring(0, 2), 10);
-      if (province < 1 || province > 24) return false; // Validate province
+      if (province < 1 || province > 24) {
+        this.toast.add({
+          severity: "error",
+          summary: "C.I. inválido",
+          detail: "El código de provincia en el C.I. no es válido.",
+          life: 3000,
+        });
+        return false;
+      }
 
       let suma = 0;
       for (let i = 0; i < 9; i++) {
@@ -725,7 +758,25 @@ export default {
       }
 
       const digitoVerificador = (10 - (suma % 10)) % 10;
-      return digitoVerificador === digits[9];
+      const isValid = digitoVerificador === digits[9];
+
+      if (isValid) {
+        this.toast.add({
+          severity: "success",
+          summary: "C.I. válido",
+          detail: "El número de C.I. es válido.",
+          life: 3000,
+        });
+      } else {
+        this.toast.add({
+          severity: "error",
+          summary: "C.I. inválido",
+          detail: "El número de C.I. no es válido.",
+          life: 3000,
+        });
+      }
+
+      return isValid;
     },
     openNotasModal(index) {
     this.selectedMemberIndex = index; // Set the selected member index
@@ -749,11 +800,16 @@ export default {
     });
     },
     eliminarMiembro(index) {
-    // Confirm before deleting the member
-    if (confirm("¿Está seguro de que desea eliminar este miembro?")) {
-      this.caso.grupoConvivencia.splice(index, 1);
-    }
-  },
+      if (confirm("¿Está seguro de que desea eliminar este miembro?")) {
+        this.caso.grupoConvivencia.splice(index, 1);
+        this.toast.add({
+          severity: "info",
+          summary: "Miembro eliminado",
+          detail: "El miembro ha sido eliminado del grupo de convivencia.",
+          life: 3000,
+        });
+      }
+    },
     irATrabajoSocialCasos() {
       this.$router.push('/TrabajoSocialCasos');
     },
@@ -763,7 +819,9 @@ export default {
       this.error = null;
 
       // Fetch case details from the API using the query parameters
-      const response = await fetch(`http://localhost:3000/social-work/${casoId}`);
+      const response = await fetch(`http://localhost:3000/social-work/${casoId}`
+        , {credentials: 'include'}
+      );
 
       if (!response.ok) {
         throw new Error('Error al cargar el caso');
@@ -775,7 +833,9 @@ export default {
       // Fetch living group members
       let grupoConvivencia = [];
       try {
-        const livingGroupResponse = await fetch(`http://localhost:3000/living-groups/process/${casoId}`);
+        const livingGroupResponse = await fetch(`http://localhost:3000/living-groups/process/${casoId}`
+          , {credentials: 'include'}
+        );
         if (livingGroupResponse.ok) {
           const livingGroupData = await livingGroupResponse.json();
           grupoConvivencia = livingGroupData.map(member => ({
@@ -851,9 +911,14 @@ export default {
 
   async actualizarCaso() {
   if (this.isFormLocked) {
-    alert("No se pueden realizar cambios en un caso archivado.");
-    return;
-  }
+        this.toast.add({
+          severity: "warn",
+          summary: "Caso archivado",
+          detail: "No se pueden realizar cambios en un caso archivado.",
+          life: 3000,
+        });
+        return;
+    }
 
   try {
     this.isLoading = true;
@@ -903,6 +968,7 @@ export default {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(socialWorkData),
+        credentials: 'include',
       });
 
       if (!response.ok) {
@@ -916,7 +982,9 @@ export default {
       // Now handle the living group members
       console.log("Fetching existing living group members...");
       // First, fetch the existing living group members for this process
-      const livingGroupResponse = await fetch(`http://localhost:3000/living-groups/process/${this.caso.numeroProceso}`);
+      const livingGroupResponse = await fetch(`http://localhost:3000/living-groups/process/${this.caso.numeroProceso}`
+        , {credential: 'include'}
+      );
       let existingMembers = [];
       
       if (livingGroupResponse.ok) {
@@ -949,6 +1017,7 @@ export default {
         if (member.id) {
           console.log(`Updating existing member: ${member.nombre} (ID: ${member.id})`);
           const updatePromise = fetch(`http://localhost:3000/living-groups/${member.id}`, {
+            credentials: 'include',
             method: "PUT",
             headers: {
               "Content-Type": "application/json",
@@ -963,6 +1032,7 @@ export default {
               console.warn(`Member ${member.id} not found, will be created instead`);
               // Create a new record instead
               return fetch(`http://localhost:3000/living-groups`, {
+                credentials: 'include',
                 method: "POST",
                 headers: {
                   "Content-Type": "application/json",
@@ -994,6 +1064,7 @@ export default {
           // This is a new member, so create it
           console.log(`Creating new member: ${member.nombre}`);
           const createPromise = fetch(`http://localhost:3000/living-groups`, {
+            credentials: 'include',
             method: "POST",
             headers: {
               "Content-Type": "application/json",
@@ -1024,6 +1095,7 @@ export default {
       for (const [memberId, member] of existingMembersMap.entries()) {
         console.log(`Deleting removed member: ${member.LG_Name} (ID: ${memberId})`);
         const deletePromise = fetch(`http://localhost:3000/living-groups/${memberId}`, {
+          credential: 'include',
           method: "DELETE",
           headers: {
             "Content-Type": "application/json",
@@ -1048,16 +1120,26 @@ export default {
       await Promise.all(deletePromises);
       console.log("All deleted members processed");
 
-      // Show success notification
-      alert("Caso actualizado correctamente");
+      // Perform the update logic here...
+
+      this.toast.add({
+          severity: "success",
+          summary: "Caso actualizado",
+          detail: "El caso ha sido actualizado correctamente.",
+          life: 3000,
+        });
 
       // Navigate back to the cases list
       this.$router.push("/TrabajoSocialCasos");
     } catch (error) {
       console.error("Error al actualizar el caso:", error);
 
-      // Show error notification
-      alert(error.message || "No se pudo actualizar el caso. Por favor intente de nuevo.");
+      this.toast.add({
+          severity: "error",
+          summary: "Error al actualizar",
+          detail: error.message || "No se pudo actualizar el caso. Por favor intente de nuevo.",
+          life: 3000,
+        });
     } finally {
       this.isLoading = false;
     }

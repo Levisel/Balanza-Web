@@ -522,24 +522,25 @@ const obtenerCasos = async () => {
     ]);
 
     const mapCasoData = async (caso: Initial_Consultation, index: number) => {
-      if (!caso || !caso.User_ID) {
-        console.warn("Caso inválido o sin User_ID:", caso);
-        return null;
-      }
-      const nombreUsuario = await obtenerNombreUsuario(caso.User_ID);
-      return {
-        nro: index + 1,
-        codigo: caso.Init_Code,
-        fecha: caso.Init_Date ? new Date(caso.Init_Date).toLocaleDateString() : 'N/A',
-        cedula: caso.User_ID,
-        usuario: nombreUsuario,
-        caso: caso.Init_Topic,
-        oficina: caso.Init_Office,
-        tema: caso.Init_Subject,
-        estado: caso.Init_Status,
-        tipocliente: caso.Init_ClientType,
-      };
-    };
+  if (!caso || !caso.User_ID) {
+    console.warn("Caso inválido o sin User_ID:", caso);
+    return null;
+  }
+  const nombreUsuario = await obtenerNombreUsuario(caso.User_ID);
+  return {
+    nro: index + 1,
+    codigo: caso.Init_Code,
+    fecha: caso.Init_Date ? new Date(caso.Init_Date).toLocaleDateString() : 'N/A',
+    cedula: caso.User_ID,
+    usuario: nombreUsuario,
+    caso: caso.Init_Topic,
+    oficina: caso.Init_Office,
+    tema: caso.Init_Subject,
+    estado: caso.Init_Status,
+    tipocliente: caso.Init_ClientType,
+    attentionSheet: caso.Init_AttentionSheet || null, // <-- Añade esto
+  };
+};
 
     const activeCasesData = activeResponse.data || [];
     casosActivos.value = (await Promise.all(activeCasesData.map(mapCasoData))).filter(caso => caso !== null);
@@ -557,6 +558,42 @@ const obtenerCasos = async () => {
     });
     casosActivos.value = [];
     casosInactivos.value = [];
+  }
+};
+
+const verArchivoAtencion = async (fileNameOrUrl: string | null, codigo?:
+  /// <reference types="../../../../node_modules/.vue-global-types/vue_3.5_0_0_0.d.ts" />
+  any) => {
+  if (!fileNameOrUrl) {
+    toast.add({
+      severity: "warn",
+      summary: "Archivo no disponible",
+      detail: "No se encontró un archivo de atención para este caso.",
+      life: 3000,
+    });
+    return;
+  }
+
+  try {
+    // Si tu API espera el nombre del archivo, ajusta la ruta según corresponda
+    const response = await axios.get(`${API}/initial-consultations/attention-sheet/${encodeURIComponent(fileNameOrUrl)}`, {
+      responseType: "blob",
+    });
+
+    // Crea un blob URL para mostrar en el iframe
+    const blob = new Blob([response.data], { type: "application/pdf" });
+    const url = URL.createObjectURL(blob);
+    documentoUrl.value = url;
+    visibleDocumentoDialog.value = true;
+  } catch (error) {
+    toast.add({
+      severity: "error",
+      summary: "Error",
+      detail: "No se pudo cargar el archivo de atención.",
+      life: 3000,
+    });
+    documentoUrl.value = null;
+    visibleDocumentoDialog.value = false;
   }
 };
 
@@ -1262,11 +1299,46 @@ onMounted(() => {
           </div>
         </div>
         <div class="flex gap-4">
-          <div class="flex-1">
-            <label class="block text-sm font-semibold">Documentos de Salud</label>
-            <p>{{ usuarioDetalles.User_HealthDocuments }}</p>
-          </div>
-        </div>
+      <div class="flex-1">
+        <label class="block text-sm font-semibold">Documentos de Salud</label>
+        <p>{{ usuarioDetalles.User_HealthDocuments }}</p>
+      </div>
+    </div>
+
+    <!-- Dialog de Detalles del Usuario: Botón Archivo de Atención -->
+<div class="flex gap-4 items-center">
+  <div class="flex-1">
+    <label class="block text-sm font-semibold">Archivo de Atención</label>
+    <div>
+      <template v-if="casoSeleccionado">
+        <!-- Depuración: muestra el valor en pantalla -->
+        <span style="display:none">
+          {{
+            JSON.stringify(
+              casosActivos.concat(casosInactivos).find(c => c.codigo === casoSeleccionado.codigo)
+            )
+          }}
+        </span>
+        <Button
+          v-if="(() => {
+            const caso = casosActivos.concat(casosInactivos).find(c => c.codigo === casoSeleccionado.codigo);
+            return caso && caso.attentionSheet;
+          })()"
+          label="Ver Archivo"
+          icon="pi pi-file-pdf"
+          class="p-button-info"
+          @click="() => {
+            const caso = casosActivos.concat(casosInactivos).find(c => c.codigo === casoSeleccionado.codigo);
+            if (caso && caso.attentionSheet) verArchivoAtencion(caso.attentionSheet, caso.codigo);
+          }"
+        />
+        <span v-else class="text-gray-400">No disponible</span>
+      </template>
+      <span v-else class="text-gray-400">No disponible</span>
+    </div>
+  </div>
+</div>
+        
         <div class="flex justify-end gap-4">
           <Button label="Cerrar" icon="pi pi-times" class="p-button-text" @click="visibleUsuarioDialog = false" />
         </div>

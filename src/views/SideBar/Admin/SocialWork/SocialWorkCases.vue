@@ -17,23 +17,6 @@
       />
     </div>
 
-    <!-- Case Status Tabs -->
-    <div class="mb-6 flex flex-wrap gap-2">
-      <button 
-        v-for="status in availableCaseStatuses"
-        :key="status.Case_Status_Id"
-        @click="currentStatus = status.Case_Status_Name"
-        :class="[
-          'px-4 py-2 rounded-lg transition-colors',
-          currentStatus === status.Case_Status_Name 
-            ? 'bg-[#164284] text-white' 
-            : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-        ]"
-      >
-        {{ status.Case_Status_Name }}
-      </button>
-    </div>
-
     <!-- Loading Indicator -->
     <div v-if="loading" class="flex justify-center my-8">
       <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-green-500"></div>
@@ -52,25 +35,41 @@
       <div 
         v-for="caso in filteredCases" 
         :key="caso.User_ID"
-        class="bg-white shadow-md rounded-lg p-6 relative"
+        class="bg-white shadow-md rounded-lg p-6 relative border border-gray-200"
+        :class="{'border-l-4 border-yellow-500': caso.SW_Status === 'Archivado'}"
       >
+        <!-- Status Label -->
+        <div class="absolute top-2 right-2">
+          <span 
+            class="text-xs font-medium px-2 py-1 rounded-full"
+            :class="{
+              'bg-yellow-100 text-yellow-800': caso.SW_Status === 'Archivado',
+              'bg-blue-100 text-blue-800': caso.SW_Status === 'Pendiente',
+              'bg-green-100 text-green-800': caso.SW_Status === 'Activo',
+              'bg-purple-100 text-purple-800': !['Archivado', 'Pendiente', 'Activo'].includes(caso.SW_Status)
+            }"
+          >
+            {{ caso.SW_Status || 'Pendiente' }}
+          </span>
+        </div>
+
         <!-- Case Details -->
-        <div @click="openCase(caso)" class="cursor-pointer">
+        <div @click="openCase(caso)" class="cursor-pointer mt-4">
           <h3 class="text-lg font-semibold mb-2">{{ caso.User_FirstName }} {{ caso.User_LastName }}</h3>
           <p class="text-gray-600">Documento de Identidad: {{ caso.User_ID || 'No disponible' }}</p>
-          <p class="text-gray-500">Estado: {{ caso.SW_Status }}</p>
-          <!-- Add this line to debug SW_ProcessNumber -->
-          <p class="text-xs text-gray-400">ID Proceso: {{ caso.SW_ProcessNumber || 'No disponible' }}</p>
+          <p class="text-xs text-gray-400 mt-1">ID Proceso: {{ caso.SW_ProcessNumber || 'No disponible' }}</p>
+          <p class="text-xs text-gray-400">ID Consulta: {{ caso.Init_Code || 'No disponible' }}</p>
         </div>
 
         <!-- Status Change Dropdown -->
-        <div class="mt-4">
+        <div class="mt-4 flex space-x-2">
           <select 
             v-model="caso.newStatus" 
             @change="confirmStatusChange(caso)"
             class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            :disabled="caso.SW_Status === 'Archivado'"
           >
-            <option value="">Cambiar Status</option>
+            <option value="">Cambiar Estado</option>
             <option 
               v-for="status in getAvailableStatuses(caso.SW_Status)" 
               :key="status.Case_Status_Id" 
@@ -79,6 +78,15 @@
               {{ status.Case_Status_Name }}
             </option>
           </select>
+          
+          <!-- Archive Button -->
+          <button 
+            v-if="caso.SW_Status !== 'Archivado'"
+            @click="confirmArchive(caso)"
+            class="px-3 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 flex-shrink-0"
+          >
+            Archivar
+          </button>
         </div>
       </div>
     </div>
@@ -88,7 +96,7 @@
       <p class="text-gray-500 text-lg">No se encontraron casos con los filtros actuales.</p>
     </div>
 
-    <!-- Confirmation Dialog -->
+    <!-- Status Change Confirmation Dialog -->
     <div 
       v-if="showConfirmDialog" 
       class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
@@ -130,6 +138,47 @@
         </div>
       </div>
     </div>
+
+    <!-- Archive Confirmation Dialog -->
+    <div 
+      v-if="showArchiveConfirmDialog" 
+      class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+    >
+      <div class="bg-white rounded-lg p-6 max-w-md w-full">
+        <h2 class="text-xl font-bold mb-4">Confirmar Archivo de Caso</h2>
+        <p class="mb-4">
+          ¿Estás seguro de archivar el caso
+          para {{ pendingArchive?.User_FirstName }} {{ pendingArchive?.User_LastName }}?
+        </p>
+        <div class="mb-4">
+          <label for="archiveObservations" class="block text-gray-700 font-medium mb-2">
+            Observaciones de Archivo <span class="text-red-500">*</span>
+          </label>
+          <textarea 
+            id="archiveObservations"
+            v-model="archiveObservations"
+            rows="4"
+            class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder="Escriba las observaciones del archivo..."
+          ></textarea>
+        </div>
+        <div class="flex justify-end space-x-4">
+          <button 
+            @click="cancelArchive"
+            class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
+          >
+            Cancelar
+          </button>
+          <button 
+            @click="confirmArchiveAction"
+            :disabled="!archiveObservations"
+            class="px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600"
+          >
+            Confirmar Archivo
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -153,7 +202,7 @@ interface SocialWorkCase {
 interface CaseStatus {
   Case_Status_Id: number;
   Case_Status_Name: string;
-  Case_Status_Status: boolean; // Changed from number to boolean
+  Case_Status_Status: boolean;
 }
 
 interface User {
@@ -165,7 +214,7 @@ interface User {
 
 interface InitialConsultation {
   Init_Code: string;
-  SocialWork?: SocialWork;
+  Social_Work?: SocialWork;
 }
 
 interface SocialWork {
@@ -187,12 +236,16 @@ const router = useRouter();
 // Search and filter states
 const searchName = ref('');
 const searchCedula = ref('');
-const currentStatus = ref<string>('');
 
-// Confirmation dialog states
+// Status change confirmation dialog states
 const showConfirmDialog = ref(false);
 const pendingStatusChange = ref<SocialWorkCase | null>(null);
 const statusObservations = ref('');
+
+// Archive confirmation dialog states
+const showArchiveConfirmDialog = ref(false);
+const pendingArchive = ref<SocialWorkCase | null>(null);
+const archiveObservations = ref('');
 
 // Get only active case statuses
 const availableCaseStatuses = computed(() => {
@@ -209,67 +262,38 @@ const fetchCaseStatuses = async (): Promise<void> => {
     console.log('Raw case status response:', response.data);
     console.log('Case statuses after parsing:', caseStatuses.value);
     console.log('Active case statuses:', caseStatuses.value.filter(status => status.Case_Status_Status === true));
-    
-    // Set default status if available
-    if (caseStatuses.value.length > 0) {
-      const activeStatuses = caseStatuses.value.filter(status => status.Case_Status_Status === true);
-      if (activeStatuses.length > 0) {
-        currentStatus.value = activeStatuses[0].Case_Status_Name;
-        console.log('Set default status to:', currentStatus.value);
-      }
-    }
-    
-    // If no case statuses were retrieved, fall back to a default of "Activo"
-    if (caseStatuses.value.length === 0 || !currentStatus.value) {
-      console.log('No case statuses found, using default "Activo"');
-      currentStatus.value = 'Activo';
-    }
-    
-    console.log('Current selected status:', currentStatus.value);
   } catch (err) {
     console.error('Error fetching case statuses:', err);
     error.value = 'Error al cargar los estados de casos. Por favor intente nuevamente más tarde.';
   }
 };
 
-// Fetch all users with social work records
 const fetchSocialWorkCases = async (): Promise<void> => {
   loading.value = true;
   error.value = null;
 
   try {
     const response = await axios.get<User[]>(`${API_URL}/users/socialwork`);
-    
-    // Debug the API response
-    console.log('API response:', response.data);
-    
-    casos.value = response.data.map((user: User) => {
-      // Handle cases where a user might have multiple consultations
-      const initialConsultation: InitialConsultation = user.Initial_Consultations && user.Initial_Consultations.length > 0 
-        ? user.Initial_Consultations[0] 
-        : { Init_Code: '', SocialWork: undefined };
-      
-      const socialWork: SocialWork = initialConsultation.SocialWork || { SW_ProcessNumber: '', SW_Status: '' };
-      
-      // Log individual mapping for debugging
-      console.log(`Mapping user ${user.User_ID}:`, {
-        name: `${user.User_FirstName} ${user.User_LastName}`,
-        init_code: initialConsultation.Init_Code,
-        process_number: socialWork.SW_ProcessNumber,
-        status: socialWork.SW_Status // Add status to debug log
-      });
-      
-      return {
-        User_ID: user.User_ID,
-        User_FirstName: user.User_FirstName,
-        User_LastName: user.User_LastName,
-        Init_Code: initialConsultation.Init_Code || null,
-        SW_ProcessNumber: socialWork.SW_ProcessNumber || null, // Ensure it's not undefined
-        SW_Status: socialWork.SW_Status || '',
-      };
-    }).filter((caso: SocialWorkCase) => caso.SW_ProcessNumber !== null); // Only include cases with a valid process number
-    
-    // Log the processed cases array
+    const cases: SocialWorkCase[] = [];
+
+    response.data.forEach((user: User) => {
+      if (user.Initial_Consultations && user.Initial_Consultations.length > 0) {
+        user.Initial_Consultations.forEach((initialConsultation: InitialConsultation) => {
+          if (initialConsultation.Social_Work) {
+            cases.push({
+              User_ID: user.User_ID,
+              User_FirstName: user.User_FirstName,
+              User_LastName: user.User_LastName,
+              Init_Code: initialConsultation.Init_Code || null,
+              SW_ProcessNumber: initialConsultation.Social_Work.SW_ProcessNumber || null,
+              SW_Status: initialConsultation.Social_Work.SW_Status || 'Pendiente',
+            });
+          }
+        });
+      }
+    });
+
+    casos.value = cases;
     console.log('Processed cases:', casos.value);
   } catch (err) {
     console.error('Error fetching social work cases:', err);
@@ -279,10 +303,9 @@ const fetchSocialWorkCases = async (): Promise<void> => {
   }
 };
 
-// Update the status of a social work case
 const updateSocialWorkStatus = async (processNumber: string, observations: string, newStatus: string) => {
   try {
-    // Make sure processNumber is not undefined or null
+    // Make sure processNumber is not undefined or null or empty
     if (!processNumber) {
       console.error('Cannot update status: SW_ProcessNumber is missing');
       error.value = 'Error: No se encontró el número de proceso para actualizar el estado.';
@@ -296,7 +319,8 @@ const updateSocialWorkStatus = async (processNumber: string, observations: strin
       observations
     });
     
-    const response = await axios.put(`${API_URL}/social-work-status/${processNumber}`, {
+    // Call the API with the processNumber in the URL and the new status and observations in the body
+    const response = await axios.put(`${API_URL}/social-work/status/${processNumber}`, {
       status: newStatus,
       observations: observations
     });
@@ -318,25 +342,12 @@ const updateSocialWorkStatus = async (processNumber: string, observations: strin
     error.value = 'Error al actualizar el estado del caso. Por favor intente nuevamente.';
     return false;
   }
-};
+}
 
-// Filtered cases based on search and status
+// Filtered cases based on search
 const filteredCases = computed(() => {
-  // Debug logs for filtering
-  console.log('Current filter status:', currentStatus.value);
-  console.log('Available case statuses:', caseStatuses.value);
-  console.log('All cases before filtering:', casos.value);
-  
-  // Check status matches between cases and current filter
-  console.log('Status matches:', casos.value.map(caso => ({
-    case_id: caso.SW_ProcessNumber,
-    case_status: caso.SW_Status,
-    matches_current: caso.SW_Status === currentStatus.value
-  })));
-  
   return casos.value.filter(
     (caso) =>
-      matchesStatus(caso.SW_Status, currentStatus.value) &&
       `${caso.User_FirstName} ${caso.User_LastName}`
         .toLowerCase()
         .includes(searchName.value.toLowerCase()) &&
@@ -348,34 +359,43 @@ const filteredCases = computed(() => {
 
 // Open specific case
 const openCase = (caso: SocialWorkCase) => {
-  if (!caso.SW_ProcessNumber) {
-    console.error('Cannot open case: SW_ProcessNumber is missing', caso);
-    error.value = 'Error: No se puede abrir el caso porque falta el número de proceso.';
-    return;
-  }
-  
+  // Always allow opening the case, even without SW_ProcessNumber
   router.push({
     path: '/nuevoCasoTrabajoSocial',
     query: {
-      casoId: caso.SW_ProcessNumber,
+      casoId: caso.SW_ProcessNumber || '',
       userId: caso.User_ID,
-      internalId: caso.Init_Code,
+      internalId: caso.Init_Code || '',
     },
   });
 };
 
 // Get available statuses for changing
 const getAvailableStatuses = (currentStatusName: string) => {
+  // No debemos permitir cambios de estado si ya está archivado
+  if (currentStatusName === 'Archivado') {
+    return [];
+  }
+  
   return availableCaseStatuses.value.filter(status => 
-    status.Case_Status_Name !== currentStatusName && status.Case_Status_Status === true
+    status.Case_Status_Name !== currentStatusName && 
+    status.Case_Status_Name !== 'Archivado' && 
+    status.Case_Status_Status === true
   );
 };
 
 // Confirm status change
 const confirmStatusChange = (caso: SocialWorkCase) => {
-  if (!caso.SW_ProcessNumber) {
-    console.error('Cannot change status: SW_ProcessNumber is missing', caso);
-    error.value = 'Error: No se puede cambiar el estado porque falta el número de proceso.';
+  // No permitir cambios de estado para casos archivados
+  if (caso.SW_Status === 'Archivado') {
+    console.log('No se pueden cambiar casos archivados');
+    return;
+  }
+  
+  // Verificar que tenemos un identificador válido (SW_ProcessNumber o Init_Code)
+  if (!caso.SW_ProcessNumber && !caso.Init_Code) {
+    console.error('Cannot change status: No valid process identifier', caso);
+    error.value = 'Error: No se puede cambiar el estado porque falta un identificador de proceso.';
     return;
   }
   
@@ -411,10 +431,11 @@ const confirmStatusChangeAction = async () => {
   
   const caso = pendingStatusChange.value;
   
-  // Ensure we have a process number
-  if (!caso.SW_ProcessNumber) {
-    console.error('Cannot confirm status change: SW_ProcessNumber is missing', caso);
-    error.value = 'Error: No se puede actualizar el estado porque falta el número de proceso.';
+  // Ensure we have a process identifier
+  const processIdentifier = caso.SW_ProcessNumber || caso.Init_Code;
+  if (!processIdentifier) {
+    console.error('Cannot confirm status change: No valid process identifier', caso);
+    error.value = 'Error: No se puede actualizar el estado porque falta un identificador de proceso.';
     showConfirmDialog.value = false;
     pendingStatusChange.value = null;
     return;
@@ -433,10 +454,10 @@ const confirmStatusChangeAction = async () => {
   loading.value = true;
 
   try {
-    console.log('Attempting to update status for:', caso.SW_ProcessNumber);
+    console.log('Attempting to update status for:', processIdentifier);
     
     const success = await updateSocialWorkStatus(
-      caso.SW_ProcessNumber,
+      processIdentifier,
       statusObservations.value,
       caso.newStatus as string
     );
@@ -444,7 +465,8 @@ const confirmStatusChangeAction = async () => {
     if (success) {
       // Update locally
       const index = casos.value.findIndex(
-        (c) => c.SW_ProcessNumber === caso.SW_ProcessNumber
+        (c) => c.SW_ProcessNumber === caso.SW_ProcessNumber || 
+              (c.Init_Code === caso.Init_Code && !c.SW_ProcessNumber)
       );
       
       if (index !== -1) {
@@ -469,13 +491,120 @@ const confirmStatusChangeAction = async () => {
   }
 };
 
+// Confirm archive action
+const confirmArchive = (caso: SocialWorkCase) => {
+  // No permitir archivar casos ya archivados
+  if (caso.SW_Status === 'Archivado') {
+    console.log('El caso ya está archivado');
+    return;
+  }
+  
+  // Verificar que tenemos un identificador válido (SW_ProcessNumber o Init_Code)
+  if (!caso.SW_ProcessNumber && !caso.Init_Code) {
+    console.error('Cannot archive case: No valid process identifier', caso);
+    error.value = 'Error: No se puede archivar el caso porque falta un identificador de proceso.';
+    return;
+  }
+  
+  pendingArchive.value = { ...caso }; // Create a copy to avoid reference issues
+  archiveObservations.value = '';
+  showArchiveConfirmDialog.value = true;
+};
+
+// Cancel archive
+const cancelArchive = () => {
+  showArchiveConfirmDialog.value = false;
+  pendingArchive.value = null;
+  archiveObservations.value = '';
+};
+
+// Confirm archive action
+const confirmArchiveAction = async () => {
+  if (!pendingArchive.value) {
+    console.error('Invalid pending archive');
+    return;
+  }
+  
+  const caso = pendingArchive.value;
+  
+  // Ensure we have a process number
+  if (!caso.SW_ProcessNumber) {
+    console.error('Cannot archive case: SW_ProcessNumber is missing', caso);
+    error.value = 'Error: No se puede archivar el caso porque falta el número de proceso.';
+    showArchiveConfirmDialog.value = false;
+    pendingArchive.value = null;
+    return;
+  }
+
+  // Ensure observations are provided
+  if (!archiveObservations.value) {
+    alert("Las observaciones son obligatorias para archivar el caso.");
+    return;
+  }
+
+  // Close dialog first to avoid UI freezing
+  showArchiveConfirmDialog.value = false;
+
+  // Show loading indicator
+  loading.value = true;
+
+  try {
+    console.log('Attempting to archive case:', caso.SW_ProcessNumber);
+    
+    // Si no hay SW_ProcessNumber, intentar usar Init_Code como alternativa
+    const processIdentifier = caso.SW_ProcessNumber || caso.Init_Code;
+    if (!processIdentifier) {
+      throw new Error('No valid process identifier found');
+    }
+    
+    console.log('Using process identifier for API call:', processIdentifier);
+    
+    // Actualizar explícitamente el estado a 'Archivado'
+    const success = await updateSocialWorkStatus(
+      processIdentifier,
+      archiveObservations.value,
+      'Archivado'
+    );
+
+    if (success) {
+      // Update locally
+      const index = casos.value.findIndex(
+        (c) => c.SW_ProcessNumber === caso.SW_ProcessNumber || 
+              (c.Init_Code === caso.Init_Code && !c.SW_ProcessNumber)
+      );
+      
+      if (index !== -1) {
+        // Actualizar explícitamente SW_Status a 'Archivado'
+        casos.value[index].SW_Status = 'Archivado';
+        casos.value[index].SW_Status_Observations = archiveObservations.value;
+        console.log('Updated local case data after archive:', casos.value[index]);
+        
+        // Mensaje de confirmación para el usuario
+        alert(`El caso de ${casos.value[index].User_FirstName} ${casos.value[index].User_LastName} ha sido archivado exitosamente.`);
+      } else {
+        console.warn('Could not find case in local array to archive');
+      }
+    } else {
+      throw new Error('Failed to archive case');
+    }
+  } catch (err) {
+    console.error("Error archiving social work case:", err);
+    error.value = "Error al archivar el caso. Por favor intente nuevamente.";
+  } finally {
+    // Reset
+    pendingArchive.value = null;
+    archiveObservations.value = '';
+    loading.value = false;
+  }
+};
+
 // Unified fetch function to load all necessary data
 const fetchData = async () => {
   loading.value = true;
   error.value = null;
   
   try {
-    // First fetch case statuses to set the default status
+    // First fetch case statuses
     await fetchCaseStatuses();
     // Then fetch the cases
     await fetchSocialWorkCases();
@@ -485,13 +614,6 @@ const fetchData = async () => {
   } finally {
     loading.value = false;
   }
-};
-
-// Case-insensitive status comparison helper
-const matchesStatus = (caseStatus: string, filterStatus: string): boolean => {
-  // Perform case-insensitive comparison
-  if (!caseStatus || !filterStatus) return false;
-  return caseStatus.toLowerCase() === filterStatus.toLowerCase();
 };
 
 // Fetch data on component mount
