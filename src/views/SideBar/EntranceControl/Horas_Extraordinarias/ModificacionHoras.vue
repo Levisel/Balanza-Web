@@ -109,8 +109,10 @@
             optionValue="value"
             placeholder="Seleccione un tipo"
             class="w-full"
-            :class="isDarkTheme ? '!bg-[#121212] !text-white !border-gray-600' : ''"
-            panelClass="!bg-[#1f1f1f] !text-white"
+            :class="isDarkTheme ? '!border-gray-600' : ''"
+            :inputStyle="isDarkTheme ? { backgroundColor: '#121212', color: 'white' } : {}"
+            :panelClass="isDarkTheme ? '!bg-[#1f1f1f] !text-white' : '!bg-white !text-black'"
+
           />
         </div>
 

@@ -1,8 +1,16 @@
 <template>
   <main class="flex flex-col items-center p-6 min-h-screen">
-    <h1 class="text-3xl font-bold mb-6 text-gray-800 dark:text-sky-50">
-      Visualización de Horarios
-    </h1>
+<h1
+  class="text-3xl font-bold mb-6"
+  :style="{
+    color: isDarkTheme ? '#f0f8ff' : '#0a0a0a',
+    opacity: 1
+  }"
+>
+  Visualización de Horarios
+</h1>
+
+
     <Toast />
 
  <!-- Filtros con botón Limpiar integrado -->
@@ -113,6 +121,9 @@ const busquedaNombre = ref('')
 const busquedaCedula = ref('')
 const periodos = ref<any[]>([])
   const { subjects: opcionesAreas, fetchSubjects } = useSubjects()
+
+import { useDarkMode } from '@/components/ThemeSwitcher'
+const { isDarkTheme } = useDarkMode()
 
 
 // Arreglo de estudiantes y horarios completos

@@ -108,8 +108,8 @@
           </template>
         </Column>
 
-        <!-- Columna: ¿Finalizó el proceso? -->
-        <Column field="Summary_IsComplete" header="¿Finalizó el proceso?" sortable>
+        <!-- Columna: ¿Finalizó sus prácticas? -->
+        <Column field="Summary_IsComplete" header="¿Finalizó sus prácticas?" sortable>
           <template #body="slotProps">
             <span
               v-if="slotProps.data.Summary_IsComplete"
