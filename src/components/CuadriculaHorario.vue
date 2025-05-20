@@ -5,8 +5,8 @@
       <!-- Encabezado: columna de hora y días -->
       <div class="grid grid-cols-6 gap-2 mb-2 border-b pb-2">
         <div>Hora</div>
-        <div v-for="dia in diasSemana" :key="dia" class="text-center font-medium">
-          {{ dia }}
+     <div v-for="dia in diasSemana" :key="dia" class="text-center font-medium">
+          {{ diasTraducidos[dia] }}
         </div>
       </div>
       <!-- Filas: una por cada hora -->
@@ -55,11 +55,24 @@ const props = defineProps({
 const diasSemana = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
 const horas = [9, 10, 11, 12, 13, 14, 15, 16, 17]
 
+const diasTraducidos: Record<string, string> = {
+  Monday: 'Lunes',
+  Tuesday: 'Martes',
+  Wednesday: 'Miércoles',
+  Thursday: 'Jueves',
+  Friday: 'Viernes'
+}
+
 // Matriz para la visualización. Cada celda es un arreglo (inicialmente vacío).
 const scheduleMatrix = ref<Record<string, Record<number, number[]>>>({})
 
 // Indica si la matriz ya se inicializó
 const estaInicializado = computed(() => Object.keys(scheduleMatrix.value).length > 0)
+
+
+
+
+
 
 // Función para inicializar la matriz: cada celda es un arreglo vacío
 function inicializarMatriz() {

@@ -1,131 +1,145 @@
 <template>
-    <main class="flex flex-col items-center p-8 min-h-screen">
-      <!-- Encabezado -->
-      <div class="w-full flex items-center justify-between mb-8">
-        <Button
-          icon="pi pi-arrow-left"
-          class="p-button-text text-blue-600 hover:text-blue-800"
-          @click="volver"
-          tooltip="Volver al listado"
-          tooltipOptions="{ position: 'top' }"
-        />
-        <h1 class="text-3xl font-bold text-center flex-grow">
-          Registro Manual de Asistencia
-        </h1>
-        <div class="w-10"></div>
-      </div>
-  
-      <Toast />
-  
-      <!-- Modal de error en caso de búsqueda fallida -->
-      <Dialog
-        v-model:visible="showErrorModal"
-        header="Error"
-        :modal="true"
-        :closable="true"
-        style="width: 30rem"
-      >
-        <p class="text-center">{{ errorModalMessage }}</p>
-        <div class="flex justify-center mt-4">
-          <Button label="Cerrar" @click="showErrorModal = false" />
-        </div>
-      </Dialog>
-  
-      <!-- Modal de confirmación de asistencia -->
-      <Dialog
-        v-model:visible="confirmDialogVisible"
-        header="Confirmar asistencia"
-        :modal="true"
-        :closable="false"
-        style="width: 30rem"
-      >
-        <div class="p-4">
-          <p class="text-center text-lg">
-            ¿Está seguro de que desea guardar la asistencia?
-          </p>
-        </div>
-        <template #footer>
-          <div class="flex justify-end gap-3 p-2">
-            <Button label="Cancelar" class="p-button-danger" @click="cancelConfirm" />
-            <Button label="Confirmar" class="p-button-success" @click="confirmGuardarAsistencia" />
-          </div>
-        </template>
-      </Dialog>
-  
-      <!-- Formulario para ingresar cédula -->
-      <div class="w-full max-w-md p-6 rounded-lg shadow-lg mb-8" :class="cardClass">
-        <h2 class="text-xl font-semibold text-center mb-4">
-          Ingrese la Cédula del Estudiante
-        </h2>
-        <InputText
-          v-model="cedulaInput"
-          type="text"
-          placeholder="Ingrese la cédula"
-          class="w-full p-3 border rounded-lg"
-          @keyup.enter="buscarEstudiante"
-        />
+  <main class="p-8 max-w-3xl mx-auto min-h-screen transition-colors duration-300">
+    <!-- Encabezado -->
+    <div class="flex items-center justify-between mb-8">
+      <Button
+        icon="pi pi-arrow-left"
+        class="p-button-text text-blue-600 hover:text-blue-800"
+        @click="volver"
+        tooltip="Volver al listado"
+        tooltipOptions="{ position: 'top' }"
+      />
+      <h1 class="text-3xl font-bold text-center flex-grow">Registro Manual de Asistencia</h1>
+      <div class="w-10"></div>
+    </div>
 
-        <Button label="Buscar" class="mt-4" @click="buscarEstudiante" />
+    <Toast />
+
+    <!-- Modal de error -->
+    <Dialog
+      v-model:visible="showErrorModal"
+      header="Error"
+      modal
+      :style="{ width: '30rem' }"
+      :breakpoints="{ '960px': '90vw' }"
+      :class="isDarkTheme ? 'bg-[#1f1f1f] text-white' : 'bg-white text-gray-900'"
+    >
+      <p class="text-center">{{ errorModalMessage }}</p>
+      <div class="flex justify-center mt-4">
+        <Button label="Cerrar" @click="showErrorModal = false" />
       </div>
-  
-      <!-- Datos mínimos del estudiante y formulario manual -->
-      <div v-if="estudianteCargado" :class="['w-full max-w-lg p-6 rounded-lg shadow-lg', cardClass]">
-        <h2 class="text-xl font-semibold text-center mb-4">
-          Datos del Estudiante y Registro Manual
-        </h2>
-        <div class="mb-4">
-          <p><strong>Cédula:</strong> {{ cedula }}</p>
-          <p><strong>Nombre:</strong> {{ nombres }}</p>
-          <p><strong>Período Activo: </strong>
-            <span v-if="periodoActual">
-              {{ periodoActual.period.Period_Name }}
-            </span>
-            <span v-else>
-              No asignado
-            </span>
-          </p>
+    </Dialog>
+
+    <!-- Confirmación -->
+    <Dialog
+      v-model:visible="confirmDialogVisible"
+      header="Confirmar Asistencia"
+      modal
+      :closable="false"
+      :style="{ width: '30rem' }"
+      :breakpoints="{ '960px': '90vw' }"
+      :class="isDarkTheme ? 'bg-[#1f1f1f] text-white' : 'bg-white text-gray-900'"
+    >
+      <div class="p-4 text-center text-lg">
+        ¿Está seguro de que desea guardar la asistencia?
+      </div>
+      <template #footer>
+        <div class="flex justify-end gap-3 px-4 pb-4">
+          <Button label="Cancelar" class="p-button-danger" @click="cancelConfirm" />
+          <Button label="Confirmar" class="p-button-success" @click="confirmGuardarAsistencia" />
         </div>
-        <!-- Formulario para ingresar manualmente la hora de entrada y salida -->
-        <div class="mb-4">
-          <label class="block font-medium mb-1">Hora de Entrada</label>
-          <input
-            v-model="manualEntrada"
-            type="datetime-local"
-            class="w-full p-2 border rounded-lg"
-            :min="formatMinMaxDate(periodoInicio)"
-            :max="formatMinMaxDate(periodoFin)"
-          />
-        </div>
-        <div class="mb-4">
-          <label class="block font-medium mb-1">Hora de Salida</label>
-          <input
-              v-model="manualSalida"
-              type="datetime-local"
-              class="w-full p-2 border rounded-lg"
-              :min="formatMinMaxDate(periodoInicio)"
-              :max="formatMinMaxDate(periodoFin)"
-            />
-        </div>
-        <div class="mb-4">
-  <label class="block font-medium mb-1">Tipo de Asistencia</label>
-  <Dropdown
-    v-model="attendanceTypeSelected"
-    :options="['Presencial', 'Virtual']"
-    placeholder="Seleccione tipo de asistencia"
-    class="w-full p-2 border rounded-lg"
+      </template>
+    </Dialog>
+
+    <!-- Formulario de búsqueda -->
+<!-- Formulario de búsqueda -->
+<div :class="[
+  'mx-auto rounded-2xl shadow-md p-6 mb-8 w-full max-w-md',
+  isDarkTheme ? 'bg-[#1f1f1f] text-white' : 'bg-white text-gray-900'
+]">
+  <h2 class="text-xl font-semibold text-center mb-4">Ingrese la Cédula del Estudiante</h2>
+  <InputText
+    v-model="cedulaInput"
+    type="text"
+    maxlength="15"
+    placeholder="Ej: 0102030405"
+    class="w-full p-3 border rounded-lg mb-4"
+    @keyup.enter="buscarEstudiante"
+  />
+  <Button
+    label="Buscar"
+    class="p-button-success w-full px-6 py-2 text-base rounded-lg shadow-md"
+    @click="buscarEstudiante"
   />
 </div>
 
-        <div class="flex justify-center mt-4">
-          <Button
-            label="Guardar Asistencia"
-            class="p-button-success"
-            @click="openConfirmDialog"
-          />
-        </div>
+
+    <!-- Registro de asistencia -->
+    <div
+      v-if="estudianteCargado"
+      :class="[
+        'mx-auto w-full max-w-xl rounded-2xl shadow-md p-6 space-y-4',
+        isDarkTheme ? 'bg-[#1f1f1f] text-white' : 'bg-white text-gray-900'
+      ]"
+    >
+
+      <h2 class="text-xl font-semibold text-center">Datos del Estudiante y Registro</h2>
+      <div class="space-y-1">
+        <p><strong>Cédula:</strong> {{ cedula }}</p>
+        <p><strong>Nombre:</strong> {{ nombres }}</p>
+        <p><strong>Período Activo:</strong>
+          <span v-if="periodoActual">{{ periodoActual.period.Period_Name }}</span>
+          <span v-else>No asignado</span>
+        </p>
       </div>
-    </main>
-  </template>
+
+      <!-- Entrada -->
+      <div>
+        <label class="block font-medium mb-1">Hora de Entrada</label>
+        <input
+          v-model="manualEntrada"
+          type="datetime-local"
+          class="w-full p-3 border rounded-lg"
+          :min="formatMinMaxDate(periodoInicio)"
+          :max="formatMinMaxDate(periodoFin)"
+        />
+      </div>
+
+      <!-- Salida -->
+      <div>
+        <label class="block font-medium mb-1">Hora de Salida</label>
+        <input
+          v-model="manualSalida"
+          type="datetime-local"
+          class="w-full p-3 border rounded-lg"
+          :min="formatMinMaxDate(periodoInicio)"
+          :max="formatMinMaxDate(periodoFin)"
+        />
+      </div>
+
+      <!-- Tipo asistencia -->
+      <div>
+        <label class="block font-medium mb-1">Tipo de Asistencia</label>
+        <Dropdown
+          v-model="attendanceTypeSelected"
+          :options="['Presencial', 'Virtual']"
+          placeholder="Seleccione tipo de asistencia"
+          class="w-full"
+        />
+      </div>
+
+   <div class="flex justify-center pt-4">
+  <Button
+    label="Guardar Asistencia"
+    class="p-button-success px-6 py-2 text-base rounded-lg"
+    @click="openConfirmDialog"
+  />
+</div>
+
+    </div>
+  </main>
+</template>
+
   
   <script setup lang="ts">
   import { ref, computed } from "vue";

@@ -1,7 +1,7 @@
 <template>
-  <main class="flex flex-col items-center p-8 min-h-screen">
+  <main class="px-4 sm:px-8 py-6 max-w-2xl mx-auto min-h-screen transition-colors duration-300 space-y-8">
     <!-- Encabezado -->
-    <div class="w-full flex items-center justify-between mb-8">
+    <div class="flex items-center gap-4">
       <Button
         icon="pi pi-arrow-left"
         class="p-button-text text-blue-600 hover:text-blue-800"
@@ -9,7 +9,7 @@
         tooltip="Volver al listado"
         tooltipOptions="{ position: 'top' }"
       />
-      <h1 class="text-3xl font-bold text-center flex-grow">
+      <h1 class="text-2xl sm:text-3xl font-bold text-center flex-grow">
         Registro de Asistencia Automático
       </h1>
       <div class="w-10"></div>
@@ -17,122 +17,127 @@
 
     <Toast />
 
-    <!-- Modal de error en caso de no encontrar el estudiante -->
+    <!-- Modal de error -->
     <Dialog
       v-model:visible="showErrorModal"
       header="Error"
-      :modal="true"
+      modal
       :closable="true"
       style="width: 30rem"
+      :class="isDarkTheme ? 'bg-[#1f1f1f] text-white' : 'bg-white text-gray-900'"
     >
-      <p class="text-center">{{ errorModalMessage }}</p>
-      <div class="flex justify-center mt-4">
-        <Button label="Cerrar" @click="showErrorModal = false" />
-      </div>
+      <p class="text-center text-base">{{ errorModalMessage }}</p>
+      <template #footer>
+        <div class="flex justify-center p-3">
+          <Button label="Cerrar" class="text-sm px-4 py-2" @click="showErrorModal = false" />
+        </div>
+      </template>
     </Dialog>
 
-    <!-- Formulario para ingresar cédula -->
-    <div class="w-full max-w-md p-6 rounded-lg shadow-lg mb-8" :class="cardClass">
-      <h2 class="text-xl font-semibold text-center mb-4">Ingrese su Cédula</h2>
+    <!-- Formulario para cédula -->
+    <div :class="[cardClass, 'rounded-2xl shadow-md p-6 w-full max-w-md mx-auto']">
+      <h2 class="text-lg font-semibold text-center mb-4">Ingrese su Cédula</h2>
       <input
         v-model="cedulaInput"
         type="text"
-        placeholder="Ingrese su cédula"
-        class="w-full p-3 border rounded-lg"
+        maxlength="15"
+        placeholder="Ej: 0102030405"
+        class="w-full p-3 border rounded-lg mb-4"
         @keyup.enter="buscarEstudiante"
       />
-
-      <Button label="Buscar" class="mt-4" @click="buscarEstudiante" />
+      <Button label="Buscar" class="w-full text-base px-6 py-3" @click="buscarEstudiante" />
     </div>
 
     <!-- Datos del estudiante -->
-    <div v-if="estudianteCargado" :class="['w-full max-w-3xl p-6 rounded-lg shadow-lg', cardClass]">
-      <h2 class="text-xl font-semibold text-center mb-6">Detalles del Estudiante</h2>
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
-        <div>
-          <label class="block font-medium mb-1">Cédula</label>
-          <p class="p-3 rounded-lg border" :class="inputClass">{{ cedula }}</p>
-        </div>
-        <div>
-          <label class="block font-medium mb-1">Nombres</label>
-          <p class="p-3 rounded-lg border" :class="inputClass">{{ nombres }}</p>
-        </div>
-        <div>
-          <label class="block font-medium mb-1">Apellidos</label>
-          <p class="p-3 rounded-lg border" :class="inputClass">{{ apellidos }}</p>
-        </div>
-        <div>
-          <label class="block font-medium mb-1">Correo Institucional</label>
-          <p class="p-3 rounded-lg border" :class="inputClass">{{ correo }}</p>
-        </div>
-        <div>
-          <label class="block font-medium mb-1">Área</label>
-          <p class="p-3 rounded-lg border" :class="inputClass">{{ area || "N/A" }}</p>
-        </div>
-      </div>
-
-      <!-- Información del período actual -->
-      <div v-if="periodoActual" class="mt-4 text-center">
-        <p class="text-lg text-green-600">
-          Estás en el período: {{ periodoActual.period.Period_Name }}
-        </p>
-      </div>
-
-    <!-- Horario programado -->
-        <div class="mt-6 text-center" v-if="scheduledTimeUTC">
-          <p class="text-lg">
-            Tu hora de {{ tipoRegistro === 'entrada' ? 'entrada' : 'salida' }} es: 
-            <strong>{{ scheduledTimeUTC.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }}</strong>
-          </p>
-          <p v-if="tipoRegistro === 'entrada'" class="text-sm text-gray-600">
-            (Ventana de 10 minutos antes y 10 después)
-          </p>
-        </div>
-
-
-      <!-- Si ya existe registro de entrada, mostrar la hora convertida a local -->
-      <div v-if="tipoRegistro === 'salida' && registroEntradaLocal" class="mt-4 text-center">
-        <p class="text-lg text-blue-600">
-          Ya ingresaste a las: {{ registroEntradaLocal }}
-        </p>
-      </div>
-
-      <!-- Botón para guardar la asistencia -->
-      <div class="flex flex-col items-center mt-8">
-        <Button
-          label="Cancelar"
-          severity="danger"
-          class="px-6 py-3 rounded-full bg-red-500 hover:bg-red-600 text-white mt-2"
-          @click="volver"
-        />
+    <div
+      v-if="estudianteCargado"
+      :class="[cardClass, 'rounded-2xl shadow-md p-6 w-full mx-auto']"
+    >
+      <h2 class="text-lg font-semibold text-center mb-4">Datos del Estudiante</h2>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm sm:text-base">
+        <p><strong>Cédula:</strong> {{ cedula }}</p>
+        <p><strong>Correo:</strong> {{ correo }}</p>
+        <p><strong>Nombres:</strong> {{ nombres }}</p>             
+        <p><strong>Área:</strong> {{ area || "N/A" }}</p>
+        <p><strong>Apellidos:</strong> {{ apellidos }}</p>
+        <p v-if="periodoActual"><strong>Período:</strong> {{ periodoActual.period.Period_Name }}</p>
       </div>
     </div>
 
-    <!-- Modal para Captura de Huella con Spinner -->
-    <Dialog
-  v-model:visible="dialogoActivo"
-  :header="`Capturar Huella (${tipoRegistro === 'entrada' ? 'Ingreso' : 'Salida'})`"
-  :modal="true"
-  :closable="false"
-  style="width: 30rem"
+    <!-- Registro de asistencia -->
+   <!-- Registro de asistencia -->
+<div
+  v-if="estudianteCargado"
+  :class="[cardClass, 'rounded-2xl shadow-md p-6 w-full max-w-xl mx-auto']"
 >
-  <div class="flex flex-col items-center">
-    <p class="mb-4 text-center text-lg font-medium">
-      {{ tipoRegistro === 'entrada' ? 'Ingreso' : 'Salida' }} - Coloca tu dedo en el lector
-    </p>
-    <ProgressSpinner
-      style="width:50px; height:50px;"
-      strokeWidth="8"
-      animationDuration=".8s"
-    />
-    <div class="flex gap-4 mt-4">
-      <Button label="Cancelar" class="p-button-danger" @click="cancelarCaptura" />
+  <h2 class="text-xl font-bold text-center mb-6">
+    Registro de Asistencia
+  </h2>
+
+  <!-- Si ya registró entrada -->
+  <div v-if="tipoRegistro === 'salida'" class="space-y-8">
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-6 text-center">
+      <div class="flex flex-col items-center">
+        <span class="text-gray-400 text-base sm:text-lg">Hora Programada</span>
+        <span class="text-xl font-semibold">{{ scheduledTimeString }}</span>
+      </div>
+      <div class="flex flex-col items-center">
+        <span class="text-gray-400 text-base sm:text-lg">Entrada registrada</span>
+        <span class="text-xl text-blue-400 font-semibold">{{ registroEntradaLocal }}</span>
+      </div>
+      <div class="flex flex-col items-center">
+        <span class="text-gray-400 text-base sm:text-lg">Falta</span>
+        <span class="text-xl text-red-400 font-semibold">Salida</span>
+      </div>
     </div>
   </div>
-</Dialog>
 
+  <!-- Si aún no registra -->
+  <div v-else class="text-center space-y-4">
+    <p class="text-lg sm:text-xl">
+      Tu hora de entrada es: <span class="font-bold">{{ scheduledTimeString }}</span>
+    </p>
+    <p class="text-base text-gray-500">
+      (Ventana de 10 minutos antes y 10 después)
+    </p>
+  </div>
+
+  <!-- Botones -->
+  <div class="flex flex-col items-center mt-8 gap-4">
+    <Button
+      label="Cancelar"
+      class="text-base px-6 py-3 p-button-danger"
+      @click="volver"
+    />
+  </div>
+</div>
+
+
+    <!-- Modal de huella -->
+    <Dialog
+      v-model:visible="dialogoActivo"
+      :header="`Capturar Huella (${tipoRegistro === 'entrada' ? 'Ingreso' : 'Salida'})`"
+      :modal="true"
+      :closable="false"
+      style="width: 30rem"
+    >
+      <div class="flex flex-col items-center">
+        <p class="mb-4 text-center text-lg font-medium">
+          {{ tipoRegistro === 'entrada' ? 'Ingreso' : 'Salida' }} - Coloca tu dedo en el lector
+        </p>
+        <ProgressSpinner
+          style="width:50px; height:50px;"
+          strokeWidth="8"
+          animationDuration=".8s"
+        />
+        <div class="flex gap-4 mt-4">
+          <Button label="Cancelar" class="p-button-danger" @click="cancelarCaptura" />
+        </div>
+      </div>
+    </Dialog>
   </main>
 </template>
+
 
 <script setup lang="ts">
 import { ref, computed, onMounted, watch, nextTick } from "vue";
@@ -188,7 +193,7 @@ const capturando = ref(false);
 
 // SIMULACIÓN DE FECHA Y HORA ACTUAL
 const modoSimulacion = false; // Cambiar a false para usar la hora real
-const fechaSimulada = new Date("2025-04-23T13:51:00"); // Lunes 8:49 AM
+const fechaSimulada = new Date("2025-04-30T13:51:00"); // Lunes 8:49 AM
 
 function getAhoraLocal(): Date {
   return modoSimulacion ? new Date(fechaSimulada) : new Date();
@@ -240,13 +245,17 @@ const horaSalidaProgramada = computed(() => {
 
 // Clases para dark mode
 const cardClass = computed(() =>
-  isDarkTheme.value ? "bg-gray-800 text-white shadow-lg" : "bg-white text-gray-900 shadow-lg"
+  isDarkTheme.value
+    ? 'bg-[#1f1f1f] text-white border border-gray-700'
+    : 'bg-white text-gray-900 border border-gray-200'
 );
+
 const inputClass = computed(() =>
   isDarkTheme.value
-    ? "bg-gray-900 text-white border-gray-700"
-    : "bg-white text-gray-900 border-gray-300"
+    ? 'bg-[#121212] text-white border border-gray-600'
+    : 'bg-white text-gray-900 border border-gray-300'
 );
+
 
 // Variables para el horario completo del estudiante (se obtiene vía backend)
 const horarioCompleto = ref<any[]>([]);

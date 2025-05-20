@@ -68,14 +68,33 @@ const filters = ref<any>({
   'Student.Name': { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.CONTAINS }] }, // Custom filter key for combined name
   'Initial_Consultation.User_ID': { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.STARTS_WITH }] },
   'Initial_Consultation.User.Name': { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.CONTAINS }] }, // Custom filter key for combined name
+  'Initial_Consultation.User.User_FirstName': { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.CONTAINS }] }, // Custom filter key for combined name
+  'Student.Internal_Name': { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.CONTAINS }] }, // Custom filter key for combined name
 });
 
 // Function to fetch assigned cases from the API
 const fetchAssignedCases = async () => {
   try {
-    // Update the endpoint to fetch all assigned cases
     const { data } = await axios.get<Assignment[]>(`${API}/assignment/cases/all`);
-    assignments.value = data;
+    // Agrega los campos de nombre completo
+    assignments.value = data.map(a => ({
+      ...a,
+      Assigner: {
+        ...a.Assigner,
+        FullName: `${a.Assigner.Internal_Name} ${a.Assigner.Internal_LastName}`.trim()
+      },
+      Student: {
+        ...a.Student,
+        FullName: `${a.Student.Internal_Name} ${a.Student.Internal_LastName}`.trim()
+      },
+      Initial_Consultation: {
+        ...a.Initial_Consultation,
+        User: {
+          ...a.Initial_Consultation.User,
+          FullName: `${a.Initial_Consultation.User.User_FirstName} ${a.Initial_Consultation.User.User_LastName}`.trim()
+        }
+      }
+    }));
     console.log("Datos de la API (Casos Asignados):", assignments.value);
   } catch (error) {
     console.error("Error al cargar los casos asignados:", error);
@@ -98,6 +117,11 @@ const initFilters = () => {
     'Student.Name': { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.CONTAINS }] },
     'Initial_Consultation.User_ID': { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.STARTS_WITH }] },
     'Initial_Consultation.User.Name': { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.CONTAINS }] },
+    'Assigner.Internal_Name': { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.CONTAINS }] },
+    'Initial_Consultation.User.User_FirstName': { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.CONTAINS }] },
+    'Assigner.FullName': { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.CONTAINS }] },
+    'Student.FullName': { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.CONTAINS }] },
+    'Initial_Consultation.User.FullName': { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.CONTAINS }] },
   };
 };
 
@@ -230,35 +254,31 @@ onMounted(() => {
 
       <!-- Abogado (Assigner) -->
       <Column
-        field="Assigner.Name"
+        field="Assigner.FullName"
         header="Abogado"
         sortable
-        :sortField="'Assigner.Internal_Name'" 
-        style="min-width: 14rem"
-        filterField="Assigner.Name" 
+        filterField="Assigner.FullName"
       >
         <template #body="{ data }">
-          {{ data.Assigner.Internal_Name }} {{ data.Assigner.Internal_LastName }}
+          {{ data.Assigner.FullName }}
         </template>
         <template #filter="{ filterModel, filterCallback }">
-          <InputText v-model="filterModel.value" @input="filterCallback()" type="text" placeholder="Buscar por abogado" />
+          <InputText v-model="filterModel.value" @input="filterCallback()" type="text" placeholder="Buscar por nombre completo" />
         </template>
       </Column>
 
       <!-- Estudiante -->
       <Column
-        field="Student.Name"
+        field="Student.FullName"
         header="Estudiante"
         sortable
-        :sortField="'Student.Internal_Name'" 
-        style="min-width: 14rem"
-        filterField="Student.Name" 
+        filterField="Student.FullName"
       >
         <template #body="{ data }">
-          {{ data.Student.Internal_Name }} {{ data.Student.Internal_LastName }}
+          {{ data.Student.FullName }}
         </template>
         <template #filter="{ filterModel, filterCallback }">
-          <InputText v-model="filterModel.value" @input="filterCallback()" type="text" placeholder="Buscar por estudiante" />
+          <InputText v-model="filterModel.value" @input="filterCallback()" type="text" placeholder="Buscar por nombre completo" />
         </template>
       </Column>
 
@@ -280,18 +300,16 @@ onMounted(() => {
 
       <!-- Nombre y Apellido del Usuario -->
       <Column
-        field="Initial_Consultation.User.Name"
+        field="Initial_Consultation.User.FullName"
         header="Nombre Usuario"
         sortable
-        :sortField="'Initial_Consultation.User.User_FirstName'" 
-        style="min-width: 14rem"
-        filterField="Initial_Consultation.User.Name" 
+        filterField="Initial_Consultation.User.FullName"
       >
         <template #body="{ data }">
-          {{ data.Initial_Consultation.User.User_FirstName }} {{ data.Initial_Consultation.User.User_LastName }}
+          {{ data.Initial_Consultation.User.FullName }}
         </template>
         <template #filter="{ filterModel, filterCallback }">
-          <InputText v-model="filterModel.value" @input="filterCallback()" type="text" placeholder="Buscar por nombre usuario" />
+          <InputText v-model="filterModel.value" @input="filterCallback()" type="text" placeholder="Buscar por nombre completo" />
         </template>
       </Column>
 

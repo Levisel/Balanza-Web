@@ -406,90 +406,87 @@ function guardarEdicion() {
         </template>
       </Column>
     </DataTable>
-    <Dialog
-      v-model:visible="dialogVisible"
-      :style="{ width: '600px' }"
-      header="Editar Información del Estudiante"
-      :modal="true"
-      :breakpoints="{ '960px': '75vw', '640px': '90vw' }"
-      class="edit-dialog"
-    >
-      <div class="p-fluid" v-if="registroEditando">
-        <div class="rounded-2xl shadow-md border border-gray-200 bg-white mb-6">
-          <div class="flex items-center gap-2 px-4 py-3 border-b border-gray-200 bg-gray-50 rounded-t-2xl">
-            <i class="pi pi-user-edit text-primary-600 text-lg"></i>
-            <h5 class="text-base font-semibold text-gray-700 m-0">Datos Personales</h5>
-          </div>
-          <div class="p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label for="cedula" class="block text-sm font-medium text-gray-700 mb-1">Cédula</label>
-              <InputText
-                id="cedula"
-                v-model="registroEditando.Internal_ID"
-                disabled
-                class="w-full"
-                :class="{ 'p-invalid': !registroEditando.Internal_ID }"
-              />
-              <small v-if="!registroEditando.Internal_ID" class="text-red-500">La cédula es requerida</small>
-            </div>
-            <div>
-              <label for="apellidos" class="block text-sm font-medium text-gray-700 mb-1">Apellidos</label>
-              <InputText
-                id="apellidos"
-                v-model="registroEditando.Internal_LastName"
-                class="w-full"
-                :class="{ 'p-invalid': !registroEditando.Internal_LastName }"
-              />
-              <small v-if="!registroEditando.Internal_LastName" class="text-red-500">Los apellidos son requeridos</small>
-            </div>
-            <div>
-              <label for="nombres" class="block text-sm font-medium text-gray-700 mb-1">Nombres</label>
-              <InputText
-                id="nombres"
-                v-model="registroEditando.Internal_Name"
-                class="w-full"
-                :class="{ 'p-invalid': !registroEditando.Internal_Name }"
-              />
-              <small v-if="!registroEditando.Internal_Name" class="text-red-500">Los nombres son requeridos</small>
-            </div>
-          </div>
+  <Dialog
+  v-model:visible="dialogVisible"
+  :style="{ width: '600px' }"
+  header="Editar Información del Estudiante"
+  :modal="true"
+  :breakpoints="{ '960px': '75vw', '640px': '90vw' }"
+  class="edit-dialog"
+>
+  <div class="p-fluid" v-if="registroEditando">
+    <!-- Datos personales -->
+    <div :class="[isDarkTheme ? 'bg-[#1f1f1f] text-white border-gray-700' : 'bg-white text-gray-900 border-gray-200', 'rounded-2xl shadow-md border mb-6']">
+      <div :class="[isDarkTheme ? 'bg-[#2c2c2c] border-gray-700 text-white' : 'bg-gray-50 border-gray-200 text-gray-700', 'flex items-center gap-2 px-4 py-3 border-b rounded-t-2xl']">
+        <i class="pi pi-user-edit text-primary-600 text-lg"></i>
+        <h5 class="text-base font-semibold m-0">Datos Personales</h5>
+      </div>
+      <div class="p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm font-medium mb-1">Cédula</label>
+          <InputText
+            v-model="registroEditando.Internal_ID"
+            disabled
+            class="w-full"
+            :class="{ 'p-invalid': !registroEditando.Internal_ID }"
+          />
         </div>
-        <div class="rounded-2xl shadow-md border border-gray-200 bg-white">
-          <div class="flex items-center gap-2 px-4 py-3 border-b border-gray-200 bg-gray-50 rounded-t-2xl">
-            <i class="pi pi-envelope text-primary-600 text-lg"></i>
-            <h5 class="text-base font-semibold text-gray-700 m-0">Información de Contacto</h5>
-          </div>
-          <div class="p-4 grid grid-cols-1 gap-4">
-            <div>
-              <label for="correo" class="block text-sm font-medium text-gray-700 mb-1">Correo Electrónico</label>
-              <InputText
-                id="correo"
-                v-model="registroEditando.Internal_Email"
-                class="w-full"
-                :class="{ 'p-invalid': !registroEditando.Internal_Email }"
-              />
-              <small v-if="!registroEditando.Internal_Email" class="text-red-500">El correo es requerido</small>
-            </div>
-          </div>
+        <div>
+          <label class="block text-sm font-medium mb-1">Apellidos</label>
+          <InputText
+            v-model="registroEditando.Internal_LastName"
+            class="w-full"
+            :class="{ 'p-invalid': !registroEditando.Internal_LastName }"
+          />
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1">Nombres</label>
+          <InputText
+            v-model="registroEditando.Internal_Name"
+            class="w-full"
+            :class="{ 'p-invalid': !registroEditando.Internal_Name }"
+          />
         </div>
       </div>
-      <template #footer>
-        <div class="flex justify-between items-center w-full px-2 py-2">
-          <Button
-            label="Cancelar"
-            icon="pi pi-times"
-            class="p-button-outlined p-button-danger"
-            @click="dialogVisible = false"
-          />
-          <Button
-            label="Guardar Cambios"
-            icon="pi pi-check"
-            class="p-button-success"
-            @click="guardarEdicion"
+    </div>
+
+    <!-- Información de contacto -->
+    <div :class="[isDarkTheme ? 'bg-[#1f1f1f] text-white border-gray-700' : 'bg-white text-gray-900 border-gray-200', 'rounded-2xl shadow-md border']">
+      <div :class="[isDarkTheme ? 'bg-[#2c2c2c] border-gray-700 text-white' : 'bg-gray-50 border-gray-200 text-gray-700', 'flex items-center gap-2 px-4 py-3 border-b rounded-t-2xl']">
+        <i class="pi pi-envelope text-primary-600 text-lg"></i>
+        <h5 class="text-base font-semibold m-0">Información de Contacto</h5>
+      </div>
+      <div class="p-4 grid grid-cols-1 gap-4">
+        <div>
+          <label class="block text-sm font-medium mb-1">Correo Electrónico</label>
+          <InputText
+            v-model="registroEditando.Internal_Email"
+            class="w-full"
+            :class="{ 'p-invalid': !registroEditando.Internal_Email }"
           />
         </div>
-      </template>
-    </Dialog>
+      </div>
+    </div>
+  </div>
+
+  <template #footer>
+    <div class="flex justify-between items-center w-full px-2 py-2">
+      <Button
+        label="Cancelar"
+        icon="pi pi-times"
+        class="p-button-outlined p-button-danger"
+        @click="dialogVisible = false"
+      />
+      <Button
+        label="Guardar Cambios"
+        icon="pi pi-check"
+        class="p-button-success"
+        @click="guardarEdicion"
+      />
+    </div>
+  </template>
+</Dialog>
+
   </main>
 </template>
 

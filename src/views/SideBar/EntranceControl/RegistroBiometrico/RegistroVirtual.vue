@@ -1,138 +1,138 @@
 <template>
-    <main class="flex flex-col items-center p-8 min-h-screen">
-      <!-- Encabezado -->
-      <div class="w-full flex items-center justify-between mb-8">
-        <Button
-          icon="pi pi-arrow-left"
-          class="p-button-text text-blue-600 hover:text-blue-800"
-          @click="volver"
-          tooltip="Volver al inicio"
-          tooltipOptions="{ position: 'top' }"
-        />
-        <h1 class="text-3xl font-bold text-center flex-grow">
-          Registro de Asistencia Virtual
-        </h1>
-        <div class="w-10"></div>
+  <main class="px-4 sm:px-8 py-6 max-w-2xl mx-auto min-h-screen transition-colors duration-300 space-y-8">
+    <!-- Encabezado -->
+    <div class="flex items-center gap-4">
+      <Button
+        icon="pi pi-arrow-left"
+        class="p-button-text text-blue-600 hover:text-blue-800"
+        @click="volver"
+        tooltip="Volver al listado"
+        tooltipOptions="{ position: 'top' }"
+      />
+      <h1 class="text-2xl sm:text-3xl font-bold text-center flex-grow">
+        Registro de Asistencia Virtual
+      </h1>
+      <div class="w-10"></div>
+    </div>
+
+    <Toast />
+
+    <!-- Modal de confirmación -->
+    <Dialog
+      v-model:visible="dialogoConfirmacion"
+      header="Confirmar Registro"
+      modal
+      :closable="false"
+      :style="{ width: '30rem' }"
+      :class="isDarkTheme ? 'bg-[#1f1f1f] text-white' : 'bg-white text-gray-900'"
+    >
+      <div class="p-4 text-center text-base">
+        ¿Deseas registrar
+        <span class="font-semibold">{{ tipoRegistro === 'entrada' ? 'la Entrada' : 'la Salida' }}</span>
+        virtual?
       </div>
-  
-      <Toast />
-  
-      <!-- Modal de error -->
-      <Dialog
-        v-model:visible="showErrorModal"
-        header="Error"
-        :modal="true"
-        :closable="true"
-        style="width: 30rem"
-      >
-        <p class="text-center">{{ errorModalMessage }}</p>
-        <div class="flex justify-center mt-4">
-          <Button label="Cerrar" @click="showErrorModal = false" />
+      <template #footer>
+        <div class="flex justify-end gap-3 px-4 pb-4">
+          <Button label="Cancelar" class="p-button-danger text-sm px-4 py-2" @click="dialogoConfirmacion = false" />
+          <Button label="Confirmar" class="p-button-success text-sm px-4 py-2" @click="guardarAsistenciaVirtual" />
         </div>
-      </Dialog>
-  
-      <!-- Información del estudiante y horario virtual -->
-      <div v-if="estudianteCargado" :class="['w-full max-w-3xl p-6 rounded-lg shadow-lg', cardClass]">
-        <h2 class="text-xl font-semibold text-center mb-6">Detalles del Estudiante (Virtual)</h2>
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
-          <div>
-            <label class="block font-medium mb-1">ID</label>
-            <p class="p-3 rounded-lg border" :class="inputClass">{{ cedula }}</p>
-          </div>
-          <div>
-            <label class="block font-medium mb-1">Nombres</label>
-            <p class="p-3 rounded-lg border" :class="inputClass">{{ nombres }}</p>
-          </div>
-          <div>
-            <label class="block font-medium mb-1">Apellidos</label>
-            <p class="p-3 rounded-lg border" :class="inputClass">{{ apellidos }}</p>
-          </div>
-          <div>
-            <label class="block font-medium mb-1">Correo</label>
-            <p class="p-3 rounded-lg border" :class="inputClass">{{ correo }}</p>
-          </div>
-          <div>
-            <label class="block font-medium mb-1">Área</label>
-            <p class="p-3 rounded-lg border" :class="inputClass">{{ area || "N/A" }}</p>
-          </div>
+      </template>
+    </Dialog>
+
+    <!-- Modal de error -->
+    <Dialog
+      v-model:visible="showErrorModal"
+      header="Error"
+      modal
+      :closable="true"
+      :style="{ width: '30rem' }"
+      :class="isDarkTheme ? 'bg-[#1f1f1f] text-white' : 'bg-white text-gray-900'"
+    >
+      <p class="text-center text-base">{{ errorModalMessage }}</p>
+      <template #footer>
+        <div class="flex justify-center p-3">
+          <Button label="Cerrar" class="text-sm px-4 py-2" @click="showErrorModal = false" />
         </div>
-  
-        <!-- Período activo -->
-        <div v-if="periodoActual" class="mt-4 text-center">
-          <p class="text-lg text-green-600">
-            Estás en el período: {{ periodoActual.period.Period_Name }}
-          </p>
-        </div>
-  
-        <!-- Horario virtual programado -->
-        <div class="mt-6 text-center" v-if="scheduledTimeVirtual">
-          <p class="text-lg">
-            Hora programada para hoy: <strong>{{ scheduledTimeString }}</strong>
-          </p>
-          <p class="text-sm text-gray-600">(Ventana de {{ ventanaTexto }})</p>
-        </div>
-        <div v-else class="mt-6 text-center text-red-600">
-          <p>No tienes un horario virtual asignado para hoy ({{ currentDayMessage }}).</p>
-        </div>
-  
-        <!-- Registro virtual completo (si ya existe) -->
-        <div v-if="registroVirtualCompleto" class="mt-4 text-center">
-          <p class="text-lg text-blue-600">
-            Ya registraste tu asistencia virtual el día de hoy.
-            <br />
-            Entrada: {{ formatTime(registroVirtualCompleto.Attendance_Entry) }}
-            <br />
-            Salida: {{ formatTime(registroVirtualCompleto.Attendance_Exit) }}
-          </p>
-        </div>
-  
-        <!-- Botón para registrar asistencia virtual (sólo si hay horario y aún no se completó el registro) -->
-        <div v-else-if="scheduledTimeVirtual" class="mt-6 text-center">
-          <p v-if="tipoRegistro === 'entrada'" class="text-gray-700">
-            Aún no has registrado tu asistencia virtual.
-          </p>
-          <p v-else-if="tipoRegistro === 'salida'" class="text-blue-600">
-            Tienes un registro abierto (Entrada a las {{ formatTime(registroAbierto.Attendance_Entry) }}). Falta registrar la Salida Virtual.
-          </p>
-          <Button
-            :label="tipoRegistro === 'entrada' ? 'Registrar Entrada Virtual' : 'Registrar Salida Virtual'"
-            class="p-button-success mt-4"
-            @click="confirmarRegistro"
-          />
-        </div>
-  
-        <!-- Botón de Cancelar -->
-        <div class="flex flex-col items-center mt-8">
-          <Button
-            label="Cancelar"
-            severity="danger"
-            class="px-6 py-3 rounded-full bg-red-500 hover:bg-red-600 text-white mt-2"
-            @click="volver"
-          />
-        </div>
+      </template>
+    </Dialog>
+
+    <!-- Datos del estudiante -->
+    <div
+      v-if="estudianteCargado"
+      :class="[cardClass, 'rounded-2xl shadow-md p-6 w-full mx-auto']"
+    >
+      <h2 class="text-lg font-semibold text-center mb-4">Datos del Estudiante</h2>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm sm:text-base">
+        <p><strong>Cédula:</strong> {{ cedula }}</p>
+        <p><strong>Nombres:</strong> {{ nombres }}</p>
+        <p><strong>Apellidos:</strong> {{ apellidos }}</p>
+        <p><strong>Correo:</strong> {{ correo }}</p>
+        <p><strong>Área:</strong> {{ area || "N/A" }}</p>
+        <p v-if="periodoActual"><strong>Período:</strong> {{ periodoActual.period.Period_Name }}</p>
       </div>
-  
-      <!-- Modal de confirmación para el registro virtual -->
-      <Dialog
-        v-model:visible="dialogoConfirmacion"
-        header="Confirmar Registro Virtual"
-        :modal="true"
-        :closable="false"
-        style="width: 30rem"
-      >
-        <div class="flex flex-col items-center">
-          <p class="mb-4 text-center">
-            ¿Estás seguro de que deseas registrar
-            <strong>{{ tipoRegistro === 'entrada' ? 'la Entrada Virtual' : 'la Salida Virtual' }}</strong>?
-          </p>
-          <div class="flex gap-4 mt-4">
-            <Button label="Cancelar" class="p-button-danger" @click="dialogoConfirmacion = false" />
-            <Button label="Confirmar" class="p-button-success" @click="guardarAsistenciaVirtual" />
-          </div>
-        </div>
-      </Dialog>
-    </main>
-  </template>
+    </div>
+
+<!-- Registro de asistencia -->
+<div
+  v-if="estudianteCargado"
+  :class="[cardClass, 'rounded-2xl shadow-md p-6 w-full max-w-xl mx-auto']"
+>
+  <h2 class="text-xl font-bold text-center mb-6">
+    Registro de Asistencia
+  </h2>
+
+  <!-- Entrada registrada, falta salida -->
+  <div v-if="registroAbierto" class="space-y-8">
+
+    <!-- Información alineada horizontalmente -->
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-6 text-center">
+      <div class="flex flex-col items-center">
+        <span class="text-gray-400 text-base">Hora Programada</span>
+        <span class="text-lg font-semibold">{{ scheduledTimeString }}</span>
+      </div>
+      <div class="flex flex-col items-center">
+        <span class="text-gray-400 text-base">Entrada registrada</span>
+        <span class="text-lg text-blue-400 font-semibold">
+          {{ formatTime(registroAbierto.Attendance_Entry) }}
+        </span>
+      </div>
+      <div class="flex flex-col items-center">
+        <span class="text-gray-400 text-base">Falta</span>
+        <span class="text-lg text-red-400 font-semibold">Salida</span>
+      </div>
+    </div>
+
+    <!-- Botones centrados y amplios -->
+    <div class="flex flex-col items-center gap-4">
+      <Button
+        label="Registrar Salida"
+        class="p-button-success text-base px-6 py-3"
+        @click="confirmarRegistro"
+      />
+      <Button
+        label="Cancelar"
+        class="p-button-danger text-base px-6 py-3"
+        @click="volver"
+      />
+    </div>
+  </div>
+
+  <!-- Sin horario asignado -->
+  <div v-else class="text-center text-red-500 text-base mt-6">
+    No tienes horario virtual asignado hoy ({{ currentDayMessage }}).
+  </div>
+</div>
+
+
+
+  </main>
+</template>
+
+
+
+
+
+
   
   <script setup lang="ts">
   import { ref, computed, onMounted } from "vue";
@@ -169,6 +169,7 @@
 const MINUTOS_ANTES = 10;
 const MINUTOS_DESPUES = 10;
 const ventanaTexto = `${MINUTOS_ANTES} minutos antes y ${MINUTOS_DESPUES} después`;
+
 
 
 // Computed para validar si estamos dentro del rango permitido
@@ -216,7 +217,13 @@ const dentroDeRangoSalida = computed(() => {
   if (todayKey === "Sunday" || todayKey === "Saturday") return null; // No asistencia sábado/domingo
 
   // Buscar el primer horario válido
-  const schedule = horarioVirtualData.value.find((h: any) => h.Schedule_IsDeleted === false || h.Schedule_IsDeleted === 0);
+  const schedule = horarioVirtualData.value.find((h: any) => {
+  const campo = tipoRegistro.value === 'entrada'
+    ? `${todayKey}_Start`
+    : `${todayKey}_End`;
+  return (h.Schedule_IsDeleted === false || h.Schedule_IsDeleted === 0) && h[campo];
+});
+
   if (!schedule) return null;
 
   let timeString = "";
@@ -276,12 +283,14 @@ const currentDayMessage = computed(() => {
   const errorModalMessage = ref("");
   
   // CLASES PARA DARK MODE
-  const cardClass = computed(() =>
-    isDarkTheme.value ? "bg-gray-800 text-white shadow-lg" : "bg-white text-gray-900 shadow-lg"
-  );
-  const inputClass = computed(() =>
-    isDarkTheme.value ? "bg-gray-900 text-white border-gray-700" : "bg-white text-gray-900 border-gray-300"
-  );
+const cardClass = computed(() =>
+  isDarkTheme.value ? 'bg-[#1f1f1f] text-white' : 'bg-white text-gray-900'
+)
+
+const inputClass = computed(() =>
+  isDarkTheme.value ? 'bg-[#121212] text-white border-gray-600' : 'bg-white text-gray-900 border-gray-300'
+)
+
   
   // HELPER PARA FORMATEAR HORAS
   function formatTime(fechaStr: string | null): string {
@@ -489,15 +498,30 @@ async function guardarAsistenciaVirtual() {
 }
 
 
+function estaDentroDeVentana(fechaReferencia: Date): boolean {
+  const ahora = new Date();
+  const inicio = new Date(fechaReferencia.getTime() - MINUTOS_ANTES * 60000);
+  const fin = new Date(fechaReferencia.getTime() + MINUTOS_DESPUES * 60000);
+  return ahora >= inicio && ahora <= fin;
+}
+
 
   
   // Función para abrir el diálogo de confirmación
-  function confirmarRegistro() {
-  // Validación previa al abrir el modal
-  if (
-    (tipoRegistro.value === "entrada" && !dentroDeRango.value) ||
-    (tipoRegistro.value === "salida" && !dentroDeRangoSalida.value)
-  ) {
+function confirmarRegistro() {
+  const scheduled = scheduledTimeVirtual.value;
+
+  if (!scheduled) {
+    toast.add({
+      severity: "warn",
+      summary: "Sin horario",
+      detail: "No tienes un horario virtual asignado para hoy.",
+      life: 4000,
+    });
+    return;
+  }
+
+  if (!estaDentroDeVentana(scheduled)) {
     toast.add({
       severity: "warn",
       summary: "Fuera de Rango",
@@ -507,9 +531,9 @@ async function guardarAsistenciaVirtual() {
     return;
   }
 
-  // Solo si está en rango se muestra el modal
   dialogoConfirmacion.value = true;
 }
+
 
   
   // Función de navegación

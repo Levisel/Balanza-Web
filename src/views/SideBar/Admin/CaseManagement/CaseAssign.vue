@@ -8,7 +8,7 @@ import Dialog from 'primevue/dialog';
 import Button from 'primevue/button';
 import TabView from 'primevue/tabview';
 import TabPanel from 'primevue/tabpanel';
-import Paginator, { PageState } from 'primevue/paginator'; 
+import Paginator, { type PageState } from 'primevue/paginator'; 
 import { useNotificationStore } from '@/stores/notifications';  
 
 interface Case {
@@ -53,7 +53,7 @@ export default defineComponent({
     const students = ref<Student[]>([]);
     const autoAssignLoading = ref<boolean>(false);
     const showNotification = ref<boolean>(false);
-    const notificationType = ref<'success' | 'error'>('');
+    const notificationType = ref<'success' | 'error' | 'info' | 'warning'>('success');
     const notificationIcon = ref<string>('');
     const notificationTitle = ref<string>('');
     const notificationMessage = ref<string>('');
@@ -568,7 +568,7 @@ const filteredAssignedCases = computed(() =>
     </div>
 
     <TabView>
-      <TabPanel header="Casos por Asignar">
+      <TabPanel header="Casos por Asignar" :value="'casosPorAsignar'">
         <div class="border border-gray-300 rounded-md overflow-hidden">
           <!-- Cabecera de la tabla -->
           <div class="bg-gray-100 font-semibold text-gray-700 flex">
@@ -656,7 +656,7 @@ const filteredAssignedCases = computed(() =>
         />
       </TabPanel>
 
-      <TabPanel header="Casos Asignados">
+      <TabPanel header="Casos Asignados" :value="'casosAsignados'">
         <div class="border border-gray-300 rounded-md overflow-hidden">
           <!-- Cabecera de la tabla -->
           <div class="bg-gray-100 font-semibold text-gray-700 flex">
@@ -726,7 +726,7 @@ const filteredAssignedCases = computed(() =>
       :class="{
         'border-green-500': notificationType === 'success',
         'border-red-500': notificationType === 'error',
-        'border-blue-500': notificationType === 'info', // Añadir otros tipos si es necesario
+        'border-blue-500': notificationType === 'info',
         'border-yellow-500': notificationType === 'warning'
       }"
       role="alert"
