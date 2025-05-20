@@ -31,43 +31,47 @@ const internalNames = ref<Record<string, string>>({});
 const viewDialogVisible = ref(false);
 const editDialogVisible = ref(false);
 
-// Inicializamos filtros
-const filters = ref<any>({
-  global: { value: null, matchMode: FilterMatchMode.CONTAINS },
-  Init_Code: {
-    operator: FilterOperator.AND,
-    constraints: [{ value: null, matchMode: FilterMatchMode.STARTS_WITH }],
-  },
-  User_Name: {
-    operator: FilterOperator.AND,
-    constraints: [{ value: null, matchMode: FilterMatchMode.STARTS_WITH }],
-  },
-  Init_Subject: {
-    operator: FilterOperator.AND,
-    constraints: [{ value: null, matchMode: FilterMatchMode.STARTS_WITH }],
-  },
-  Init_Service: {
-    operator: FilterOperator.AND,
-    constraints: [{ value: null, matchMode: FilterMatchMode.STARTS_WITH }],
-  },
-  Init_Status: { value: null, matchMode: FilterMatchMode.EQUALS },
-});
+
 
 // Estados disponibles para filtro
-const statuses = ref(["Activo", "Inactivo"]);
+const statuses = ref([
+  { label: "Alerta", value: 'Alerta' },
+  { label: "Sin Alerta", value: 'Sin Alerta' },
+]);
+
+
+const fetchAllInternalUsers = async (): Promise<Record<string, string>> => {
+  try {
+    const { data } = await axios.get(`${API}/internal-user`);
+    // Suponiendo que data es un array de usuarios internos
+    return data.reduce((acc: Record<string, string>, user: any) => {
+      acc[user.Internal_ID] = user.Internal_Name + " " + user.Internal_LastName;
+      return acc;
+    }, {});
+  } catch (error) {
+    console.error("Error al cargar usuarios internos:", error);
+    return {};
+  }
+};
 
 // Función para obtener las consultas de la API
 const fetchReviewCases = async (initType: string, initStatus: string) => {
   try {
-    const { data } = await axios.get(`${API}/initial-consultations`, {
-      params: { initType, initStatus },
-    });
-    // Filtra los registros que no tienen 'Patrocinio' en Init_Service
-    initialConsultation.value = data.filter(
-      (record: Initial_Consultation) =>
-        record.Init_Service !== "Patrocinio" && record.Init_Type !== "En espera"
-    );
-    console.log("Datos de la API (filtrados):", initialConsultation.value);
+    const [consultations, internalUsers] = await Promise.all([
+      axios.get(`${API}/initial-consultations`, { params: { initType, initStatus } }),
+      fetchAllInternalUsers()
+    ]);
+    initialConsultation.value = consultations.data
+      .filter(
+        (record: Initial_Consultation) =>
+          record.Init_Service !== "Patrocinio" && record.Init_Type !== "En espera"
+      )
+      .map((record: Initial_Consultation) => ({
+        ...record,
+        Computed_AlertStatus: (record.Init_AlertNote && String(record.Init_AlertNote).trim() !== '') ? 'Alerta' : 'Sin Alerta',
+        Internal_FullName: internalUsers[record.Internal_ID] || record.Internal_ID
+      }));
+    console.log("Datos de la API (filtrados y mapeados):", initialConsultation.value);
   } catch (error) {
     console.error("Error al cargar las consultas:", error);
   }
@@ -116,40 +120,21 @@ const resolveInternalUserName = (internalId: string): string => {
   }
 };
 
-const initFilters = () => {
-  filters.value = {
-    global: { value: null, matchMode: FilterMatchMode.CONTAINS },
-    Init_Code: {
-      operator: FilterOperator.AND,
-      constraints: [{ value: null, matchMode: FilterMatchMode.STARTS_WITH }],
-    },
-    Internal_ID: {
-      operator: FilterOperator.AND,
-      constraints: [{ value: null, matchMode: FilterMatchMode.STARTS_WITH }],
-    },
-    User_Name: {
-      operator: FilterOperator.AND,
-      constraints: [{ value: null, matchMode: FilterMatchMode.STARTS_WITH }],
-    },
-    User_ID: {
-      operator: FilterOperator.AND,
-      constraints: [{ value: null, matchMode: FilterMatchMode.STARTS_WITH }],
-    },
-    Init_Subject: {
-      operator: FilterOperator.AND,
-      constraints: [{ value: null, matchMode: FilterMatchMode.STARTS_WITH }],
-    },
-    Init_Service: {
-      operator: FilterOperator.AND,
-      constraints: [{ value: null, matchMode: FilterMatchMode.STARTS_WITH }],
-    },
-    Init_Status: { value: null, matchMode: FilterMatchMode.EQUALS },
-  };
+const defaultFilters = {
+  global:   { value: null, matchMode: FilterMatchMode.CONTAINS },
+  Init_Code: { value: null, matchMode: FilterMatchMode.CONTAINS },
+  Internal_FullName: { value: null, matchMode: FilterMatchMode.CONTAINS }, 
+  Init_Subject: { value: null, matchMode: FilterMatchMode.CONTAINS },
+  Init_Service: { value: null, matchMode: FilterMatchMode.CONTAINS },
+  Init_Status: { value: null, matchMode: FilterMatchMode.CONTAINS },
+  Computed_AlertStatus: { value: null, matchMode: FilterMatchMode.EQUALS }, 
 };
 
+// Clear filters function
+const filters = ref({ ...defaultFilters });
+
 const clearFilter = () => {
-  initFilters();
-  filters.value = { ...filters.value };
+  filters.value = { ...defaultFilters };
 };
 
 const redirectToConsultation = (data: Initial_Consultation) => {
@@ -193,7 +178,6 @@ const loadUserAttentionSheet = async (initCode: string) => {
 
 onMounted(() => {
   fetchReviewCases("Por Asignar", "Activo");
-  initFilters();
 });
 </script>
 
@@ -216,12 +200,12 @@ onMounted(() => {
       removableSort
       :globalFilterFields="[
         'Init_Code',
-        'Internal_ID',
+        'Internal_FullName',
         'User_ID',
         'Init_Subject',
         'Init_Service',
         'Init_Status',
-        'Init_AlertNote',
+        'Computed_AlertStatus',
       ]"
     >
       <template #header>
@@ -237,7 +221,7 @@ onMounted(() => {
             <InputIcon>
               <i class="pi pi-search" />
             </InputIcon>
-            <InputText v-model="filters['global'].value" placeholder="Buscar" />
+            <InputText v-model="filters['global'].value" placeholder="Buscar Globalmente" />
           </IconField>
         </div>
       </template>
@@ -250,13 +234,15 @@ onMounted(() => {
         header="Código"
         sortable
         style="min-width: 14rem"
+        filter-field="Init_Code"
       >
         <template #body="{ data }">
           {{ data.Init_Code }}
         </template>
-        <template #filter="{ filterModel }">
+        <template #filter="{ filterModel, filterCallback }">
           <InputText
             v-model="filterModel.value"
+            @input="filterCallback()"
             type="text"
             placeholder="Buscar por código"
           />
@@ -264,19 +250,21 @@ onMounted(() => {
       </Column>
 
       <Column
-        field="Internal_ID"
+        field="Internal_FullName"
         header="Creado Por"
         sortable
         style="min-width: 14rem"
+        filter-field="Internal_FullName"
       >
         <template #body="{ data }">
-          {{ resolveInternalUserName(data.Internal_ID) }}
+          {{ data.Internal_FullName }}
         </template>
-        <template #filter="{ filterModel }">
+        <template #filter="{ filterModel, filterCallback }">
           <InputText
             v-model="filterModel.value"
+            @input="filterCallback()"
             type="text"
-            placeholder="Buscar por ID interno"
+            placeholder="Buscar por nombre"
           />
         </template>
       </Column>
@@ -285,13 +273,15 @@ onMounted(() => {
         header="Área/Materia"
         sortable
         style="min-width: 14rem"
+        filter-field="Init_Subject"
       >
         <template #body="{ data }">
           {{ data.Init_Subject }}
         </template>
-        <template #filter="{ filterModel }">
+        <template #filter="{ filterModel, filterCallback }">
           <InputText
             v-model="filterModel.value"
+            @input="filterCallback()"
             type="text"
             placeholder="Buscar por tema"
           />
@@ -303,28 +293,33 @@ onMounted(() => {
         header="Servicio"
         sortable
         style="min-width: 14rem"
+        filter-field="Init_Service"
       >
         <template #body="{ data }">
           {{ data.Init_Service }}
         </template>
-        <template #filter="{ filterModel }">
+        <template #filter="{ filterModel, filterCallback }">
           <InputText
             v-model="filterModel.value"
+            @input="filterCallback()"
             type="text"
             placeholder="Buscar por servicio"
           />
         </template>
       </Column>
-
       <Column
-        field="Init_AlertNote"
+        field="Computed_AlertStatus" 
         header="Nota de Alerta"
         sortable
+        filterField="Computed_AlertStatus" 
+        :showFilterMatchModes="false" 
+        dataType="string"
         style="min-width: 14rem"
       >
         <template #body="{ data }">
+          <!-- La visualización sigue basándose en el Init_AlertNote original -->
           <Tag
-            v-if="data.Init_AlertNote"
+            v-if="data.Init_AlertNote && String(data.Init_AlertNote).trim() !== ''"
             severity="danger"
             value="Alerta"
             class="w-full md:w-20 text-center"
@@ -336,12 +331,37 @@ onMounted(() => {
             class="w-full md:w-20 text-center"
           ></Tag>
         </template>
-        <template #filter="{ filterModel }">
+        <template #filter="{ filterModel, filterCallback }">
           <Select
             v-model="filterModel.value"
-            :options="statuses"
+            :options="statuses" 
+            optionLabel="label"
+            optionValue="value"
+            @change="filterCallback()"
             placeholder="Seleccionar estado"
-          />
+            showClear
+            class="p-column-filter"
+          >
+            <template #option="slotProps">
+              <Tag
+                :severity="slotProps.option.value === 'Alerta' ? 'danger' : 'success'"
+                :value="slotProps.option.label"
+                class="w-full text-center"
+              ></Tag>
+            </template>
+            <template #value="slotProps">
+              <template v-if="slotProps.value !== null && slotProps.value !== undefined">
+                <Tag
+                  :severity="slotProps.value === 'Alerta' ? 'danger' : 'success'"
+                  :value="statuses.find(s => s.value === slotProps.value)?.label"
+                  class="w-full text-center"
+                ></Tag>
+              </template>
+              <span v-else>
+                {{ slotProps.placeholder }}
+              </span>
+            </template>
+          </Select>
         </template>
       </Column>
 

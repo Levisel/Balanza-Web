@@ -509,49 +509,9 @@ const alertClass = computed(() => [
                       </li>
                     </div>
                     <!-- Sección: INFORME DE VIABILIDAD -->
-                    <div
-                      v-if="
-                        authStore.user?.type == 'Administrador' ||
-                        authStore.user?.type == 'Abogado' ||
-                        authStore.user?.type == 'Estudiante' ||
-                        authStore.user?.type == 'Coordinador'
-                      "
-                    >
-                      <li>
-                        <router-link
-                          to="/InformeDeViabilidad"
-                          draggable="false"
-                          v-ripple
-                          :class="feasibilityReportClass"
-                        >
-                          <i class="pi pi-file-word mr-2"></i>
-                          <span class="font-medium text-lg"
-                            >Informe de Viabilidad</span
-                          >
-                        </router-link>
-                      </li>
-                    </div>
+
                     <!-- Sección: DOCUMENTOS -->
-                    <div
-                      v-if="
-                        authStore.user?.type == 'Administrador' ||
-                        authStore.user?.type == 'Abogado' ||
-                        authStore.user?.type == 'Estudiante' ||
-                        authStore.user?.type == 'Coordinador'
-                      "
-                    >
-                      <li>
-                        <router-link
-                          to="/ReporteDeDocumentos"
-                          draggable="false"
-                          v-ripple
-                          :class="fileReportClass"
-                        >
-                          <i class="pi pi-file-pdf mr-2"></i>
-                          <span class="font-medium text-lg">Documentos</span>
-                        </router-link>
-                      </li>
-                    </div>
+                    
                   </ul>
                 </li>
                 <!-- Sección: NOTIFICACIONES -->

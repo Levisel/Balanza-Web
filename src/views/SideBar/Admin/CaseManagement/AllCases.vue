@@ -76,7 +76,15 @@ const fetchAllCases = async () => {
     // Convert date strings to Date objects if necessary for filtering/sorting
     cases.value = data.map(caseItem => ({
         ...caseItem,
-        Init_Date_Obj: new Date(caseItem.Init_Date) // Create a Date object version
+        Init_Date_Obj: new Date(caseItem.Init_Date), // Create a Date object version
+        Internal_User: {
+            ...caseItem.Internal_User,
+            FullName: `${caseItem.Internal_User.Internal_Name} ${caseItem.Internal_User.Internal_LastName}`.trim()
+        },
+        User: {
+            ...caseItem.User,
+            FullName: `${caseItem.User.User_FirstName} ${caseItem.User.User_LastName}`.trim()
+        }
     }));
     console.log("Datos de la API (Todos los Casos):", cases.value);
   } catch (error) {
@@ -96,9 +104,9 @@ const defaultFilters = {
   Init_Code: { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.STARTS_WITH }] },
   Init_Date_Obj: { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.DATE_IS }] },
   Init_Subject: { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.STARTS_WITH }] },
-  'Internal_User.Name': { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.CONTAINS }] },
+  'Internal_User.FullName': { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.CONTAINS }] },
   User_ID: { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.STARTS_WITH }] },
-  'User.Name': { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.CONTAINS }] },
+  'User.FullName': { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.CONTAINS }] },
   Init_Service: { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.STARTS_WITH }] },
 };
 
@@ -265,18 +273,17 @@ onMounted(() => {
 
       <!-- Creado Por -->
       <Column
-        field="Internal_User.Name"
+        field="Internal_User.FullName"
         header="Creado Por"
         sortable
-        :sortField="'Internal_User.Internal_Name'" 
+        filterField="Internal_User.FullName"
         style="min-width: 14rem"
-        filterField="Internal_User.Name"
       >
         <template #body="{ data }">
-          {{ data.Internal_User.Internal_Name }} {{ data.Internal_User.Internal_LastName }}
+          {{ data.Internal_User.FullName }}
         </template>
         <template #filter="{ filterModel, filterCallback }">
-          <InputText v-model="filterModel.value" @input="filterCallback()" type="text" placeholder="Buscar por creador" />
+          <InputText v-model="filterModel.value" @input="filterCallback()" type="text" placeholder="Buscar por nombre completo" />
         </template>
       </Column>
 
@@ -297,19 +304,18 @@ onMounted(() => {
       </Column>
 
        <!-- Nombre y Apellido del Usuario -->
-       <Column
-        field="User.Name"
+      <Column
+        field="User.FullName"
         header="Nombre Usuario"
         sortable
-        :sortField="'User.User_FirstName'" 
+        filterField="User.FullName"
         style="min-width: 14rem"
-        filterField="User.Name"
       >
         <template #body="{ data }">
-          {{ data.User.User_FirstName }} {{ data.User.User_LastName }}
+          {{ data.User.FullName }}
         </template>
         <template #filter="{ filterModel, filterCallback }">
-          <InputText v-model="filterModel.value" @input="filterCallback()" type="text" placeholder="Buscar por nombre usuario" />
+          <InputText v-model="filterModel.value" @input="filterCallback()" type="text" placeholder="Buscar por nombre completo" />
         </template>
       </Column>
 
