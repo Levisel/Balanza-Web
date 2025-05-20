@@ -156,7 +156,7 @@ const onFormSubmit = async ({ valid }: { valid: boolean }) => {
         <div class="-mt-6">
           <router-link to="/login/forgot-password" draggable="false" v-ripple>
             <span class="font-medium text-sm text-blue-800 hover:text-blue-400"
-              >¿Haz olvidado tu contraseña?</span
+              >¿Has olvidado tu contraseña?</span
             >
           </router-link>
         </div>
