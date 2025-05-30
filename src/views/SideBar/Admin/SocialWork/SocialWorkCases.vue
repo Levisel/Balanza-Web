@@ -16,6 +16,19 @@
         class="flex-grow px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
       />
     </div>
+    
+    <!-- Status Filter Buttons -->
+    <div class="mb-6 flex flex-wrap justify-center items-center space-x-2 sm:space-x-4">
+      <button
+        v-for="statusObj in dynamicFilterStatuses"
+        :key="statusObj.value"
+        @click="selectedStatus = statusObj.value"
+        :class="[
+          'px-4 py-2 rounded-lg text-sm font-medium transition-colors',
+          selectedStatus === statusObj.value ? 'bg-[#164284] text-white shadow-md' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+        ]"
+      >{{ statusObj.label }}</button>
+    </div>
 
     <!-- Loading Indicator -->
     <div v-if="loading" class="flex justify-center my-8">
@@ -237,6 +250,14 @@ const router = useRouter();
 const searchName = ref('');
 const searchCedula = ref('');
 
+// Status filter state
+const selectedStatus = ref('Todos'); // Default to 'Todos'
+
+const dynamicFilterStatuses = computed(() => {
+  const statuses = availableCaseStatuses.value.map(status => ({ label: status.Case_Status_Name, value: status.Case_Status_Name }));
+  return [{ label: 'Todos', value: 'Todos' }, ...statuses];
+});
+
 // Status change confirmation dialog states
 const showConfirmDialog = ref(false);
 const pendingStatusChange = ref<SocialWorkCase | null>(null);
@@ -347,14 +368,22 @@ const updateSocialWorkStatus = async (processNumber: string, observations: strin
 // Filtered cases based on search
 const filteredCases = computed(() => {
   return casos.value.filter(
-    (caso) =>
-      `${caso.User_FirstName} ${caso.User_LastName}`
+    (caso) => {
+      const matchesName = `${caso.User_FirstName} ${caso.User_LastName}`
         .toLowerCase()
-        .includes(searchName.value.toLowerCase()) &&
-      (caso.User_ID || '')
+        .includes(searchName.value.toLowerCase());
+      const matchesCedula = (caso.User_ID || '')
         .toLowerCase()
-        .includes(searchCedula.value.toLowerCase())
-  );
+        .includes(searchCedula.value.toLowerCase());
+
+      // Normalize SW_Status for filtering (treat null/empty as 'Pendiente')
+      const currentCaseActualStatus = caso.SW_Status || 'Pendiente';
+      
+      const matchesStatus = selectedStatus.value === 'Todos' || 
+                            currentCaseActualStatus === selectedStatus.value;
+      
+      return matchesName && matchesCedula && matchesStatus;
+    });
 });
 
 // Open specific case
