@@ -9,6 +9,7 @@ import Button from 'primevue/button';
 import TabView from 'primevue/tabview';
 import TabPanel from 'primevue/tabpanel';
 import Paginator, { type PageState } from 'primevue/paginator'; 
+import { useNotificationStore } from '@/stores/notifications';  
 
 interface Case {
   Internal_ID: string;
@@ -26,6 +27,11 @@ interface Student {
   Internal_ID: string;
   Internal_Name: string;
   Internal_LastName: string;
+}
+
+interface AssignedCase {
+  Init_Code: string; 
+  assignedTo: string; 
 }
 
 export default defineComponent({
@@ -56,6 +62,7 @@ export default defineComponent({
     const selectedCaseToReassign = ref<Case | null>(null);
     const selectedStudentToReassign = ref<string | null>(null);
     const reassignObservation = ref<string>('');
+    const notificationStore = useNotificationStore(); // Store para notificaciones
 
     // --- ESTADO DE PAGINACIÓN ---
     const rowsPerPage = ref<number>(10); // Número de filas por página
@@ -252,6 +259,21 @@ const filteredAssignedCases = computed(() =>
           { headers: { 'internal-id': authStore.user.id } }
         );
 
+        // Find the student's name from the `students` array
+        const assignedStudent = students.value.find(student => student.Internal_ID === caso.assignedTo);
+        const assignedStudentName = assignedStudent
+          ? `${assignedStudent.Internal_Name} ${assignedStudent.Internal_LastName}`
+          : 'Estudiante no encontrado';
+
+        // Add a notification to the store
+        notificationStore.addNotification({
+          id: Date.now(), // Unique ID for the notification
+          mensaje: `El caso ${caso.Init_Code} te ha sido asignado.`,
+          fecha: new Date().toISOString(),
+          leida: false,
+          userId: caso.assignedTo,
+        });
+
         showNotification.value = true;
         notificationType.value = 'success';
         notificationTitle.value = 'Asignación exitosa';
@@ -301,6 +323,23 @@ const filteredAssignedCases = computed(() =>
           { area: selectedArea.value },
           { headers: { 'internal-id': authStore.user.id } }
         );
+
+        // // Find the student's name from the `students` array
+        // const assignedStudent = students.value.find(student => student.Internal_ID === caso.assignedTo);
+        // const assignedStudentName = assignedStudent
+        //   ? `${assignedStudent.Internal_Name} ${assignedStudent.Internal_LastName}`
+        //   : 'Estudiante no encontrado';
+
+        // Add a notification for the automatic assignment
+        response.data.assignedCases.forEach((assignedCase:AssignedCase) => {
+          notificationStore.addNotification({
+            id: Date.now(),
+            mensaje: `El caso ${assignedCase.Init_Code} ha sido asignado automáticamente.`,
+            fecha: new Date().toISOString(),
+            leida: false,
+            userId: assignedCase.assignedTo, // Associate with the assigned student's ID
+          });
+        });
 
         showNotification.value = true;
         notificationType.value = 'success';
@@ -381,6 +420,20 @@ const filteredAssignedCases = computed(() =>
                     headers: { 'internal-id': authStore.user.id },
                 }
             );
+            // Find the new student's name
+            const reassignedStudent = students.value.find(student => student.Internal_ID === selectedStudentToReassign.value);
+            const reassignedStudentName = reassignedStudent
+              ? `${reassignedStudent.Internal_Name} ${reassignedStudent.Internal_LastName}`
+              : 'Estudiante no encontrado';
+
+            // Add a notification for the reassignment
+            notificationStore.addNotification({
+              id: Date.now(),
+              mensaje: `El caso ${initCode} ha sido reasignado a ${reassignedStudentName}.`,
+              fecha: new Date().toISOString(),
+              leida: false,
+              userId: selectedStudentToReassign.value, // ID del nuevo estudiante asignado
+            });
 
             // --- Notificaciones y recarga (sin cambios) ---
             showNotification.value = true;

@@ -421,10 +421,14 @@
                   class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   :disabled="isFormLocked"
                 >
-                  <option value="propia">Vivienda propia</option>
-                  <option value="arrendada">Vivienda arrendada</option>
-                  <option value="prestada">Familiar</option>
-                  <option value="otro">Otro</option>
+                  <option value="">Seleccione</option>
+                  <option 
+                    v-for="type in housingTypes" 
+                    :key="type.id" 
+                    :value="type.name"
+                  >
+                    {{ type.name }}
+                  </option>
                 </select>
               </div>
             </div>
@@ -460,11 +464,13 @@
                   :disabled="isFormLocked"
                 >
                   <option value="">Seleccione</option>
-                  <option value="Soltero/a">Soltero/a</option>
-                  <option value="Casado/a">Casado/a</option>
-                  <option value="Unión libre">Unión libre</option>
-                  <option value="Divorciado/a">Divorciado/a</option>
-                  <option value="Viudo/a">Viudo/a</option>
+                  <option 
+                    v-for="status in civilStatuses" 
+                    :key="status.id" 
+                    :value="status.name"
+                  >
+                    {{ status.name }}
+                  </option>
                 </select>
               </div>
               <div class="form-group">
@@ -628,8 +634,11 @@ export default {
       },
       isLoading: false,
       error: null,
-      notasModalVisible: false,  // Added this missing state variable
-      selectedMemberIndex: null  // Added this missing state variable
+      notasModalVisible: false, 
+      selectedMemberIndex: null,  
+      housingTypes: [],
+      civilStatuses: [],
+      toast
     };
   },
   computed: {
@@ -645,21 +654,101 @@ export default {
     } else {
       this.error = 'Faltan parámetros en la URL.';
     }
+
+    //Fetch dropdown options from the API
+    await this.fetchHousingTypes();
+    await this.fetchCivilStatuses();
   },
   methods: {
+    async fetchHousingTypes() {
+      try {
+        const response = await fetch('http://localhost:3000/type-of-housing'
+          , {credentials: 'include',}
+        );
+        if (!response.ok) throw new Error('Error fetching housing types');
+        
+        const data = await response.json();
+        console.log('Raw housing types response:', data);
+        
+        // Filter to only include items where Type_Of_Housing_Status is true
+        // AND map the API properties to what the template expects
+        this.housingTypes = data
+          .filter(item => item.Type_Of_Housing_Status === true)
+          .map(item => ({
+            id: item.Type_Of_Housing_ID,
+            name: item.Type_Of_Housing_Name
+          }));
+        
+        console.log('Transformed housing types:', this.housingTypes);
+      } catch (error) {
+        console.error('Error in fetchHousingTypes:', error);
+      }
+    },
+    async fetchCivilStatuses() {
+      try {
+        const response = await fetch('http://localhost:3000/civil-statuses'
+          , {credentials:'include'}
+        );
+        if (!response.ok) throw new Error('Error fetching civil statuses');
+        
+        const data = await response.json();
+        console.log('Raw civil statuses response:', data);
+        
+        // Filter to only include items where Civil_Status_Status is true
+        // AND map the API properties to what the template expects
+        this.civilStatuses = data
+          .filter(item => item.Civil_Status_Status === true)
+          .map(item => ({
+            id: item.Civil_Status_ID,
+            name: item.Civil_Status_Name
+          }));
+        
+        console.log('Transformed civil statuses:', this.civilStatuses);
+      } catch (error) {
+        console.error('Error in fetchCivilStatuses:', error);
+      }
+    },
     validatePercentage() {
       if (this.caso.discapacidad.porcentaje > 100) {
         this.caso.discapacidad.porcentaje = 100; // Cap the value at 100
+        this.toast.add({
+          severity: "warn",
+          summary: "Porcentaje ajustado",
+          detail: "El porcentaje no puede ser mayor a 100.",
+          life: 3000,
+        });
       } else if (this.caso.discapacidad.porcentaje < 0) {
         this.caso.discapacidad.porcentaje = 0; // Ensure the value is not negative
+        this.toast.add({
+          severity: "warn",
+          summary: "Porcentaje ajustado",
+          detail: "El porcentaje no puede ser negativo.",
+          life: 3000,
+        });
       }
     },
     validateID(ID) {
-      if (!/^\d{10}$/.test(ID)) return false; // Only allow 10 numeric digits
+      if (!/^\d{10}$/.test(ID)) {
+        this.toast.add({
+          severity: "error",
+          summary: "C.I. inválido",
+          detail: "El C.I. debe tener exactamente 10 dígitos numéricos.",
+          life: 3000,
+        });
+        return false;
+      }
 
       const digits = ID.split("").map(Number);
       const province = parseInt(ID.substring(0, 2), 10);
-      if (province < 1 || province > 24) return false; // Validate province
+      if (province < 1 || province > 24) {
+        this.toast.add({
+          severity: "error",
+          summary: "C.I. inválido",
+          detail: "El código de provincia en el C.I. no es válido.",
+          life: 3000,
+        });
+        return false;
+      }
 
       let suma = 0;
       for (let i = 0; i < 9; i++) {
@@ -669,7 +758,25 @@ export default {
       }
 
       const digitoVerificador = (10 - (suma % 10)) % 10;
-      return digitoVerificador === digits[9];
+      const isValid = digitoVerificador === digits[9];
+
+      if (isValid) {
+        this.toast.add({
+          severity: "success",
+          summary: "C.I. válido",
+          detail: "El número de C.I. es válido.",
+          life: 3000,
+        });
+      } else {
+        this.toast.add({
+          severity: "error",
+          summary: "C.I. inválido",
+          detail: "El número de C.I. no es válido.",
+          life: 3000,
+        });
+      }
+
+      return isValid;
     },
     openNotasModal(index) {
     this.selectedMemberIndex = index; // Set the selected member index
@@ -693,11 +800,16 @@ export default {
     });
     },
     eliminarMiembro(index) {
-    // Confirm before deleting the member
-    if (confirm("¿Está seguro de que desea eliminar este miembro?")) {
-      this.caso.grupoConvivencia.splice(index, 1);
-    }
-  },
+      if (confirm("¿Está seguro de que desea eliminar este miembro?")) {
+        this.caso.grupoConvivencia.splice(index, 1);
+        this.toast.add({
+          severity: "info",
+          summary: "Miembro eliminado",
+          detail: "El miembro ha sido eliminado del grupo de convivencia.",
+          life: 3000,
+        });
+      }
+    },
     irATrabajoSocialCasos() {
       this.$router.push('/TrabajoSocialCasos');
     },
@@ -707,23 +819,27 @@ export default {
       this.error = null;
 
       // Fetch case details from the API using the query parameters
-      const response = await fetch(`http://localhost:3000/social-work/${casoId}`);
+      const response = await fetch(`http://localhost:3000/social-work/${casoId}`
+        , {credentials: 'include'}
+      );
 
       if (!response.ok) {
         throw new Error('Error al cargar el caso');
       }
 
       const data = await response.json();
-      console.log("Datos recibidos del backend:", data); // Add logging for debugging
+      console.log("Datos recibidos del backend:", data); 
 
       // Fetch living group members
       let grupoConvivencia = [];
       try {
-        const livingGroupResponse = await fetch(`http://localhost:3000/living-groups/process/${casoId}`);
+        const livingGroupResponse = await fetch(`http://localhost:3000/living-groups/process/${casoId}`
+          , {credentials: 'include'}
+        );
         if (livingGroupResponse.ok) {
           const livingGroupData = await livingGroupResponse.json();
           grupoConvivencia = livingGroupData.map(member => ({
-            id: member.LG_LivingGroup_ID, // Store the ID for later reference
+            id: member.LG_LivingGroup_ID, 
             nombre: member.LG_Name,
             edad: member.LG_Age,
             parentesco: member.LG_Relationship,
@@ -780,9 +896,7 @@ export default {
         casoConocidoAnteriormente: data.SW_PreviouslyKnownCase || '',
         relatoHechos: data.SW_Notes || '',
         observaciones: data.SW_Observations || '',
-        // Add Internal_ID for auditing purposes
         Internal_ID: internalId,
-        // Add SW_Status to control locking
         SW_Status: data.SW_Status || ''
       };
 
@@ -794,13 +908,17 @@ export default {
       this.isLoading = false;
     }
   },
-    // Improved implementation for updating living group members
+
   async actualizarCaso() {
-  // First check if the form is locked and prevent submission
   if (this.isFormLocked) {
-    alert("No se pueden realizar cambios en un caso archivado.");
-    return;
-  }
+        this.toast.add({
+          severity: "warn",
+          summary: "Caso archivado",
+          detail: "No se pueden realizar cambios en un caso archivado.",
+          life: 3000,
+        });
+        return;
+    }
 
   try {
     this.isLoading = true;
@@ -850,6 +968,7 @@ export default {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(socialWorkData),
+        credentials: 'include',
       });
 
       if (!response.ok) {
@@ -863,7 +982,9 @@ export default {
       // Now handle the living group members
       console.log("Fetching existing living group members...");
       // First, fetch the existing living group members for this process
-      const livingGroupResponse = await fetch(`http://localhost:3000/living-groups/process/${this.caso.numeroProceso}`);
+      const livingGroupResponse = await fetch(`http://localhost:3000/living-groups/process/${this.caso.numeroProceso}`
+        , {credential: 'include'}
+      );
       let existingMembers = [];
       
       if (livingGroupResponse.ok) {
@@ -896,6 +1017,7 @@ export default {
         if (member.id) {
           console.log(`Updating existing member: ${member.nombre} (ID: ${member.id})`);
           const updatePromise = fetch(`http://localhost:3000/living-groups/${member.id}`, {
+            credentials: 'include',
             method: "PUT",
             headers: {
               "Content-Type": "application/json",
@@ -910,6 +1032,7 @@ export default {
               console.warn(`Member ${member.id} not found, will be created instead`);
               // Create a new record instead
               return fetch(`http://localhost:3000/living-groups`, {
+                credentials: 'include',
                 method: "POST",
                 headers: {
                   "Content-Type": "application/json",
@@ -941,6 +1064,7 @@ export default {
           // This is a new member, so create it
           console.log(`Creating new member: ${member.nombre}`);
           const createPromise = fetch(`http://localhost:3000/living-groups`, {
+            credentials: 'include',
             method: "POST",
             headers: {
               "Content-Type": "application/json",
@@ -971,6 +1095,7 @@ export default {
       for (const [memberId, member] of existingMembersMap.entries()) {
         console.log(`Deleting removed member: ${member.LG_Name} (ID: ${memberId})`);
         const deletePromise = fetch(`http://localhost:3000/living-groups/${memberId}`, {
+          credential: 'include',
           method: "DELETE",
           headers: {
             "Content-Type": "application/json",
@@ -995,16 +1120,26 @@ export default {
       await Promise.all(deletePromises);
       console.log("All deleted members processed");
 
-      // Show success notification
-      alert("Caso actualizado correctamente");
+      // Perform the update logic here...
+
+      this.toast.add({
+          severity: "success",
+          summary: "Caso actualizado",
+          detail: "El caso ha sido actualizado correctamente.",
+          life: 3000,
+        });
 
       // Navigate back to the cases list
       this.$router.push("/TrabajoSocialCasos");
     } catch (error) {
       console.error("Error al actualizar el caso:", error);
 
-      // Show error notification
-      alert(error.message || "No se pudo actualizar el caso. Por favor intente de nuevo.");
+      this.toast.add({
+          severity: "error",
+          summary: "Error al actualizar",
+          detail: error.message || "No se pudo actualizar el caso. Por favor intente de nuevo.",
+          life: 3000,
+        });
     } finally {
       this.isLoading = false;
     }
@@ -1026,7 +1161,6 @@ watch: {
 </script>
   
 
-<!-- Add this CSS to your component's style section -->
 <style scoped>
 .form-locked {
   opacity: 0.85;
@@ -1056,5 +1190,3 @@ watch: {
   color: #666 !important;
 }
 </style>
-
-<!-- In your template, add a class binding to your form container -->

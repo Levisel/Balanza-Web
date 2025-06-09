@@ -99,7 +99,8 @@
         :key="diaObj.nombre"
         class="flex items-center gap-4 mb-2"
       >
-        <span class="w-24 font-bold">{{ diaObj.nombre }}</span>
+        <span class="w-24 font-bold">{{ diasTraducidos[diaObj.nombre] }}</span>
+
 
         <!-- Dropdown con opciones virtuales filtradas (solo turno opuesto al presencial) -->
         <Dropdown
@@ -310,6 +311,14 @@ const diasSemana = ref([
   { nombre: 'Thursday', horarios: [] },
   { nombre: 'Friday', horarios: [] }
 ]);
+
+const diasTraducidos: Record<string, string> = {
+  Monday: 'Lunes',
+  Tuesday: 'Martes',
+  Wednesday: 'Miércoles',
+  Thursday: 'Jueves',
+  Friday: 'Viernes'
+}
 
 
 // Horario presencial (informativo y para filtrar)

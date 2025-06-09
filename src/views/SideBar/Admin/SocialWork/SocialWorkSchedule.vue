@@ -7,13 +7,7 @@
         <!-- Filtros y Acciones -->
         <div class="bg-white p-4 rounded-lg shadow-sm mb-6 flex flex-wrap justify-between items-center">
           <div class="flex space-x-4 mb-2 sm:mb-0">
-            <select v-model="filtroArea" class="rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
-              <option value="">Todas las áreas</option>
-              <option value="niñez">Niñez</option>
-              <option value="movilidad">Movilidad Humana</option>
-              <option value="civil">Civil</option>
-              <option value="penal">Penal</option>
-            </select>
+             <p class="text-sm text-gray-700">Filtrar por estado de contacto:</p>
             
             <select v-model="filtroEstado" class="rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
               <option value="">Todos los estados</option>
@@ -46,11 +40,10 @@
                    class="min-h-16 p-1 border border-gray-200 rounded-md relative">
                 <div v-for="cita in getCitasEnHorario(dia.valor, hora)" :key="cita.id"
                      :class="[
-                       'text-xs p-1 rounded cursor-pointer mb-1',
-                       getColorClaseCita(cita)
+                       'text-xs p-1 rounded cursor-pointer mb-1 bg-indigo-100 text-indigo-800'
                      ]"
                      @click="seleccionarCita(cita)">
-                  {{ cita.cliente }} - {{ cita.area }}
+                  {{ cita.cliente }}
                 </div>
               </div>
             </div>
@@ -65,7 +58,6 @@
               <thead class="bg-gray-50">
                 <tr>
                   <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cliente</th>
-                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Área</th>
                   <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha Cita</th>
                   <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Último Contacto</th>
                   <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
@@ -77,7 +69,6 @@
                     :class="{'bg-yellow-50': diasSinContacto(cita) > 10 && diasSinContacto(cita) <= 30, 
                              'bg-red-50': diasSinContacto(cita) > 30}">
                   <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ cita.cliente }}</td>
-                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ cita.area }}</td>
                   <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ formatearFechaCompleta(cita.fecha) }}</td>
                   <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     {{ cita.ultimoContacto ? formatearFechaCompleta(cita.ultimoContacto) : 'Sin contacto' }}
@@ -101,6 +92,10 @@
                             class="text-gray-600 hover:text-gray-900">
                       Ver Detalles
                     </button>
+                    <button @click="confirmarEliminarCita(cita.id)"
+                            class="text-red-600 hover:text-red-900 ml-3">
+                      Eliminar Cita
+                    </button>
                   </td>
                 </tr>
               </tbody>
@@ -119,18 +114,7 @@
               <input v-model="nuevaCita.cliente" type="text" required
                      class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
             </div>
-            
-            <div class="mb-4">
-              <label class="block text-sm font-medium text-gray-700 mb-1">Área</label>
-              <select v-model="nuevaCita.area" required
-                      class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
-                <option value="niñez">Niñez</option>
-                <option value="movilidad">Movilidad Humana</option>
-                <option value="civil">Civil</option>
-                <option value="penal">Penal</option>
-              </select>
-            </div>
-            
+          
             <div class="grid grid-cols-2 gap-4 mb-4">
               <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">Fecha</label>
@@ -184,11 +168,6 @@
             <div>
               <h3 class="text-sm font-medium text-gray-500">Cliente</h3>
               <p class="mt-1">{{ citaSeleccionada.cliente }}</p>
-            </div>
-            
-            <div>
-              <h3 class="text-sm font-medium text-gray-500">Área</h3>
-              <p class="mt-1">{{ citaSeleccionada.area }}</p>
             </div>
             
             <div class="grid grid-cols-2 gap-4">
@@ -245,6 +224,10 @@
                     class="px-4 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-md">
               Registrar Contacto
             </button>
+            <button @click="confirmarEliminarCita(citaSeleccionada.id); citaSeleccionada = null"
+                    class="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-md">
+              Eliminar Cita
+            </button>
           </div>
         </div>
       </div>
@@ -288,7 +271,7 @@
   </template>
   
   <script lang="ts">
-  import { defineComponent, ref, computed } from 'vue';
+  import { defineComponent, ref, computed, onMounted, watch } from 'vue';
   
   interface Contacto {
     fecha: string;
@@ -298,7 +281,6 @@
   interface Cita {
     id: number;
     cliente: string;
-    area: string;
     fecha: string;
     hora: number;
     notas?: string;
@@ -310,67 +292,9 @@
     name: 'GestionCitas',
     setup() {
       // Estado
-      const citas = ref<Cita[]>([
-        {
-          id: 1,
-          cliente: 'Ana Martínez',
-          area: 'niñez',
-          fecha: '2025-02-20',
-          hora: 9,
-          notas: 'Custodia de menor',
-          ultimoContacto: '2025-02-18',
-          historialContacto: [
-            { fecha: '2025-02-18', notas: 'Llamada telefónica para confirmar cita' }
-          ]
-        },
-        {
-          id: 2,
-          cliente: 'Carlos Vega',
-          area: 'civil',
-          fecha: '2025-02-21',
-          hora: 11,
-          notas: 'Contrato de arrendamiento',
-          ultimoContacto: '2025-02-01',
-          historialContacto: [
-            { fecha: '2025-02-01', notas: 'Contacto inicial y agendamiento' }
-          ]
-        },
-        {
-          id: 3,
-          cliente: 'María López',
-          area: 'movilidad',
-          fecha: '2025-02-22',
-          hora: 10,
-          notas: 'Solicitud de refugio',
-        },
-        {
-          id: 4,
-          cliente: 'Juan Pérez',
-          area: 'penal',
-          fecha: '2025-02-19',
-          hora: 14,
-          notas: 'Denuncia por robo',
-          ultimoContacto: '2025-01-15',
-          historialContacto: [
-            { fecha: '2025-01-15', notas: 'Primera entrevista' }
-          ]
-        },
-        {
-          id: 5,
-          cliente: 'Sofía Ramírez',
-          area: 'niñez',
-          fecha: '2025-02-21',
-          hora: 15,
-          notas: 'Alimentos',
-          ultimoContacto: '2025-02-19',
-          historialContacto: [
-            { fecha: '2025-02-19', notas: 'Actualización de documentos' }
-          ]
-        }
-      ]);
+      const citas = ref<Cita[]>([]);
   
       // Filtros
-      const filtroArea = ref('');
       const filtroEstado = ref('');
   
       // Modales
@@ -382,7 +306,6 @@
       // Formularios
       const nuevaCita = ref<Omit<Cita, 'id'>>({
         cliente: '',
-        area: 'civil',
         fecha: '',
         hora: 9,
         notas: ''
@@ -415,20 +338,18 @@
       // Filtrado de citas
       const citasFiltradas = computed(() => {
         return citas.value.filter(cita => {
-          const cumpleFiltroArea = !filtroArea.value || cita.area === filtroArea.value;
-          
-          if (!filtroEstado.value) return cumpleFiltroArea;
-          
+          if (!filtroEstado.value) return true;
+
           const diasSinContactar = diasSinContacto(cita);
           if (filtroEstado.value === 'agendada') {
-            return cumpleFiltroArea && diasSinContactar <= 10;
+            return  diasSinContactar <= 10;
           } else if (filtroEstado.value === 'pendiente') {
-            return cumpleFiltroArea && diasSinContactar > 10;
+            return diasSinContactar > 10;
           } else if (filtroEstado.value === 'contactada') {
-            return cumpleFiltroArea && cita.ultimoContacto;
+            return cita.ultimoContacto;
           }
           
-          return cumpleFiltroArea;
+          return true;
         });
       });
   
@@ -470,18 +391,7 @@
         if (dias > 10) return 'Alerta: +10 días sin contacto';
         return 'Al día';
       };
-  
-      const getColorClaseCita = (cita: Cita): string => {
-        const areaColors: Record<string, string> = {
-          'niñez': 'bg-blue-100 text-blue-800',
-          'movilidad': 'bg-green-100 text-green-800',
-          'civil': 'bg-purple-100 text-purple-800',
-          'penal': 'bg-orange-100 text-orange-800'
-        };
-        
-        return areaColors[cita.area] || 'bg-gray-100 text-gray-800';
-      };
-  
+    
       const seleccionarCita = (cita: Cita): void => {
         citaSeleccionada.value = {...cita};
       };
@@ -496,7 +406,6 @@
         // Resetear formulario
         nuevaCita.value = {
           cliente: '',
-          area: 'civil',
           fecha: '',
           hora: 9,
           notas: ''
@@ -513,7 +422,18 @@
         };
         mostrarModalRegistrarContacto.value = true;
       };
-  
+      const eliminarCita = (citaId: number): void => {
+        citas.value = citas.value.filter(c => c.id !== citaId);
+        if (citaSeleccionada.value && citaSeleccionada.value.id === citaId) {
+          citaSeleccionada.value = null;
+        }
+      };
+
+      const confirmarEliminarCita = (citaId: number): void => {
+        if (window.confirm('¿Estás seguro de que deseas eliminar esta cita?')) {
+          eliminarCita(citaId);
+        }
+      };
       const guardarContacto = (): void => {
         // Buscar la cita original en el array
         const index = citas.value.findIndex(c => c.id === citaContacto.value.id);
@@ -539,11 +459,21 @@
         
         mostrarModalRegistrarContacto.value = false;
       };
-  
+      // Persistencia con localStorage
+      onMounted(() => {
+        const citasGuardadas = localStorage.getItem('citasAgendadasSocialWork');
+        if (citasGuardadas) {
+          citas.value = JSON.parse(citasGuardadas);
+        }
+      });
+
+      watch(citas, (nuevasCitas) => {
+        localStorage.setItem('citasAgendadasSocialWork', JSON.stringify(nuevasCitas));
+      }, { deep: true });
+
       return {
         // Estado
         citas,
-        filtroArea,
         filtroEstado,
         mostrarModalAgendarCita,
         mostrarModalRegistrarContacto,
@@ -561,11 +491,12 @@
         getCitasEnHorario,
         diasSinContacto,
         estadoContactoTexto,
-        getColorClaseCita,
         seleccionarCita,
         guardarCita,
         registrarContacto,
-        guardarContacto
+        guardarContacto,
+        eliminarCita,
+        confirmarEliminarCita
       };
     }
   });
