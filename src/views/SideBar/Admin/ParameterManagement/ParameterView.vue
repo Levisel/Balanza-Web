@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from "vue";
+import { useRouter, useRoute } from "vue-router";
 import axios from "axios";
 import ConfirmDialog from "primevue/confirmdialog";
 import DataTable from "primevue/datatable";
@@ -19,6 +20,15 @@ import { useConfirm } from "primevue/useconfirm";
 
 // PrimeVue Toast para notificaciones
 const toast = useToast();
+const router = useRouter();
+const route = useRoute();
+
+onMounted(() => {
+  if (route.query.tabla === "Profiles") {
+    selectedTableLabel.value = tableNames.Profiles;
+    loadData();
+  }
+});
 
 const isValueSelected = computed(() => !!selectedTableLabel.value);
 
@@ -194,6 +204,10 @@ const resetSelectedRecord = () => {
   selectedRecord.value = {};
 };
 
+function goToProfilePermissions() {
+  router.push({ name: "RoleView" }); // Cambia el nombre por el de tu ruta destino
+}
+
 // Mapeo de nombres amigables para el select
 const tableNames: { [key in keyof typeof tableConfig]: string } = {
   //USUARIO
@@ -228,7 +242,7 @@ const tableNames: { [key in keyof typeof tableConfig]: string } = {
   Derived_By: "Derivado por",
   //CONTROL DE INGRESOS
   Schedule: "Horario",
-  Profiles: "Perfiles",
+  Profiles: "Perfiles/Roles",
   Period_Type: "Tipo de Período",
   Practical_Hours: "Horas Prácticas",
   //EXTRA
@@ -240,22 +254,22 @@ const tableNames: { [key in keyof typeof tableConfig]: string } = {
 
 // Mapeo de campos de ID según la tabla
 const idFieldMap: { [key in keyof typeof tableConfig]: string } = {
-  Vulnerable_Situation: "Vulnerable_Situation_Id",
-  Catastrophic_Illness: "Catastrophic_Illness_Id",
-  Disability: "Disability_Id",
-  Protocols: "Protocol_Id",
-  Case_Status: "Case_Status_Id",
-  Type_Of_Attention: "Type_Of_Attention_Id",
-  Schedule: "Schedule_Id",
-  Profiles: "Profile_Id",
-  Occupations: "Occupation_Id",
-  Income_Level: "Income_Level_Id",
-  Family_Group: "Family_Group_Id",
-  Family_Income: "Family_Income_Id",
-  Type_Of_Housing: "Type_Of_Housing_Id",
-  Own_Assets: "Own_Assets_Id",
-  Pensioner: "Pensioner_Id",
-  Health_Insurance: "Health_Insurance_Id",
+  Vulnerable_Situation: "Vulnerable_Situation_ID",
+  Catastrophic_Illness: "Catastrophic_Illness_ID",
+  Disability: "Disability_ID",
+  Protocols: "Protocol_ID",
+  Case_Status: "Case_Status_ID",
+  Type_Of_Attention: "Type_Of_Attention_ID",
+  Schedule: "Schedule_ID",
+  Profiles: "Profile_ID",
+  Occupations: "Occupation_ID",
+  Income_Level: "Income_Level_ID",
+  Family_Group: "Family_Group_ID",
+  Family_Income: "Family_Income_ID",
+  Type_Of_Housing: "Type_Of_Housing_ID",
+  Own_Assets: "Own_Assets_ID",
+  Pensioner: "Pensioner_ID",
+  Health_Insurance: "Health_Insurance_ID",
   Ethnicity: "Ethnicity_ID",
   Academic_Instruction: "Academic_Instruction_ID",
   Number_Of_Attempts: "Number_Of_Attempts_ID",
@@ -493,8 +507,8 @@ const createData = async () => {
       toast.add({
         severity: "error",
         summary: "Error",
-        detail: "No se pudo crear el registro",
-        life: 3000,
+        detail: "No se pudo crear el registro, verifica que ese nombre no exista o que los datos sean correctos.",
+        life: 5000,
       });
     }
   }
@@ -576,7 +590,8 @@ const updateData = async () => {
             "Por favor, revisa que has hecho cambios antes de actualizar el registro.",
           life: 4000,
         });
-      } else {
+      } 
+      else {
         toast.add({
           severity: "error",
           summary: "Error",
@@ -642,17 +657,34 @@ const deleteData = async () => {
         });
         return;
       }
-      console.log("Eliminando registro con ID:", recordId);
       await axios.delete(`${urlMap[selectedTableKey.value]}/${recordId}`);
       await loadData();
-    } catch (error) {
-      console.error("Error al eliminar el dato:", error);
       toast.add({
-        severity: "error",
-        summary: "Error",
-        detail: "No se pudo eliminar el registro",
+        severity: "info",
+        summary: "Eliminado",
+        detail: "El registro se eliminó exitosamente.",
         life: 3000,
       });
+    } catch (error) {
+      if ((error as any).response?.status === 400) {
+        toast.add({
+          severity: "error",
+          summary: "Error",
+          detail:
+            "Existen usuarios asociados a este registro, no se puede eliminar.",
+          life: 5000,
+        });
+      }
+      else{
+        console.error("Error al eliminar el dato:", error);
+        toast.add({
+          severity: "error",
+          summary: "Error",
+          detail: "No se pudo eliminar el registro, verifica que no existan usuarios asociados de ser el caso.",
+          life: 3000,
+        });
+        }
+
     }
   }
 };
@@ -697,12 +729,6 @@ const deleteConfirm = (data: any) => {
     acceptProps: { label: "Eliminar", severity: "danger" },
     accept: async () => {
       await deleteData();
-      toast.add({
-        severity: "info",
-        summary: "Eliminado",
-        detail: "El registro se eliminó exitosamente.",
-        life: 3000,
-      });
     },
   });
 };
@@ -730,13 +756,23 @@ onMounted(() => {
         placeholder="Seleccione una tabla"
         @change="loadData"
       />
-      <Button
-        @click="createDialogVisible = true"
-        label="Crear"
-        icon="pi pi-plus-circle"
-        class="mb-4"
-        :disabled="!isValueSelected"
-      />
+      <div class="flex gap-2">
+        <Button
+          @click="createDialogVisible = true"
+          label="Crear"
+          icon="pi pi-plus-circle"
+          class="mb-4"
+          :disabled="!isValueSelected"
+        />
+        <Button
+          v-if="selectedTableLabel === tableNames.Profiles"
+          label="Gestionar Permisos"
+          icon="pi pi-wrench"
+          class="mb-4"
+          severity="help"
+          @click="goToProfilePermissions"
+        />
+      </div>
     </div>
 
     <div v-if="isValueSelected">

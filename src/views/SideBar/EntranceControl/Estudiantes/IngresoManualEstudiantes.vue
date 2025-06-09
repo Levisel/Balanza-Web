@@ -402,13 +402,6 @@ const onFormSubmit = async () => {
     </div>
 
     <div class="mt-6 text-center mb-10">
-      <Button
-      @click="$router.push('/ListadoEstudiantes')"
-      label="Regresar"
-      severity="contrast"
-       class="w-full md:w-auto bg-blue-600 hover:bg-blue-700 text-white mt-10 mr-10"
-       icon="pi pi-arrow-circle-left"
-      />
       
       <Button
         type="submit"

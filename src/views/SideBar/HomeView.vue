@@ -1,10 +1,55 @@
 <script setup lang="ts">
-import Card from "primevue/card";
-import Fieldset from "primevue/fieldset";
+import { ref, onMounted } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
+import { useAuthStore } from '@/stores/auth';
+import { Message } from 'primevue';
+import Card from 'primevue/card';
+
+
+const route = useRoute();
+const router = useRouter();
+const authStore = useAuthStore();
+
+const showAccessDeniedMessage = ref(false);
+const accessDeniedMessage = ref('');
+
+onMounted(() => {
+  if (route.query.error === 'access_denied') {
+    showAccessDeniedMessage.value = true;
+    accessDeniedMessage.value = 'No tienes permisos para acceder a la página solicitada';
+    
+    // Limpiar la query después de 5 segundos
+    setTimeout(() => {
+      showAccessDeniedMessage.value = false;
+      router.replace({ name: 'home' });
+    }, 5000);
+  }
+});
+
+const closeMessage = () => {
+  showAccessDeniedMessage.value = false;
+  router.replace({ name: 'home' });
+};
 </script>
 
 <template>
   <main>
+    <Message 
+      v-if="showAccessDeniedMessage" 
+      severity="warn" 
+      :closable="true" 
+      @close="closeMessage"
+      class="mb-1"
+    >
+      <div class="flex items-center gap-3">
+        <i class="pi pi-exclamation-triangle text-xl"></i>
+        <div>
+          <strong>Acceso Denegado</strong>
+          <p class="mt-1">{{ accessDeniedMessage }}</p>
+        </div>
+      </div>
+    </Message>
+
     <div class="flex flex-row flex-wrap">
       <!-- MISIÓN -->
       <div

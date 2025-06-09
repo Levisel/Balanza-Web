@@ -58,6 +58,9 @@ onMounted(async () => {
   }
 });
 
+const formErrors = ref<string[]>([]);
+const formErrors2 = ref<string[]>([]);
+
 const toast = useToast();
 
 const currentDateTime = new Date();
@@ -1307,6 +1310,88 @@ const isResettingConsultation = ref(false);
 
 const dialogVisible = ref(false);
 
+
+function validateUserRequiredFields() {
+  formErrors.value = [];
+  //Datos personales
+  if (!userIDType.value) formErrors.value.push("Tipo de ID");
+  if (!userID.value) formErrors.value.push("Número de ID");
+  if (!userFirstName.value) formErrors.value.push("Nombres");
+  if (!userLastName.value) formErrors.value.push("Apellidos");
+  if (!userGender.value) formErrors.value.push("Sexo");
+  if (!userBirthDate.value) formErrors.value.push("Fecha de nacimiento");
+  if (!userNationality.value) formErrors.value.push("Nacionalidad");
+  if (!userProvince.value) formErrors.value.push("Provincia");
+  if (!userCity.value) formErrors.value.push("Ciudad");
+
+  //Contacto y contacto de referencia
+  if (!userEmail.value) formErrors.value.push("Correo electrónico");
+  if (!userAddress.value) formErrors.value.push("Dirección");
+  if (!userSector.value) formErrors.value.push("Sector");
+
+  //Datos demográficos
+  if (!userAcademicInstruction.value)
+    formErrors.value.push("Instrucción académica");
+  if (!userProfession.value) formErrors.value.push("Profesión u ocupación");
+  if (!userMaritalStatus.value) formErrors.value.push("Estado civil");
+  if (userDependents.value === null || userDependents.value < 0)
+    formErrors.value.push("Cargas familiares");
+  if (!userIncomeLevel.value) formErrors.value.push("Nivel de ingresos");
+  if (!userFamilyIncome.value) formErrors.value.push("Ingreso familiar");
+  if (userEconomicActivePeople.value === null || userEconomicActivePeople.value < 0)
+    formErrors.value.push("Personas económicamente activas");
+  if (userFamilyGroup.value.length === 0)
+
+  //Datos socioeconómicos y de salud
+  if (!userOwnAssets.value || userOwnAssets.value.length === 0)
+    formErrors.value.push("Bienes propios");
+  if (!userHousingType.value) formErrors.value.push("Tipo de vivienda");
+  if (!userPensioner.value) formErrors.value.push("Pensionista");
+  if (!userHealthInsurance.value) formErrors.value.push("Seguro de salud");
+  if (!userVulnerableSituation.value)
+    formErrors.value.push("Situación de vulnerabilidad");
+
+  //FICHA TECNICA DE ASESORÍA
+
+  if (!initCaseStatus.value) formErrors.value.push("Estado del caso");
+  if (!initClientType.value) formErrors.value.push("Tipo de cliente");
+  if (!initSubject.value) formErrors.value.push("Materia");
+  if (!initTopic.value) formErrors.value.push("Tema");
+  if (!initService.value) formErrors.value.push("Servicio");
+  if (!initLawyer.value) formErrors.value.push("Abogado asignado");
+  if (!initReferral.value) formErrors.value.push("Derivado por");
+  if (!initNotes.value) formErrors.value.push("Notas");
+
+  return formErrors.value.length === 0;
+}
+
+function validateConsultationRequiredFields() {
+    formErrors2.value = [];
+
+    //FICHA TECNICA DE ASESORÍA
+
+  if (!initCaseStatus.value) formErrors2.value.push("Estado del caso");
+  if (!initClientType.value) formErrors2.value.push("Tipo de cliente");
+  if (!initSubject.value) formErrors2.value.push("Materia");
+  if (!initTopic.value) formErrors2.value.push("Tema");
+  if (!initService.value) formErrors2.value.push("Servicio");
+  if (!initLawyer.value) formErrors2.value.push("Abogado asignado");
+  if (!initReferral.value) formErrors2.value.push("Derivado por");
+  if (!initNotes.value) formErrors2.value.push("Notas");
+
+    return formErrors2.value.length === 0;
+}
+
+
+
+
+
+
+
+
+
+
+
 watch(userHasDisability, (newHasDisability: boolean) => {
   if (!newHasDisability || userDisability.value?.value === "No") {
     userDisabilityPercentage.value = 0;
@@ -1862,6 +1947,15 @@ const fetchActivities = async (initCode: string): Promise<void> => {
 //NEW CONSULTATION
 
 const createInitialConsultation = async () => {
+    if (!validateUserRequiredFields()) {
+      toast.add({
+        severity: "error",
+        summary: "Campos incompletos",
+        detail: "Por favor, completa todos los datos requeridos marcados con ''*''.",
+        life: 4000,
+      });
+      return;
+   }
   isCreateLoading.value = true;
   // Validar que existan campos obligatorios, por ejemplo, User_ID
   if (!userID.value) {
@@ -2088,6 +2182,18 @@ const cancelNewConsultation = async () => {
 };
 
 const newUserConsultation = async () => {
+
+  if (!validateConsultationRequiredFields()) {
+    toast.add({
+      severity: "error",
+      summary: "Campos incompletos",
+      detail: "Por favor, completa todos los datos requeridos marcados con ''*''.",
+      life: 4000,
+    });
+    return;
+  }
+
+
   // ✅ Agregar async aquí
   if (!userID.value) {
     toast.add({
@@ -3059,7 +3165,7 @@ const handleInitNotesChange = (event: EditorTextChangeEvent): void => {
           <div class="w-full max-w-md mx-auto">
             <div class="flex flex-col sm:flex-row gap-4">
               <!-- Select para Tipo ID -->
-              <div class="w-full sm:w-1/3">
+              <div class="w-full sm:w-7/20">
                 <FloatLabel variant="on" class="w-full">
                   <Select
                     v-model="userIDType"
@@ -3071,11 +3177,11 @@ const handleInitNotesChange = (event: EditorTextChangeEvent): void => {
                     :disabled="areInputsDisabled || doesUserExist"
                     @change="userID = ''"
                   />
-                  <label for="tipoID">Tipo ID</label>
+                  <label for="tipoID"><span class="text-red-500">* </span>Tipo ID</label>
                 </FloatLabel>
               </div>
               <!-- Input para Número de ID -->
-              <div class="w-full sm:w-2/3">
+              <div class="w-full sm:w-3/5">
                 <FloatLabel variant="on" class="w-full">
                   <InputText
                     id="userID"
@@ -3089,7 +3195,7 @@ const handleInitNotesChange = (event: EditorTextChangeEvent): void => {
                     @blur="() => checkIdSize()"
                     autocomplete="off"
                   />
-                  <label for="userID">Número de ID</label>
+                  <label for="userID"><span class="text-red-500">* </span>Número de ID</label>
                 </FloatLabel>
               </div>
             </div>
@@ -3120,7 +3226,7 @@ const handleInitNotesChange = (event: EditorTextChangeEvent): void => {
               class="w-full"
               :disabled="areInputsDisabled"
             />
-            <label for="userFirstName">Nombres</label>
+            <label for="userFirstName"><span class="text-red-500">* </span>Nombres</label>
           </FloatLabel>
           <!-- Apellidos -->
           <FloatLabel variant="on" class="w-full">
@@ -3131,7 +3237,7 @@ const handleInitNotesChange = (event: EditorTextChangeEvent): void => {
               class="w-full"
               :disabled="areInputsDisabled"
             />
-            <label for="userLastName">Apellidos</label>
+            <label for="userLastName"><span class="text-red-500">* </span>Apellidos</label>
           </FloatLabel>
           <!-- Sexo -->
           <FloatLabel variant="on" class="w-full">
@@ -3144,7 +3250,7 @@ const handleInitNotesChange = (event: EditorTextChangeEvent): void => {
               class="w-full"
               :disabled="areInputsDisabled"
             />
-            <label for="userGender">Sexo</label>
+            <label for="userGender"><span class="text-red-500">* </span>Sexo</label>
           </FloatLabel>
           <!-- Fecha de Nacimiento -->
           <FloatLabel variant="on" class="w-full">
@@ -3157,7 +3263,7 @@ const handleInitNotesChange = (event: EditorTextChangeEvent): void => {
               size="large"
               :disabled="areInputsDisabled"
             />
-            <label for="userBirthDate">Fecha de nacimiento</label>
+            <label for="userBirthDate"><span class="text-red-500">* </span>Fecha de nacimiento</label>
           </FloatLabel>
           <!-- Nacionalidad -->
           <FloatLabel variant="on" class="w-full">
@@ -3203,7 +3309,7 @@ const handleInitNotesChange = (event: EditorTextChangeEvent): void => {
                 </div>
               </template>
             </Select>
-            <label for="nacionalidad">País de origen</label>
+            <label for="nacionalidad"><span class="text-red-500">* </span>País de origen</label>
           </FloatLabel>
           <!-- Etnia -->
           <FloatLabel variant="on" class="w-full">
@@ -3218,7 +3324,7 @@ const handleInitNotesChange = (event: EditorTextChangeEvent): void => {
               resetFilterOnHide
               :disabled="areInputsDisabled"
             />
-            <label for="userEthnicity">Etnia</label>
+            <label for="userEthnicity"><span class="text-red-500">* </span>Etnia</label>
           </FloatLabel>
 
           <!-- Provincia -->
@@ -3234,7 +3340,7 @@ const handleInitNotesChange = (event: EditorTextChangeEvent): void => {
               class="w-full"
               :disabled="areInputsDisabled"
             />
-            <label for="userProvince">Provincia</label>
+            <label for="userProvince"><span class="text-red-500">* </span>Provincia</label>
           </FloatLabel>
 
           <!-- Ciudad -->
@@ -3250,7 +3356,7 @@ const handleInitNotesChange = (event: EditorTextChangeEvent): void => {
               class="w-full"
               :disabled="areInputsDisabled"
             />
-            <label for="userCity">Ciudad</label>
+            <label for="userCity"><span class="text-red-500">* </span>Ciudad</label>
           </FloatLabel>
         </div>
       </div>
@@ -3280,7 +3386,7 @@ const handleInitNotesChange = (event: EditorTextChangeEvent): void => {
               class="w-full md:w-100"
               :disabled="areInputsDisabled"
             />
-            <label for="userEmail">Correo Electrónico</label>
+            <label for="userEmail"><span class="text-red-500">* </span>Correo Electrónico</label>
           </FloatLabel>
           <FloatLabel variant="on" class="w-full">
             <InputText
@@ -3290,7 +3396,7 @@ const handleInitNotesChange = (event: EditorTextChangeEvent): void => {
               class="w-full md:w-100"
               :disabled="areInputsDisabled"
             />
-            <label for="userAddress">Dirección de domicilio</label>
+            <label for="userAddress"><span class="text-red-500">* </span>Dirección de domicilio</label>
           </FloatLabel>
           <!-- Grid para Sector y Zona con ligero margin-right -->
           <div class="grid grid-cols-2" style="max-width: 400px">
@@ -3306,7 +3412,7 @@ const handleInitNotesChange = (event: EditorTextChangeEvent): void => {
                 resetFilterOnHide
                 :disabled="areInputsDisabled"
               />
-              <label for="userSector">Sector</label>
+              <label for="userSector"><span class="text-red-500">* </span>Sector</label>
             </FloatLabel>
             <FloatLabel variant="on" class="w-full">
               <Select
@@ -3432,7 +3538,7 @@ const handleInitNotesChange = (event: EditorTextChangeEvent): void => {
               resetFilterOnHide
               :disabled="areInputsDisabled"
             />
-            <label for="userAcademicInstruction">Instrucción</label>
+            <label for="userAcademicInstruction"><span class="text-red-500">* </span>Instrucción</label>
           </FloatLabel>
 
           <!-- Ocupación -->
@@ -3448,7 +3554,7 @@ const handleInitNotesChange = (event: EditorTextChangeEvent): void => {
               resetFilterOnHide
               :disabled="areInputsDisabled"
             />
-            <label for="userProfession">Ocupación</label>
+            <label for="userProfession"><span class="text-red-500">* </span>Ocupación</label>
           </FloatLabel>
 
           <!-- Estado Civil -->
@@ -3462,7 +3568,7 @@ const handleInitNotesChange = (event: EditorTextChangeEvent): void => {
               class="w-full"
               :disabled="areInputsDisabled"
             />
-            <label for="userMaritalStatus">Estado Civil</label>
+            <label for="userMaritalStatus"><span class="text-red-500">* </span>Estado Civil</label>
           </FloatLabel>
 
           <!-- Cargas Familiares -->
@@ -3479,7 +3585,7 @@ const handleInitNotesChange = (event: EditorTextChangeEvent): void => {
               class="w-full"
               :disabled="areInputsDisabled"
             />
-            <label for="on_label">Cargas Familiares</label>
+            <label for="on_label"><span class="text-red-500">* </span>Cargas Familiares</label>
           </FloatLabel>
 
           <!-- Nivel de Ingresos -->
@@ -3495,7 +3601,7 @@ const handleInitNotesChange = (event: EditorTextChangeEvent): void => {
               resetFilterOnHide
               :disabled="areInputsDisabled"
             />
-            <label for="userIncomeLevel">Nivel de ingresos</label>
+            <label for="userIncomeLevel"><span class="text-red-500">* </span>Nivel de ingresos</label>
           </FloatLabel>
 
           <!-- Ingresos Familiares -->
@@ -3511,7 +3617,7 @@ const handleInitNotesChange = (event: EditorTextChangeEvent): void => {
               resetFilterOnHide
               :disabled="areInputsDisabled"
             />
-            <label for="userIncomeLevel">Ingresos Familiares</label>
+            <label for="userIncomeLevel"><span class="text-red-500">* </span>Ingresos Familiares</label>
           </FloatLabel>
 
           <!-- Grupo Familiar -->
@@ -3527,7 +3633,7 @@ const handleInitNotesChange = (event: EditorTextChangeEvent): void => {
               :maxSelectedLabels="3"
               class="w-full"
             />
-            <label for="on_label">Grupo Familiar</label>
+            <label for="on_label"><span class="text-red-500">* </span>Grupo Familiar</label>
           </FloatLabel>
 
           <!-- Personas economicamente activas -->
@@ -3544,7 +3650,7 @@ const handleInitNotesChange = (event: EditorTextChangeEvent): void => {
               class="w-full"
               :disabled="areInputsDisabled"
             />
-            <label for="on_label">Personas económicamente activas</label>
+            <label for="on_label"><span class="text-red-500">* </span>Personas económicamente activas</label>
           </FloatLabel>
         </div>
       </div>
@@ -3657,7 +3763,7 @@ const handleInitNotesChange = (event: EditorTextChangeEvent): void => {
               :maxSelectedLabels="2"
               class="w-full"
             />
-            <label for="userOwnAssets">Patrimonio Propio</label>
+            <label for="userOwnAssets"><span class="text-red-500">* </span>Patrimonio Propio</label>
           </FloatLabel>
 
           <!-- Tipo de vivienda -->
@@ -3671,7 +3777,7 @@ const handleInitNotesChange = (event: EditorTextChangeEvent): void => {
               class="w-full"
               :disabled="areInputsDisabled"
             />
-            <label for="userHousingType">Tipo de vivienda</label>
+            <label for="userHousingType"><span class="text-red-500">* </span>Tipo de vivienda</label>
           </FloatLabel>
 
           <!-- Pensionista -->
@@ -3685,7 +3791,7 @@ const handleInitNotesChange = (event: EditorTextChangeEvent): void => {
               class="w-full"
               :disabled="areInputsDisabled"
             />
-            <label for="userPensioner">Pensionista</label>
+            <label for="userPensioner"><span class="text-red-500">* </span>Pensionista</label>
           </FloatLabel>
 
           <!-- Seguro de salud -->
@@ -3699,7 +3805,7 @@ const handleInitNotesChange = (event: EditorTextChangeEvent): void => {
               class="w-full"
               :disabled="areInputsDisabled"
             />
-            <label for="userHealthInsurance">Seguro de salud</label>
+            <label for="userHealthInsurance"><span class="text-red-500">* </span>Seguro de salud</label>
           </FloatLabel>
 
           <!-- Situación de vulnerabilidad -->
@@ -3714,7 +3820,7 @@ const handleInitNotesChange = (event: EditorTextChangeEvent): void => {
               :disabled="areInputsDisabled"
             />
             <label for="userVulnerableSituation"
-              >Situación de vulnerabilidad</label
+              ><span class="text-red-500">* </span>Situación de vulnerabilidad</label
             >
           </FloatLabel>
 
@@ -4173,7 +4279,7 @@ const handleInitNotesChange = (event: EditorTextChangeEvent): void => {
                       "
                       :disabled="areInputsDisabled"
                     />
-                    <label for="initCaseStatus">Estado</label>
+                    <label for="initCaseStatus"><span class="text-red-500">* </span>Estado</label>
                   </FloatLabel>
                 </div>
               </div>
@@ -4238,7 +4344,7 @@ const handleInitNotesChange = (event: EditorTextChangeEvent): void => {
                   size="large"
                   :disabled="areInputsDisabled"
                 />
-                <label for="initClientType">Tipo de cliente</label>
+                <label for="initClientType"><span class="text-red-500">* </span>Tipo de cliente</label>
               </FloatLabel>
 
               <!-- Área -->
@@ -4247,7 +4353,7 @@ const handleInitNotesChange = (event: EditorTextChangeEvent): void => {
                   v-model="initSubject"
                   :options="
                            initSubjectOptions.filter(
-                              (option) => option.name !== 'Primeras Consultas'
+                              (option) => option.name !== 'Primeras Consultas' 
                             )
                       "
                   optionLabel="name"
@@ -4263,7 +4369,7 @@ const handleInitNotesChange = (event: EditorTextChangeEvent): void => {
                   resetFilterOnHide
                   :disabled="areInputsDisabled"
                 />
-                <label for="initSubject">Área/Materia</label>
+                <label for="initSubject"><span class="text-red-500">* </span>Área/Materia</label>
               </FloatLabel>
 
               <!-- Tema -->
@@ -4283,7 +4389,7 @@ const handleInitNotesChange = (event: EditorTextChangeEvent): void => {
                   resetFilterOnHide
                   :disabled="areInputsDisabled"
                 />
-                <label for="initTopic">Tema</label>
+                <label for="initTopic"><span class="text-red-500">* </span>Tema</label>
               </FloatLabel>
 
               <div class="flex flex-col sm:flex-row gap-4">
@@ -4315,7 +4421,7 @@ const handleInitNotesChange = (event: EditorTextChangeEvent): void => {
                       size="large"
                       :disabled="areInputsDisabled"
                     />
-                    <label for="initService">Tipo de atención</label>
+                    <label for="initService"><span class="text-red-500">* </span>Tipo de atención</label>
                   </FloatLabel>
                 </div>
 
@@ -4358,7 +4464,7 @@ const handleInitNotesChange = (event: EditorTextChangeEvent): void => {
                   size="large"
                   :disabled="areInputsDisabled"
                 />
-                <label for="initLawyer">Abogado</label>
+                <label for="initLawyer"><span class="text-red-500">* </span>Abogado</label>
               </FloatLabel>
 
               <!-- Derivado por -->
@@ -4376,7 +4482,7 @@ const handleInitNotesChange = (event: EditorTextChangeEvent): void => {
                   size="large"
                   :disabled="areInputsDisabled"
                 />
-                <label for="initReferral">Derivado por</label>
+                <label for="initReferral"><span class="text-red-500">* </span>Derivado por</label>
               </FloatLabel>
             </div>
 
@@ -4384,7 +4490,7 @@ const handleInitNotesChange = (event: EditorTextChangeEvent): void => {
             <div class="grid grid-cols-1 md:grid-cols-2 gap-10 mt-6">
               <!-- Observación -->
               <div class="flex flex-col">
-                <label for="initNotes" class="mb-2">Observación</label>
+                <label for="initNotes" class="mb-2"><span class="text-red-500">* </span>Observación</label>
                 <Editor
                   ref="initNotesEditor"
                   v-model="initNotes"
