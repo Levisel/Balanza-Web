@@ -20,7 +20,6 @@ declare module 'vue' {
     Dialog: typeof import('primevue/dialog')['default']
     Divider: typeof import('primevue/divider')['default']
     Dropdown: typeof import('primevue/dropdown')['default']
-    Editor: typeof import('primevue/editor')['default']
     EditStudentsModal: typeof import('./src/components/EditStudentsModal.vue')['default']
     Fieldset: typeof import('primevue/fieldset')['default']
     FileUpload: typeof import('primevue/fileupload')['default']
@@ -30,7 +29,6 @@ declare module 'vue' {
     InputMask: typeof import('primevue/inputmask')['default']
     InputNumber: typeof import('primevue/inputnumber')['default']
     InputText: typeof import('primevue/inputtext')['default']
-    Message: typeof import('primevue/message')['default']
     Paginator: typeof import('primevue/paginator')['default']
     Password: typeof import('primevue/password')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
@@ -40,7 +38,6 @@ declare module 'vue' {
     TabView: typeof import('primevue/tabview')['default']
     Tag: typeof import('primevue/tag')['default']
     Textarea: typeof import('primevue/textarea')['default']
-    Timeline: typeof import('primevue/timeline')['default']
     Toast: typeof import('primevue/toast')['default']
   }
   export interface ComponentCustomProperties {

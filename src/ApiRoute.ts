@@ -85,6 +85,7 @@ export interface Initial_Consultation {
     Init_MandatorySW: boolean;
     Init_AlertNote: string;
     User_ID: string;
+    Init_AttentionSheet: File | null; //Archivo de la ficha de atención
 }
 
 
