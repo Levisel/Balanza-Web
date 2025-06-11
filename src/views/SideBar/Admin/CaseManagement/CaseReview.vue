@@ -13,9 +13,11 @@ import Tag from "primevue/tag";
 import { useToast } from "primevue/usetoast";
 import type { Initial_Consultation, Internal_User } from "@/ApiRoute";
 import { API } from "@/ApiRoute";
-
+import ConfirmDialog from "primevue/confirmdialog";
+import { useConfirm } from "primevue/useconfirm";
 // PrimeVue Toast para notificaciones
 const toast = useToast();
+const confirm = useConfirm();
 
 // Consultas cargadas desde la API
 const initialConsultation = ref<Initial_Consultation[]>([]);
@@ -64,7 +66,7 @@ const fetchReviewCases = async (initType: string, initStatus: string) => {
     initialConsultation.value = consultations.data
       .filter(
         (record: Initial_Consultation) =>
-          record.Init_Service !== "Patrocinio" && record.Init_Type !== "En espera"
+          record.Init_Service !== "Patrocinio" && record.Init_Type !== "En espera" && record.Init_Type !== "Asesoría"
       )
       .map((record: Initial_Consultation) => ({
         ...record,
@@ -119,6 +121,48 @@ const resolveInternalUserName = (internalId: string): string => {
     return "Cargando...";
   }
 };
+
+const markAsAdvisory = async (data: Initial_Consultation) => {
+  try {
+    const response = await axios.put(`${API}/initial-consultations/${data.Init_Code}`, {
+      Init_Type: "Asesoría",
+      Init_Service: "Asesoría",
+      Init_Status: "Activo",
+    });
+    if (response.status === 200) {
+      toast.add({
+        severity: "info",
+        summary: "Operación Exitosa",
+        detail: "La consulta ha sido marcada como Asesoría.",
+        life: 3000,
+      });
+      fetchReviewCases("Por Asignar", "Activo");
+    } else {
+      throw new Error("Error al marcar la consulta como Asesoría.");
+    }
+  } catch (error) {
+    toast.add({
+      severity: "error",
+      summary: "Error",
+      detail: "No se pudo marcar la consulta como Asesoría.",
+      life: 3000,
+    });
+    console.error("Error al marcar la consulta como Asesoría:", error);
+  }
+};
+
+const confirmMarkAsAdvisory = (data: Initial_Consultation) => {
+  confirm.require({
+    header: "Advertencia",
+    icon: "pi pi-info-circle",
+    message: "¿Estás seguro de que deseas marcar esta consulta como Asesoría?",
+    rejectLabel: "Cancelar",
+    rejectProps: { label: "Cancel", severity: "secondary", outlined: true, icon: "pi pi-times" },
+    acceptProps: { label: "Aceptar", severity: "info", icon: "pi pi-check-circle" },
+    accept: () => markAsAdvisory(data),
+  });
+};
+
 
 const defaultFilters = {
   global:   { value: null, matchMode: FilterMatchMode.CONTAINS },
@@ -183,6 +227,7 @@ onMounted(() => {
 
 <template>
   <Toast />
+  <ConfirmDialog />
   <div class="card">
     <div class="flex justify-between items-center">
       <h1 class="text-2xl font-bold mb-4">Revisar Casos</h1>
@@ -377,6 +422,14 @@ onMounted(() => {
               v-tooltip.bottom="'Ver Ficha Técnica'"
               icon="pi pi-file-pdf"
               severity="secondary"
+              rounded
+              variant="outlined"
+            />
+            <Button
+              @click="confirmMarkAsAdvisory(data)"
+              v-tooltip.bottom="'Marcar como Asesoría'"
+              icon="pi pi-verified"
+              severity="help"
               rounded
               variant="outlined"
             />
