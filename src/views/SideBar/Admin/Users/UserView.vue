@@ -66,7 +66,15 @@ const areas = ref([
   "Trabajo Social",
 ]);
 
-const types = ref(["Administrador", "Estudiante", "SuperAdmin"]);
+const types = ref<{ name: string; value: string }[]>([]);
+
+
+axios.get(`${API}/profile`).then((response) => {
+  types.value = response.data.map((item: any) => ({
+    name: item.Profile_Name,
+    value: item.Profile_Name,
+  }));
+});
 
 // Función para obtener usuarios de la API
 const fetchUsers = async () => {
@@ -236,9 +244,11 @@ onMounted(() => {
       :globalFilterFields="[
         'Internal_ID',
         'Internal_Name',
+        'Internal_LastName',
         'Internal_Email',
         'Internal_Area',
         'Internal_Status',
+        'Internal_Type',
       ]"
     >
       <template #header>
@@ -346,6 +356,8 @@ onMounted(() => {
           <Select
             v-model="filterModel.value"
             :options="types"
+            optionLabel="name"
+            optionValue="value" 
             placeholder="Seleccionar uno"
             showClear
           />
