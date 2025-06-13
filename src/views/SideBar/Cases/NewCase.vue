@@ -272,10 +272,6 @@ const uploadNewDocument = () => {
           return;
         }
         // Realizar el PUT
-        console.log(
-          "NOMBRE DEL DOCUMENTO ANTES DE SUBIR:",
-          userHealthDocumentsName.value
-        );
         await axios.put(`${API}/user/document/${userID.value}`, formData, {
           headers: {
             "Content-Type": "multipart/form-data",
@@ -336,8 +332,6 @@ function onSelectedFiles(event: { files: File[] }) {
     } else if (file.size <= maxSize) {
       userHealthDocuments.value = event.files[0]; // Guardar el archivo
       userHealthDocumentsName.value = event.files[0].name; // Guardar el nombre del archivo
-      console.log("Archivo cargado:", userHealthDocuments.value);
-      console.log("Nombre del archivo:", userHealthDocumentsName.value);
       userRequestNewDocument.value = true;
     }
   }
@@ -436,8 +430,6 @@ function onSelectedFilesEvidence(event: { files: File[] }) {
       }
       evidenceFile.value = file;
       evidenceFileName.value = file.name;
-      console.log("Archivo cargado:", evidenceFile.value);
-      console.log("Nombre del archivo:", evidenceFileName.value);
       onSaveDocumentEvidence(); // Opcionalmente notifica que se ha guardado
     }
   }
@@ -2115,14 +2107,6 @@ const createInitialConsultation = async () => {
     formData.append("evidenceFile", ""); // Si no hay archivo, enviar un string vacío
   }
 
-  console.log("Datos enviados:", formData);
-  //revisamos el json del formData
-  for (const pair of formData.entries()) {
-    console.log(`${pair[0]}: ${pair[1]}`);
-  }
-  //creamos un json para verificar que se envían los datos correctos
-  const jsonData = Object.fromEntries(formData.entries());
-  console.log("JSON de datos enviados:", JSON.stringify(jsonData, null, 2));
 
   try {
     await axios.post(`${API}/initial-consultations`, formData, {
@@ -2231,7 +2215,6 @@ const newUserConsultation = async () => {
     consultationData.Init_Type = "En espera";
   }
 
-  console.log("Datos enviados:", JSON.stringify(consultationData, null, 2));
 
   try {
     await axios.post(`${API}/initial-consultations/new`, consultationData, {
@@ -2264,11 +2247,8 @@ const newUserConsultation = async () => {
 
     // Agregar archivo de evidencia
     if (evidenceFile.value) {
-      console.log("Archivo de evidencia:", evidenceFile.value);
       formData.append("evidenceFile", evidenceFile.value); // Archivo
-    } else {
-      console.log("No se adjuntó ningún archivo de evidencia.");
-    }
+    } 
 
     try {
       const response = await axios.post(`${API}/evidence`, formData, {
@@ -2277,7 +2257,6 @@ const newUserConsultation = async () => {
         },
       });
 
-      console.log("Respuesta del servidor:", response.data);
     } catch (error) {
       console.error("Error al subir la evidencia:", error);
       if (evidenceFile.value) {
@@ -2463,8 +2442,6 @@ const editUserConsultation = async () => {
     // Handle boolean comparison directly
     else if (typeof updatedValue === 'boolean' && typeof originalValue === 'boolean') {
         if (updatedValue !== originalValue) {
-             console.log(`*** Change detected in BOOLEAN key: ${key} ***`);
-             console.log(`Original: ${originalValue}, Updated: ${updatedValue}`);
              hasChanges = true;
              break;
         }
@@ -2476,11 +2453,6 @@ const editUserConsultation = async () => {
         const normOriginal = originalValue === null || originalValue === undefined ? "" : String(originalValue);
 
         if (normUpdated !== normOriginal) {
-            console.log(`*** Change detected in key: ${key} ***`);
-            console.log(`Original Value: '${originalValue}' (Type: ${typeof originalValue})`);
-            console.log(`Updated Value: '${updatedValue}' (Type: ${typeof updatedValue})`);
-            console.log(`Normalized Original: '${normOriginal}'`);
-            console.log(`Normalized Updated: '${normUpdated}'`);
             hasChanges = true;
             break;
         }
@@ -2994,7 +2966,6 @@ const rejectCase = async () => {
           { id: initCode.value },
           { headers: { "internal-id": authStore.user?.id } }
         );
-        console.log(response);
         watchAlertDialog.value = false; // Cerrar el diálogo
         await fetchConsultations(); // Actualizar la lista de consultas
         toast.add({

@@ -98,30 +98,23 @@ const downloadExcelConsultationReport = async () => {
     .then((response) => {
       // Extract filename from Content-Disposition header
       const contentDisposition = response.headers['content-disposition'];
-      console.log('Content-Disposition Header:', contentDisposition); // Log the header
 
       let filename = `${report.value || 'report'}.xlsx`; // Default filename
       if (contentDisposition) {
         const filenameMatch = contentDisposition.match(/filename="?(.+)"?/i);
-        console.log('Filename Match Result:', filenameMatch); // Log the regex match result
 
         if (filenameMatch && filenameMatch.length > 1) {
           // --- TRIM THE TRAILING QUOTE ---
           filename = filenameMatch[1].replace(/"$/, ''); // Remove trailing quote if present
           // --- END OF CHANGE ---
-          console.log('Extracted Filename:', filename); // Log the extracted filename
-        } else {
-          console.log('Filename could not be extracted from header.');
-        }
-      } else {
-        console.log('Content-Disposition header not found. Using default filename.');
-      }
+        } 
+      } 
 
       // --- PASS THE ACTUAL DATA TO THE BLOB ---
       const blob = new Blob([response.data], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
       // --- END OF CHANGE ---
 
-      console.log('Final filename being set:', filename); // Add log to confirm filename before setting
+
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
@@ -208,31 +201,26 @@ const downloadExcelActivityReport = async () => {
     .then((response) => {
       // Extract filename from Content-Disposition header
       const contentDisposition = response.headers['content-disposition'];
-      console.log('Content-Disposition Header:', contentDisposition); // Log the header
+
 
       let filename = `${report.value || 'report'}.xlsx`; // Default filename
       if (contentDisposition) {
         const filenameMatch = contentDisposition.match(/filename="?(.+)"?/i);
-        console.log('Filename Match Result:', filenameMatch); // Log the regex match result
+
 
         if (filenameMatch && filenameMatch.length > 1) {
           // --- TRIM THE TRAILING QUOTE ---
           filename = filenameMatch[1].replace(/"$/, ''); // Remove trailing quote if present
           // --- END OF CHANGE ---
-          console.log('Extracted Filename:', filename); // Log the extracted filename
-        } else {
-          console.log('Filename could not be extracted from header.');
-        }
-      } else {
-        console.log('Content-Disposition header not found. Using default filename.');
-      }
+
+        } 
+      } 
 
       // --- PASS THE ACTUAL DATA TO THE BLOB
       const blob = new Blob([response.data], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
       // --- END OF CHANGE ---
 
 
-      console.log('Final filename being set:', filename); // Add log to confirm filename before setting
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
@@ -317,33 +305,29 @@ const downloadExcelSWReport = async () => {
     .then((response) => {
       // Extract filename from Content-Disposition header
       const contentDisposition = response.headers['content-disposition'];
-      console.log('Content-Disposition Header:', contentDisposition); // Log the header
+
       
 
 
       let filename = `${report.value || 'report'}.xlsx`; // Default filename
       if (contentDisposition) {
         const filenameMatch = contentDisposition.match(/filename="?(.+)"?/i);
-        console.log('Filename Match Result:', filenameMatch); // Log the regex match result
+
 
         if (filenameMatch && filenameMatch.length > 1) {
           // --- TRIM THE TRAILING QUOTE ---
           filename = filenameMatch[1].replace(/"$/, ''); // Remove trailing quote if present
           // --- END OF CHANGE ---
-          console.log('Extracted Filename:', filename); // Log the extracted filename
-        } else {
-          console.log('Filename could not be extracted from header.');
-        }
-      } else {
-        console.log('Content-Disposition header not found. Using default filename.');
-      }
+
+        } 
+      } 
 
       // --- PASS THE ACTUAL DATA TO THE BLOB
       const blob = new Blob([response.data], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
       // --- END OF CHANGE ---
 
 
-      console.log('Final filename being set:', filename); // Add log to confirm filename before setting
+ 
 
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");

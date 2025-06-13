@@ -146,7 +146,7 @@ const tableConfig = {
     { field: "Period_Type_Status", header: "Estado", type: "boolean" },
   ],
   Practical_Hours: [
-    { field: "Practical_Hours", header: "Nombre", type: "string" },
+    { field: "Practical_Hours", header: "Horas", type: "number" },
     { field: "Practical_Hours_Status", header: "Estado", type: "boolean" },
   ],
   Country: [
@@ -386,7 +386,6 @@ const getForeignName = (fkField: string, id: any) => {
 
 const loadData = async () => {
   if (selectedTableKey.value) {
-    console.log("Clave de tabla seleccionada:", selectedTableKey.value);
     try {
       const urlMap = {
         Vulnerable_Situation: `${API}/vulnerable-situation`,
@@ -426,7 +425,6 @@ const loadData = async () => {
         Type_Of_Activity: `${API}/type-of-activity`,
         Field_Of_Activity: `${API}/field-of-activity`,
       };
-      console.log("Cargando datos desde:", urlMap[selectedTableKey.value]);
       const { data } = await axios.get(urlMap[selectedTableKey.value]);
       if (Array.isArray(data)) {
         tableData.value = data;
@@ -452,7 +450,6 @@ const loadData = async () => {
 const createData = async () => {
   if (!validateRecord()) return;
   if (selectedTableKey.value) {
-    console.log("Crear dato en tabla:", selectedTableKey.value);
     try {
       const urlMap = {
         Vulnerable_Situation: `${API}/vulnerable-situation`,
@@ -605,7 +602,6 @@ const updateData = async () => {
 
 const deleteData = async () => {
   if (selectedTableKey.value) {
-    console.log("Eliminar dato en tabla:", selectedTableKey.value);
     try {
       const urlMap = {
         Vulnerable_Situation: `${API}/vulnerable-situation`,
@@ -692,13 +688,11 @@ const deleteData = async () => {
 const openViewDialog = (data: any) => {
   selectedRecord.value = { ...data };
   viewDialogVisible.value = true;
-  console.log("Visualizando registro:", data);
 };
 
 const openEditDialog = (data: any) => {
   selectedRecord.value = { ...data };
   editDialogVisible.value = true;
-  console.log("Editando registro:", data);
 };
 
 const createRecord = async () => {
@@ -934,7 +928,6 @@ onMounted(() => {
           mode="decimal"
           showButtons
           :min="1"
-          :max="col.field === 'Schedule_Limit' ? 60 : 100"
           size="large"
           class="w-full"
           inputClass="w-full"

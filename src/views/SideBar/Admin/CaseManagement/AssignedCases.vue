@@ -95,7 +95,6 @@ const fetchAssignedCases = async () => {
         }
       }
     }));
-    console.log("Datos de la API (Casos Asignados):", assignments.value);
   } catch (error) {
     console.error("Error al cargar los casos asignados:", error);
     toast.add({

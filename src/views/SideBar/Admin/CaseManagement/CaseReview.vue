@@ -73,7 +73,6 @@ const fetchReviewCases = async (initType: string, initStatus: string) => {
         Computed_AlertStatus: (record.Init_AlertNote && String(record.Init_AlertNote).trim() !== '') ? 'Alerta' : 'Sin Alerta',
         Internal_FullName: internalUsers[record.Internal_ID] || record.Internal_ID
       }));
-    console.log("Datos de la API (filtrados y mapeados):", initialConsultation.value);
   } catch (error) {
     console.error("Error al cargar las consultas:", error);
   }

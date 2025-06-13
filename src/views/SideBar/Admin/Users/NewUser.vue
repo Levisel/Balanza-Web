@@ -187,23 +187,49 @@ watch(
   }
 );
 
-watch(
-  () => internalUser.value.Internal_Email,
-  (nuevoValor) => {
-    if (nuevoValor) {
-      checkEmailExists().then((existe) => {
-        if (existe) {
-          toast.add({
-            severity: "warn",
-            summary: "Correo ya existe",
-            detail: "Ya existe un usuario con ese correo ingresado.",
-            life: 3000,
-          });
-        }
+// Validar email
+const validateEmail = (email: string): boolean => {
+  const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+  return emailRegex.test(email);
+};
+
+
+const handleEmailValidation = () => {
+  const email = internalUser.value.Internal_Email;
+  if (email) {
+    // Primero validar el formato del email
+    if (!validateEmail(email)) {
+      toast.add({
+        severity: "error",
+        summary: "Email no válido",
+        detail: "Por favor ingresa un email con formato válido.",
+        life: 3000,
       });
+       internalUser.value.Internal_Email = ""; 
+      return;
     }
+    
+    // Si el formato es válido, verificar si ya existe
+    checkEmailExists().then((existe) => {
+      if (existe) {
+        toast.add({
+          severity: "warn",
+          summary: "Correo registrado",
+          detail: "Ya existe un usuario con ese correo ingresado.",
+          life: 3000,
+        });
+        internalUser.value.Internal_Email = ""; // Limpiar si ya existe
+      } else {
+        toast.add({
+          severity: "success",
+          summary: "Email válido",
+          detail: "El formato del email es correcto.",
+          life: 3000,
+        });
+      }
+    });
   }
-);
+};
 
 const checkIdSize = (shouldShowToast: boolean = true): boolean => {
   if (
@@ -578,6 +604,7 @@ const createPassword = () => {
                   v-model="internalUser.Internal_Email"
                   size="large"
                   class="w-full"
+                   @blur="handleEmailValidation"
                 />
                 <label for="email"
                   ><span class="text-red-500">*</span> Email</label

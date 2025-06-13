@@ -86,7 +86,6 @@ const fetchAllCases = async () => {
             FullName: `${caseItem.User.User_FirstName} ${caseItem.User.User_LastName}`.trim()
         }
     }));
-    console.log("Datos de la API (Todos los Casos):", cases.value);
   } catch (error) {
     console.error("Error al cargar todos los casos:", error);
     toast.add({

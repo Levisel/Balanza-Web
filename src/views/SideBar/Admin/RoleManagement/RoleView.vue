@@ -46,7 +46,6 @@ const profileColumns = [
 const linkedPermissionPairs = [
   { a: "IngresoCronograma", b: "Cronograma" },
   { a: "RegistroHuella", b: "AsignacionHuella" },
-  { a: "NewUser", b: "UserView" },
 ];
 
 // Función para sincronizar permisos relacionados

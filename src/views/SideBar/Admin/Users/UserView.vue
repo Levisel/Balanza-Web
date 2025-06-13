@@ -113,7 +113,6 @@ const saveUser = async () => {
       // Recargar usuarios después de la actualización
       await fetchUsers();
       editDialogVisible.value = false;
-      console.log(selectedInternalUser.value);
     } catch (error: any) {
       if(error.response.status === 409) {
         toast.add({
