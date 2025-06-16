@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from "vue";
 import { useRouter, useRoute } from "vue-router";
+import { useAuthStore } from "@/stores/auth";
 import axios from "axios";
 import ConfirmDialog from "primevue/confirmdialog";
 import DataTable from "primevue/datatable";
@@ -22,6 +23,7 @@ import { useConfirm } from "primevue/useconfirm";
 const toast = useToast();
 const router = useRouter();
 const route = useRoute();
+const authStore = useAuthStore();
 
 onMounted(() => {
   if (route.query.tabla === "Profiles") {
@@ -130,7 +132,11 @@ const tableConfig = {
     { field: "Academic_Instruction_Status", header: "Estado", type: "boolean" },
   ],
   Number_Of_Attempts: [
-    { field: "Number_Of_Attempts", header: "Número de Intentos", type: "number" },
+    {
+      field: "Number_Of_Attempts",
+      header: "Número de Intentos",
+      type: "number",
+    },
     { field: "Number_Of_Attempts_Status", header: "Estado", type: "boolean" },
   ],
   Complexity: [
@@ -191,12 +197,15 @@ const tableConfig = {
     { field: "Type_Of_Activity_Status", header: "Estado", type: "boolean" },
   ],
   Field_Of_Activity: [
-    { field: "Type_Of_Activity_FK", header: "Tipo de Actividad", type: "string" },
+    {
+      field: "Type_Of_Activity_FK",
+      header: "Tipo de Actividad",
+      type: "string",
+    },
     { field: "Field_Of_Activity_Name", header: "Nombre", type: "string" },
     { field: "Field_Of_Activity_Type", header: "Tipo", type: "string" },
     { field: "Field_Of_Activity_Status", header: "Estado", type: "boolean" },
   ],
-
 };
 
 // Función para resetear el registro seleccionado
@@ -489,8 +498,11 @@ const createData = async () => {
         Type_Of_Activity: `${API}/type-of-activity`,
         Field_Of_Activity: `${API}/field-of-activity`,
       };
-      console.log("Enviando datos para creación:", selectedRecord.value);
-      await axios.post(urlMap[selectedTableKey.value], selectedRecord.value);
+      await axios.post(urlMap[selectedTableKey.value], selectedRecord.value, {
+        headers: {
+          "internal-id": authStore.user?.id,
+        },
+      });
       toast.add({
         severity: "success",
         summary: "Creado",
@@ -504,7 +516,8 @@ const createData = async () => {
       toast.add({
         severity: "error",
         summary: "Error",
-        detail: "No se pudo crear el registro, verifica que ese nombre no exista o que los datos sean correctos.",
+        detail:
+          "No se pudo crear el registro, verifica que ese nombre no exista o que los datos sean correctos.",
         life: 5000,
       });
     }
@@ -569,7 +582,12 @@ const updateData = async () => {
       console.log("Enviando datos para actualización:", selectedRecord.value);
       await axios.put(
         `${urlMap[selectedTableKey.value]}/${recordId}`,
-        selectedRecord.value
+        selectedRecord.value,
+        {
+          headers: {
+            "internal-id": authStore.user?.id,
+          },
+        }
       );
       toast.add({
         severity: "info",
@@ -587,8 +605,7 @@ const updateData = async () => {
             "Por favor, revisa que has hecho cambios antes de actualizar el registro.",
           life: 4000,
         });
-      } 
-      else {
+      } else {
         toast.add({
           severity: "error",
           summary: "Error",
@@ -653,7 +670,11 @@ const deleteData = async () => {
         });
         return;
       }
-      await axios.delete(`${urlMap[selectedTableKey.value]}/${recordId}`);
+      await axios.delete(`${urlMap[selectedTableKey.value]}/${recordId}`, {
+        headers: {
+          "internal-id": authStore.user?.id,
+        },
+      });
       await loadData();
       toast.add({
         severity: "info",
@@ -670,17 +691,16 @@ const deleteData = async () => {
             "Existen usuarios asociados a este registro, no se puede eliminar.",
           life: 5000,
         });
-      }
-      else{
+      } else {
         console.error("Error al eliminar el dato:", error);
         toast.add({
           severity: "error",
           summary: "Error",
-          detail: "No se pudo eliminar el registro, verifica que no existan usuarios asociados de ser el caso.",
+          detail:
+            "No se pudo eliminar el registro, verifica que no existan usuarios asociados de ser el caso.",
           life: 3000,
         });
-        }
-
+      }
     }
   }
 };
@@ -845,247 +865,259 @@ onMounted(() => {
 
     <!-- Modal de Creación -->
     <Dialog
-  v-model:visible="createDialogVisible"
-  :header="`Crear ${selectedTableLabel}`"
-  :style="{ width: '35rem' }"
-  :breakpoints="{ '960px': '75vw', '640px': '90vw' }"
-  modal
-  class="p-fluid"
-  appendTo="body"
-  :blockScroll="true"
-  @show="resetSelectedRecord"
->
-  <template #header>
-    <div class="flex align-items-center gap-2">
-      <span class="font-bold text-xl">{{
-        `Crear ${selectedTableLabel}`
-      }}</span>
-    </div>
-  </template>
+      v-model:visible="createDialogVisible"
+      :header="`Crear ${selectedTableLabel}`"
+      :style="{ width: '35rem' }"
+      :breakpoints="{ '960px': '75vw', '640px': '90vw' }"
+      modal
+      class="p-fluid"
+      appendTo="body"
+      :blockScroll="true"
+      @show="resetSelectedRecord"
+    >
+      <template #header>
+        <div class="flex align-items-center gap-2">
+          <span class="font-bold text-xl">{{
+            `Crear ${selectedTableLabel}`
+          }}</span>
+        </div>
+      </template>
 
-  <div class="grid gap-3">
-    <div v-for="col in editableColumns" :key="col.field" class="field">
-      <FloatLabel variant="in">
-        <!-- Combobox para Field_Of_Activity_Name -->
-<Select
-  v-if="col.field === 'Field_Of_Activity_Name'"
-  :id="col.field"
-  v-model="selectedRecord[col.field]"
-  :options="[
-    { label: 'Descripción de Actividad', value: 'Descripción de Actividad' },
-    { label: 'Fecha de Actividad', value: 'Fecha de Actividad' },
-    { label: 'Lugar', value: 'Lugar' },
-    { label: 'Tiempo de Ejecución', value: 'Tiempo de Ejecución' }
-  ]"
-  optionLabel="label"
-  optionValue="value"
-  class="w-full"
-  :pt="{ root: { class: 'border-round' } }"
-/>
+      <div class="grid gap-3">
+        <div v-for="col in editableColumns" :key="col.field" class="field">
+          <FloatLabel variant="in">
+            <!-- Combobox para Field_Of_Activity_Name -->
+            <Select
+              v-if="col.field === 'Field_Of_Activity_Name'"
+              :id="col.field"
+              v-model="selectedRecord[col.field]"
+              :options="[
+                {
+                  label: 'Descripción de Actividad',
+                  value: 'Descripción de Actividad',
+                },
+                { label: 'Fecha de Actividad', value: 'Fecha de Actividad' },
+                { label: 'Lugar', value: 'Lugar' },
+                { label: 'Tiempo de Ejecución', value: 'Tiempo de Ejecución' },
+              ]"
+              optionLabel="label"
+              optionValue="value"
+              class="w-full"
+              :pt="{ root: { class: 'border-round' } }"
+            />
 
-<!-- Combobox para Field_Of_Activity_Type -->
-<Select
-  v-else-if="col.field === 'Field_Of_Activity_Type'"
-  :id="col.field"
-  v-model="selectedRecord[col.field]"
-  :options="[
-    { label: 'Fecha', value: 'Fecha' },
-    { label: 'Texto', value: 'Texto' },
-    { label: 'Lugar', value: 'Lugar' },
-    { label: 'Tiempo', value: 'Tiempo' }
-  ]"
-  optionLabel="label"
-  optionValue="value"
-  class="w-full"
-  :pt="{ root: { class: 'border-round' } }"
-/>
+            <!-- Combobox para Field_Of_Activity_Type -->
+            <Select
+              v-else-if="col.field === 'Field_Of_Activity_Type'"
+              :id="col.field"
+              v-model="selectedRecord[col.field]"
+              :options="[
+                { label: 'Fecha', value: 'Fecha' },
+                { label: 'Texto', value: 'Texto' },
+                { label: 'Lugar', value: 'Lugar' },
+                { label: 'Tiempo', value: 'Tiempo' },
+              ]"
+              optionLabel="label"
+              optionValue="value"
+              class="w-full"
+              :pt="{ root: { class: 'border-round' } }"
+            />
 
-        <!-- Otros campos -->
-        <InputText
-          v-else-if="col.type === 'string' && !col.field.endsWith('_FK')"
-          :id="col.field"
-          v-model="selectedRecord[col.field]"
-          autocomplete="off"
-          size="large"
-          class="w-full"
-          :pt="{ root: { class: 'border-round' } }"
-        />
-        <div v-else-if="col.field.endsWith('_FK')">
-          <Select
-            :id="col.field"
-            v-model="selectedRecord[col.field]"
-            :options="foreignOptions[col.field.replace('_FK', '')]"
-            :optionLabel="col.field.replace('_FK', '') + '_Name'"
-            :optionValue="col.field.replace('_FK', '') + '_ID'"
-            class="w-full"
-            :pt="{ root: { class: 'border-round' } }"
-          />
+            <!-- Otros campos -->
+            <InputText
+              v-else-if="col.type === 'string' && !col.field.endsWith('_FK')"
+              :id="col.field"
+              v-model="selectedRecord[col.field]"
+              autocomplete="off"
+              size="large"
+              class="w-full"
+              :pt="{ root: { class: 'border-round' } }"
+            />
+            <div v-else-if="col.field.endsWith('_FK')">
+              <Select
+                :id="col.field"
+                v-model="selectedRecord[col.field]"
+                :options="foreignOptions[col.field.replace('_FK', '')]"
+                :optionLabel="col.field.replace('_FK', '') + '_Name'"
+                :optionValue="col.field.replace('_FK', '') + '_ID'"
+                class="w-full"
+                :pt="{ root: { class: 'border-round' } }"
+              />
+            </div>
+
+            <InputNumber
+              v-else-if="col.type === 'number'"
+              v-model="selectedRecord[col.field]"
+              mode="decimal"
+              showButtons
+              :min="1"
+              size="large"
+              class="w-full"
+              inputClass="w-full"
+              :pt="{ root: { class: 'border-round' } }"
+            />
+            <label :for="col.field" class="font-medium">{{ col.header }}</label>
+          </FloatLabel>
+          <div
+            v-if="col.type === 'boolean'"
+            class="flex align-items-center gap-2 pt-2"
+          >
+            <Checkbox
+              v-model="selectedRecord[col.field]"
+              :binary="true"
+              :pt="{
+                root: { class: 'w-2rem h-2rem' },
+                box: { class: 'border-2 w-2rem h-2rem' },
+              }"
+            />
+            <label class="text-color-secondary">Activo</label>
+          </div>
         </div>
 
-        <InputNumber
-          v-else-if="col.type === 'number'"
-          v-model="selectedRecord[col.field]"
-          mode="decimal"
-          showButtons
-          :min="1"
-          size="large"
-          class="w-full"
-          inputClass="w-full"
-          :pt="{ root: { class: 'border-round' } }"
-        />
-        <label :for="col.field" class="font-medium">{{ col.header }}</label>
-      </FloatLabel>
-      <div
-        v-if="col.type === 'boolean'"
-        class="flex align-items-center gap-2 pt-2"
-      >
-        <Checkbox
-          v-model="selectedRecord[col.field]"
-          :binary="true"
-          :pt="{ root: { class: 'w-2rem h-2rem' }, box: { class: 'border-2 w-2rem h-2rem' } }"
-        />
-        <label class="text-color-secondary">Activo</label>
+        <div class="flex justify-content-end gap-2 mt-5 ml-65">
+          <Button
+            label="Cancelar"
+            icon="pi pi-times"
+            severity="contrast"
+            @click="createDialogVisible = false"
+          />
+          <Button
+            label="Guardar"
+            icon="pi pi-check"
+            severity="primary"
+            @click="createRecord"
+          />
+        </div>
       </div>
-    </div>
-
-    <div class="flex justify-content-end gap-2 mt-5 ml-65">
-      <Button
-        label="Cancelar"
-        icon="pi pi-times"
-        severity="contrast"
-        @click="createDialogVisible = false"
-      />
-      <Button
-        label="Guardar"
-        icon="pi pi-check"
-        severity="primary"
-        @click="createRecord"
-      />
-    </div>
-  </div>
-</Dialog>
+    </Dialog>
 
     <!-- Modal de Edición -->
     <Dialog
-  v-model:visible="editDialogVisible"
-  :header="`Editar ${selectedTableLabel}`"
-  :style="{ width: '35rem' }"
-  :breakpoints="{ '960px': '75vw', '640px': '90vw' }"
-  modal
-  class="p-fluid"
-  appendTo="body"
-  :blockScroll="true"
->
-  <template #header>
-    <div class="flex align-items-center gap-2">
-      <span class="font-bold text-xl">{{
-        `Editar ${selectedTableLabel}`
-      }}</span>
-    </div>
-  </template>
+      v-model:visible="editDialogVisible"
+      :header="`Editar ${selectedTableLabel}`"
+      :style="{ width: '35rem' }"
+      :breakpoints="{ '960px': '75vw', '640px': '90vw' }"
+      modal
+      class="p-fluid"
+      appendTo="body"
+      :blockScroll="true"
+    >
+      <template #header>
+        <div class="flex align-items-center gap-2">
+          <span class="font-bold text-xl">{{
+            `Editar ${selectedTableLabel}`
+          }}</span>
+        </div>
+      </template>
 
-  <div class="grid gap-3">
-    <div v-for="col in editableColumns" :key="col.field" class="field">
-      <FloatLabel variant="in">
-        <!-- Combobox para Field_Of_Activity_Name -->
-<Select
-  v-if="col.field === 'Field_Of_Activity_Name'"
-  :id="col.field"
-  v-model="selectedRecord[col.field]"
-  :options="[
-    { label: 'Descripción de Actividad', value: 'Descripción de Actividad' },
-    { label: 'Fecha de Actividad', value: 'Fecha de Actividad' },
-    { label: 'Lugar', value: 'Lugar' },
-    { label: 'Tiempo de Ejecución', value: 'Tiempo de Ejecución' }
-  ]"
-  optionLabel="label"
-  optionValue="value"
-  class="w-full"
-  :pt="{ root: { class: 'border-round' } }"
-/>
+      <div class="grid gap-3">
+        <div v-for="col in editableColumns" :key="col.field" class="field">
+          <FloatLabel variant="in">
+            <!-- Combobox para Field_Of_Activity_Name -->
+            <Select
+              v-if="col.field === 'Field_Of_Activity_Name'"
+              :id="col.field"
+              v-model="selectedRecord[col.field]"
+              :options="[
+                {
+                  label: 'Descripción de Actividad',
+                  value: 'Descripción de Actividad',
+                },
+                { label: 'Fecha de Actividad', value: 'Fecha de Actividad' },
+                { label: 'Lugar', value: 'Lugar' },
+                { label: 'Tiempo de Ejecución', value: 'Tiempo de Ejecución' },
+              ]"
+              optionLabel="label"
+              optionValue="value"
+              class="w-full"
+              :pt="{ root: { class: 'border-round' } }"
+            />
 
-<!-- Combobox para Field_Of_Activity_Type -->
-<Select
-  v-else-if="col.field === 'Field_Of_Activity_Type'"
-  :id="col.field"
-  v-model="selectedRecord[col.field]"
-  :options="[
-    { label: 'Fecha', value: 'Fecha' },
-    { label: 'Texto', value: 'Texto' },
-    { label: 'Lugar', value: 'Lugar' },
-    { label: 'Tiempo de Ejecución', value: 'Tiempo de Ejecución' }
-  ]"
-  optionLabel="label"
-  optionValue="value"
-  class="w-full"
-  :pt="{ root: { class: 'border-round' } }"
-/>
+            <!-- Combobox para Field_Of_Activity_Type -->
+            <Select
+              v-else-if="col.field === 'Field_Of_Activity_Type'"
+              :id="col.field"
+              v-model="selectedRecord[col.field]"
+              :options="[
+                { label: 'Fecha', value: 'Fecha' },
+                { label: 'Texto', value: 'Texto' },
+                { label: 'Lugar', value: 'Lugar' },
+                { label: 'Tiempo de Ejecución', value: 'Tiempo de Ejecución' },
+              ]"
+              optionLabel="label"
+              optionValue="value"
+              class="w-full"
+              :pt="{ root: { class: 'border-round' } }"
+            />
 
-        <!-- Otros campos -->
-        <InputText
-          v-else-if="col.type === 'string' && !col.field.endsWith('_FK')"
-          :id="col.field"
-          v-model="selectedRecord[col.field]"
-          autocomplete="off"
-          size="large"
-          class="w-full"
-          :pt="{ root: { class: 'border-round' } }"
-        />
-        <div v-else-if="col.field.endsWith('_FK')">
-          <Select
-            :id="col.field"
-            v-model="selectedRecord[col.field]"
-            :options="foreignOptions[col.field.replace('_FK', '')]"
-            :optionLabel="col.field.replace('_FK', '') + '_Name'"
-            :optionValue="col.field.replace('_FK', '') + '_ID'"
-            class="w-full"
-            :pt="{ root: { class: 'border-round' } }"
-          />
+            <!-- Otros campos -->
+            <InputText
+              v-else-if="col.type === 'string' && !col.field.endsWith('_FK')"
+              :id="col.field"
+              v-model="selectedRecord[col.field]"
+              autocomplete="off"
+              size="large"
+              class="w-full"
+              :pt="{ root: { class: 'border-round' } }"
+            />
+            <div v-else-if="col.field.endsWith('_FK')">
+              <Select
+                :id="col.field"
+                v-model="selectedRecord[col.field]"
+                :options="foreignOptions[col.field.replace('_FK', '')]"
+                :optionLabel="col.field.replace('_FK', '') + '_Name'"
+                :optionValue="col.field.replace('_FK', '') + '_ID'"
+                class="w-full"
+                :pt="{ root: { class: 'border-round' } }"
+              />
+            </div>
+
+            <InputNumber
+              v-else-if="col.type === 'number'"
+              v-model="selectedRecord[col.field]"
+              mode="decimal"
+              showButtons
+              :min="1"
+              :max="col.field === 'Schedule_Limit' ? 60 : 100"
+              size="large"
+              class="w-full"
+              inputClass="w-full"
+              :pt="{ root: { class: 'border-round' } }"
+            />
+            <label :for="col.field" class="font-medium">{{ col.header }}</label>
+          </FloatLabel>
+          <div
+            v-if="col.type === 'boolean'"
+            class="flex align-items-center gap-2 pt-2"
+          >
+            <Checkbox
+              v-model="selectedRecord[col.field]"
+              :binary="true"
+              :pt="{
+                root: { class: 'w-2rem h-2rem' },
+                box: { class: 'border-2 w-2rem h-2rem' },
+              }"
+            />
+            <label class="text-color-secondary">Activo</label>
+          </div>
         </div>
 
-        <InputNumber
-          v-else-if="col.type === 'number'"
-          v-model="selectedRecord[col.field]"
-          mode="decimal"
-          showButtons
-          :min="1"
-          :max="col.field === 'Schedule_Limit' ? 60 : 100"
-          size="large"
-          class="w-full"
-          inputClass="w-full"
-          :pt="{ root: { class: 'border-round' } }"
-        />
-        <label :for="col.field" class="font-medium">{{ col.header }}</label>
-      </FloatLabel>
-      <div
-        v-if="col.type === 'boolean'"
-        class="flex align-items-center gap-2 pt-2"
-      >
-        <Checkbox
-          v-model="selectedRecord[col.field]"
-          :binary="true"
-          :pt="{ root: { class: 'w-2rem h-2rem' }, box: { class: 'border-2 w-2rem h-2rem' } }"
-        />
-        <label class="text-color-secondary">Activo</label>
+        <div class="flex justify-end gap-2 mt-5">
+          <Button
+            label="Cancelar"
+            icon="pi pi-times"
+            severity="contrast"
+            @click="editDialogVisible = false"
+          />
+          <Button
+            label="Actualizar"
+            icon="pi pi-save"
+            severity="info"
+            @click="editRecord"
+          />
+        </div>
       </div>
-    </div>
-
-    <div class="flex justify-end gap-2 mt-5">
-      <Button
-        label="Cancelar"
-        icon="pi pi-times"
-        severity="contrast"
-        @click="editDialogVisible = false"
-      />
-      <Button
-        label="Actualizar"
-        icon="pi pi-save"
-        severity="info"
-        @click="editRecord"
-      />
-    </div>
-  </div>
-</Dialog>
+    </Dialog>
 
     <!-- Modal de Visualización -->
     <Dialog

@@ -3,7 +3,7 @@ import { computed, onMounted, ref, watch } from "vue";
 import { type Internal_User } from "@/ApiRoute";
 import { useToast } from "primevue/usetoast";
 import { API } from "@/ApiRoute";
-
+import { useAuthStore } from "@/stores/auth";
 import InputMask from "primevue/inputmask";
 import InputText from "primevue/inputtext";
 import Select from "primevue/select";
@@ -12,12 +12,13 @@ import Button from "primevue/button";
 import axios from "axios";
 import type { boolean } from "zod";
 import { useSubjects } from "@/useSubjects";
-import ProgressSpinner from 'primevue/progressspinner';
+import ProgressSpinner from "primevue/progressspinner";
 import { useNotificationStore } from "@/stores/notifications";
-
 
 const toast = useToast();
 const notificationStore = useNotificationStore();
+const authStore = useAuthStore();
+
 const selectedIdType = ref<string>("");
 const bandera = ref<boolean>(false);
 const userRegistered = ref<boolean>(false);
@@ -193,7 +194,6 @@ const validateEmail = (email: string): boolean => {
   return emailRegex.test(email);
 };
 
-
 const handleEmailValidation = () => {
   const email = internalUser.value.Internal_Email;
   if (email) {
@@ -205,10 +205,10 @@ const handleEmailValidation = () => {
         detail: "Por favor ingresa un email con formato válido.",
         life: 3000,
       });
-       internalUser.value.Internal_Email = ""; 
+      internalUser.value.Internal_Email = "";
       return;
     }
-    
+
     // Si el formato es válido, verificar si ya existe
     checkEmailExists().then((existe) => {
       if (existe) {
@@ -252,21 +252,108 @@ const checkIdSize = (shouldShowToast: boolean = true): boolean => {
 
 const onFormSubmit = async () => {
   const restrictedWords = [
-    "manzana", "pera", "uva", "fresa", "mango", "melon", "sandia", "platano", "cereza", "naranja",
-    "limon", "papaya", "coco", "kiwi", "ciruela", "durazno", "guayaba", "mandarina", "toronja",
-    "granada", "frambuesa", "zarzamora", "arandano", "mora", "higo", "chirimoya", "maracuya",
-    "tamarindo", "zapote", "nispero", "caimito", "mamey", "guanabana", "guayabo", "anon", "pomelo",
-    "pina", "carambola", "parcha", "mamon", "tuna", "pitahaya", "chayote", "jicama", "chirimoia",
-    "nance", "naranjilla", "pepino", "calabaza", "calabacin", "berenjena", "tomate", "pimiento",
-    "papa", "yuca", "batata", "boniato", "maiz", "arroz", "trigo", "cebada", "avena", "centeno",
-    "sorgo", "mijo", "quinoa", "amaranto", "cafe", "cacao", "te", "mate", "manzanilla", "tilo",
-    "menta", "albahaca", "oregano", "perejil", "cilantro", "romero", "tomillo", "salvia", "laurel",
-    "hinojo", "eneldo", "anis", "comino", "curcuma", "pimienta", "mostaza", "nuez", "almendra",
-    "cacahuate", "pistache", "avellana", "macadamia", "sesamo", "linaza", "girasol"
+    "manzana",
+    "pera",
+    "uva",
+    "fresa",
+    "mango",
+    "melon",
+    "sandia",
+    "platano",
+    "cereza",
+    "naranja",
+    "limon",
+    "papaya",
+    "coco",
+    "kiwi",
+    "ciruela",
+    "durazno",
+    "guayaba",
+    "mandarina",
+    "toronja",
+    "granada",
+    "frambuesa",
+    "zarzamora",
+    "arandano",
+    "mora",
+    "higo",
+    "chirimoya",
+    "maracuya",
+    "tamarindo",
+    "zapote",
+    "nispero",
+    "caimito",
+    "mamey",
+    "guanabana",
+    "guayabo",
+    "anon",
+    "pomelo",
+    "pina",
+    "carambola",
+    "parcha",
+    "mamon",
+    "tuna",
+    "pitahaya",
+    "chayote",
+    "jicama",
+    "chirimoia",
+    "nance",
+    "naranjilla",
+    "pepino",
+    "calabaza",
+    "calabacin",
+    "berenjena",
+    "tomate",
+    "pimiento",
+    "papa",
+    "yuca",
+    "batata",
+    "boniato",
+    "maiz",
+    "arroz",
+    "trigo",
+    "cebada",
+    "avena",
+    "centeno",
+    "sorgo",
+    "mijo",
+    "quinoa",
+    "amaranto",
+    "cafe",
+    "cacao",
+    "te",
+    "mate",
+    "manzanilla",
+    "tilo",
+    "menta",
+    "albahaca",
+    "oregano",
+    "perejil",
+    "cilantro",
+    "romero",
+    "tomillo",
+    "salvia",
+    "laurel",
+    "hinojo",
+    "eneldo",
+    "anis",
+    "comino",
+    "curcuma",
+    "pimienta",
+    "mostaza",
+    "nuez",
+    "almendra",
+    "cacahuate",
+    "pistache",
+    "avellana",
+    "macadamia",
+    "sesamo",
+    "linaza",
+    "girasol",
   ];
 
   // Check if the password contains restricted words
-  const containsRestrictedWord = restrictedWords.some(word =>
+  const containsRestrictedWord = restrictedWords.some((word) =>
     internalUser.value.Internal_Password?.toLowerCase().includes(word)
   );
 
@@ -274,7 +361,8 @@ const onFormSubmit = async () => {
     // Add a notification to the notification store
     notificationStore.addNotification({
       id: Date.now(),
-      mensaje: "La contraseña contiene palabras restringidas. Por favor, cámbiala.",
+      mensaje:
+        "La contraseña contiene palabras restringidas. Por favor, cámbiala.",
       fecha: new Date().toISOString(),
       leida: false,
       userId: internalUser.value.Internal_ID,
@@ -283,17 +371,25 @@ const onFormSubmit = async () => {
   // Make the API call
   isLoading.value = true;
   try {
-    const response = await axios.post<Internal_User>(`${API}/register`, {
-      Internal_ID: internalUser.value.Internal_ID,
-      Internal_Name: internalUser.value.Internal_Name,
-      Internal_LastName: internalUser.value.Internal_LastName,
-      Internal_Email: internalUser.value.Internal_Email,
-      Internal_Password: internalUser.value.Internal_Password,
-      Internal_Type: internalUser.value.Internal_Type,
-      Internal_Area: internalUser.value.Internal_Area,
-      Internal_Phone: internalUser.value.Internal_Phone.replace(/\D/g, ""),
-      Internal_Status: internalUser.value.Internal_Status,
-    });
+    const response = await axios.post<Internal_User>(
+      `${API}/register`,
+      {
+        Internal_ID: internalUser.value.Internal_ID,
+        Internal_Name: internalUser.value.Internal_Name,
+        Internal_LastName: internalUser.value.Internal_LastName,
+        Internal_Email: internalUser.value.Internal_Email,
+        Internal_Password: internalUser.value.Internal_Password,
+        Internal_Type: internalUser.value.Internal_Type,
+        Internal_Area: internalUser.value.Internal_Area,
+        Internal_Phone: internalUser.value.Internal_Phone.replace(/\D/g, ""),
+        Internal_Status: internalUser.value.Internal_Status,
+      },
+      {
+        headers: {
+          "internal-id": authStore.user?.id,
+        },
+      }
+    );
     // If the API returns a success message
     if (response.data) {
       toast.add({
@@ -457,9 +553,17 @@ const createPassword = () => {
   <Toast />
   <div class="card">
     <h3 class="text-2xl font-semibold mb-8">Crear nuevo usuario</h3>
-    <div v-if="isLoading" class="flex-grow flex items-center justify-center mt-40 mb-48 mr-20">
-        <ProgressSpinner style="width: 70px; height: 70px" strokeWidth="8" fill="transparent"
-            animationDuration=".8s" aria-label="Custom ProgressSpinner" />
+    <div
+      v-if="isLoading"
+      class="flex-grow flex items-center justify-center mt-40 mb-48 mr-20"
+    >
+      <ProgressSpinner
+        style="width: 70px; height: 70px"
+        strokeWidth="8"
+        fill="transparent"
+        animationDuration=".8s"
+        aria-label="Custom ProgressSpinner"
+      />
     </div>
     <template v-if="!isLoading">
       <div class="grid grid-cols-1 md:grid-cols-2 gap-80">
@@ -604,7 +708,7 @@ const createPassword = () => {
                   v-model="internalUser.Internal_Email"
                   size="large"
                   class="w-full"
-                   @blur="handleEmailValidation"
+                  @blur="handleEmailValidation"
                 />
                 <label for="email"
                   ><span class="text-red-500">*</span> Email</label
