@@ -65,6 +65,7 @@ const isLoadingDynamicFields = ref<boolean>(false);
 const visibleDetallesActividadDialog = ref(false);
 const actividadSeleccionadaDetalles = ref<Record<string, any> | null>(null);
 const isLoadingActivityDetails = ref(false);
+const isActivityInternal = ref(false);
 
 const usuarioEvidenciaUrl = ref<string | null>(null);
 const usuarioDocumentoSaludUrl = ref<string | null>(null);
@@ -318,6 +319,7 @@ const guardarNuevaActividad = async () => {
       Activity_Type: selectedTypeObject.Type_Of_Activity_Name,
       Activity_Status: "En progreso",
       Internal_ID: authStore.user?.id,
+      Activity_IsInternal: isActivityInternal.value, // <-- Aquí se agrega el valor del checkbox
     };
 
     // Mapear los valores de los campos dinámicos al payload
@@ -384,6 +386,7 @@ const guardarNuevaActividad = async () => {
       visibleNuevaActividadDialog.value = false;
       dynamicFieldValues.value = {};
       selectedActivityType.value = null;
+      isActivityInternal.value = false; // Limpiar el checkbox al cerrar
     } else {
       throw new Error(`Error al guardar la actividad: Estado ${response.status} - ${response.statusText}`);
     }
@@ -1240,93 +1243,105 @@ onMounted(() => {
 </Dialog>
 
     <!-- Dialog para CREAR Nueva Actividad -->
-    <Dialog v-model:visible="visibleNuevaActividadDialog" modal header="Crear Nueva Actividad" class="p-6 rounded-lg shadow-lg bg-white max-w-2xl w-full">
-    <div class="space-y-4">
-      <p>Nueva actividad para el caso: <strong>{{ selectedCaseCode }}</strong></p>
+<Dialog v-model:visible="visibleNuevaActividadDialog" modal header="Crear Nueva Actividad" class="p-6 rounded-lg shadow-lg bg-white max-w-2xl w-full">
+  <div class="space-y-4">
+    <p>Nueva actividad para el caso: <strong>{{ selectedCaseCode }}</strong></p>
 
-      <!-- Dropdown (Combobox) de Tipos de Actividad -->
-      <div class="field">
-        <label for="activityType" class="block text-sm font-semibold mb-1">Tipo de Actividad</label>
-        <Select
-  id="activityType"
-  v-model="selectedActivityType"
-  :options="activityTypeOptions"
-  option-label="Type_Of_Activity_Name"
-  option-value="Type_Of_Activity_ID"
-  placeholder="Selecciona un tipo"
-  class="w-full"
-  :loading="isLoadingActivityTypes"
-  :clearable="true"
-  :filterable="activityTypeOptions.length > 10"
-/>
-      </div>
-
-      <!-- Campos dinámicos -->
-      <div v-for="field in dynamicFields" :key="field.Field_Of_Activity_Id" class="field">
-  <label :for="field.Field_Of_Activity_Name" class="block text-sm font-semibold mb-1">
-    {{ field.Field_Of_Activity_Name }}
-    <span v-if="field.Field_Of_Activity_Required" class="text-red-500">*</span>
-  </label>
-
-  <InputText
-    v-if="field.Field_Of_Activity_Type === 'Texto'"
-    :id="field.Field_Of_Activity_Name"
-    v-model="dynamicFieldValues[field.Field_Of_Activity_Name]"
-    placeholder="Ingrese la descripción"
-    class="w-full"
-  />
-
-  <Calendar
-    v-else-if="field.Field_Of_Activity_Type === 'Fecha'"
-    :id="field.Field_Of_Activity_Name"
-    v-model="dynamicFieldValues[field.Field_Of_Activity_Name]"
-    placeholder="Ingrese la fecha"
-    class="w-full"
-    dateFormat="dd/mm/yy"
-  />
-
-  <InputText
-    v-else-if="field.Field_Of_Activity_Type === 'Lugar'"
-    :id="field.Field_Of_Activity_Name"
-    v-model="dynamicFieldValues[field.Field_Of_Activity_Name]"
-    placeholder="Ingrese el lugar"
-    class="w-full"
-  />
-
-  <Calendar
-    v-else-if="field.Field_Of_Activity_Type === 'Tiempo'"
-    :id="field.Field_Of_Activity_Name"
-    v-model="dynamicFieldValues[field.Field_Of_Activity_Name]"
-    class="w-full"
-    timeOnly
-    hourFormat="24"
-    placeholder="Seleccione la hora"
-  />
-
-        <Select
-  v-else-if="field.Field_Of_Activity_Type === 'dropdown'"
-  :id="field.Field_Of_Activity_Name"
-  v-model="dynamicFieldValues[field.Field_Of_Activity_Name]"
-  :options="field.Field_Of_Activity_Options"
-  option-label="label"
-  option-value="value"
-  class="w-full"
-  :class="{ 'border-red-500': field.Field_Of_Activity_Required && !dynamicFieldValues[field.Field_Of_Activity_Name] }"
-/>
-      </div>
+    <!-- Dropdown (Combobox) de Tipos de Actividad -->
+    <div class="field">
+      <label for="activityType" class="block text-sm font-semibold mb-1">Tipo de Actividad</label>
+      <Select
+        id="activityType"
+        v-model="selectedActivityType"
+        :options="activityTypeOptions"
+        option-label="Type_Of_Activity_Name"
+        option-value="Type_Of_Activity_ID"
+        placeholder="Selecciona un tipo"
+        class="w-full"
+        :loading="isLoadingActivityTypes"
+        :clearable="true"
+        :filterable="activityTypeOptions.length > 10"
+      />
     </div>
 
-    <template #footer>
-      <Button label="Cancelar" icon="pi pi-times" class="p-button-text" @click="visibleNuevaActividadDialog = false" />
-      <Button
-  label="Guardar"
-  icon="pi pi-check"
-  class="p-button-success"
-  :disabled="!isNuevaActividadFormValid"
-  @click="guardarNuevaActividad"
-/>
-    </template>
-  </Dialog>
+    <!-- Campos dinámicos -->
+    <div v-for="field in dynamicFields" :key="field.Field_Of_Activity_Id" class="field">
+      <label :for="field.Field_Of_Activity_Name" class="block text-sm font-semibold mb-1">
+        {{ field.Field_Of_Activity_Name }}
+        <span v-if="field.Field_Of_Activity_Required" class="text-red-500">*</span>
+      </label>
+
+      <InputText
+        v-if="field.Field_Of_Activity_Type === 'Texto'"
+        :id="field.Field_Of_Activity_Name"
+        v-model="dynamicFieldValues[field.Field_Of_Activity_Name]"
+        placeholder="Ingrese la descripción"
+        class="w-full"
+      />
+
+      <Calendar
+        v-else-if="field.Field_Of_Activity_Type === 'Fecha'"
+        :id="field.Field_Of_Activity_Name"
+        v-model="dynamicFieldValues[field.Field_Of_Activity_Name]"
+        placeholder="Ingrese la fecha"
+        class="w-full"
+        dateFormat="dd/mm/yy"
+      />
+
+      <InputText
+        v-else-if="field.Field_Of_Activity_Type === 'Lugar'"
+        :id="field.Field_Of_Activity_Name"
+        v-model="dynamicFieldValues[field.Field_Of_Activity_Name]"
+        placeholder="Ingrese el lugar"
+        class="w-full"
+      />
+
+      <Calendar
+        v-else-if="field.Field_Of_Activity_Type === 'Tiempo'"
+        :id="field.Field_Of_Activity_Name"
+        v-model="dynamicFieldValues[field.Field_Of_Activity_Name]"
+        class="w-full"
+        timeOnly
+        hourFormat="24"
+        placeholder="Seleccione la hora"
+      />
+
+      <Select
+        v-else-if="field.Field_Of_Activity_Type === 'dropdown'"
+        :id="field.Field_Of_Activity_Name"
+        v-model="dynamicFieldValues[field.Field_Of_Activity_Name]"
+        :options="field.Field_Of_Activity_Options"
+        option-label="label"
+        option-value="value"
+        class="w-full"
+        :class="{ 'border-red-500': field.Field_Of_Activity_Required && !dynamicFieldValues[field.Field_Of_Activity_Name] }"
+      />
+    </div>
+    <!-- Checkbox para actividad interna usando PrimeVue -->
+    <div class="field flex items-center gap-2">
+      <Checkbox
+        inputId="isActivityInternal"
+        v-model="isActivityInternal"
+        :binary="true"
+        class="mr-2"
+      />
+      <label for="isActivityInternal" class="text-sm font-semibold select-none">
+        La actividad es Interna?
+      </label>
+    </div>
+  </div>
+
+  <template #footer>
+    <Button label="Cancelar" icon="pi pi-times" class="p-button-text" @click="visibleNuevaActividadDialog = false" />
+    <Button
+      label="Guardar"
+      icon="pi pi-check"
+      class="p-button-success"
+      :disabled="!isNuevaActividadFormValid"
+      @click="guardarNuevaActividad"
+    />
+  </template>
+</Dialog>
 
     <!-- Dialog de Detalles del Usuario -->
     <Dialog

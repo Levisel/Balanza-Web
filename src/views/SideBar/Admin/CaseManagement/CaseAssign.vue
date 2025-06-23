@@ -10,6 +10,7 @@ import TabView from 'primevue/tabview';
 import TabPanel from 'primevue/tabpanel';
 import Paginator, { type PageState } from 'primevue/paginator'; 
 import { useNotificationStore } from '@/stores/notifications';  
+import { API } from "@/ApiRoute";
 
 interface Case {
   Internal_ID: string;
@@ -122,8 +123,8 @@ const filteredAssignedCases = computed(() =>
 
     if (userType === 'Administrador' || userType === 'SuperAdmin') {
       // URLs generales para Administrador o SuperAdmin
-      pendingUrl = 'http://localhost:3000/initial-consultations/review/Por%20Asignar/Activo';
-      assignedUrl = 'http://localhost:3000/initial-consultations/review/Asignado/Activo';
+      pendingUrl = `${API}/initial-consultations/review/Por%20Asignar/Activo`;
+      assignedUrl = `${API}/initial-consultations/review/Asignado/Activo`;
     } else {
       // URLs específicas para otros usuarios
       if (!authStore.user?.area) {
@@ -136,8 +137,8 @@ const filteredAssignedCases = computed(() =>
       }
 
       const areaEncoded = encodeURIComponent(authStore.user.area);
-      pendingUrl = `http://localhost:3000/initial-consultations/type/${areaEncoded}/Por%20Asignar/Activo`;
-      assignedUrl = `http://localhost:3000/initial-consultations/type/${areaEncoded}/Asignado/Activo`;
+      pendingUrl = `${API}/initial-consultations/type/${areaEncoded}/Por%20Asignar/Activo`;
+      assignedUrl = `${API}/initial-consultations/type/${areaEncoded}/Asignado/Activo`;
     }
 
     // Realizar peticiones en paralelo
@@ -155,7 +156,7 @@ const filteredAssignedCases = computed(() =>
         try {
           console.log(`Fetching assignment for case: ${caso.Init_Code}`);
           const assignmentResponse = await axios.get(
-            `http://localhost:3000/assignment/student/initcode/${caso.Init_Code}`
+            `${API}/assignment/student/initcode/${caso.Init_Code}`
           );
 
           if (typeof assignmentResponse.data === 'string' && assignmentResponse.data) {
@@ -164,7 +165,7 @@ const filteredAssignedCases = computed(() =>
             caso.assignedTo = studentId; // Mantener consistencia
 
             try {
-              const studentResponse = await axios.get(`http://localhost:3000/internal-user/${studentId}`);
+              const studentResponse = await axios.get(`${API}/internal-user/${studentId}`);
               const studentData = studentResponse.data;
               caso.assignedStudentName = `${studentData.Internal_Name || ''} ${studentData.Internal_LastName || ''}`.trim();
             } catch (studentError: any) {
@@ -211,7 +212,7 @@ const filteredAssignedCases = computed(() =>
       if (!selectedArea.value) return; // No hacer fetch si no hay área
       try {
         const response = await axios.get(
-          `http://localhost:3000/internal-users/students/${encodeURIComponent(selectedArea.value)}`
+          `${API}/internal-users/students/${encodeURIComponent(selectedArea.value)}`
         );
         students.value = response.data || [];
       } catch (error) {
@@ -248,13 +249,13 @@ const filteredAssignedCases = computed(() =>
           Internal_User_ID: authStore.user.id,
         };
 
-        await axios.post('http://localhost:3000/assignment', assignmentData, {
+        await axios.post(`${API}/assignment`, assignmentData, {
           headers: { 'internal-id': authStore.user.id },
         });
 
         const updateData = { Init_Type: 'Asignado' };
         await axios.put(
-          `http://localhost:3000/initial-consultations/${caso.Init_Code}`,
+          `${API}/initial-consultations/${caso.Init_Code}`,
           updateData,
           { headers: { 'internal-id': authStore.user.id } }
         );
@@ -319,7 +320,7 @@ const filteredAssignedCases = computed(() =>
       autoAssignLoading.value = true;
       try {
         const response = await axios.post(
-          'http://localhost:3000/assignment/assign-pending-by-area',
+          `${API}/assignment/assign-pending-by-area`,
           { area: selectedArea.value },
           { headers: { 'internal-id': authStore.user.id } }
         );
@@ -414,7 +415,7 @@ const filteredAssignedCases = computed(() =>
 
             // --- Llamada a la API (sin cambios en URL o método) ---
             await axios.put(
-                `http://localhost:3000/assignment/initcode/${initCode}`,
+                `${API}/assignment/initcode/${initCode}`,
                 updateData, // Ahora envía la clave correcta
                 {
                     headers: { 'internal-id': authStore.user.id },
