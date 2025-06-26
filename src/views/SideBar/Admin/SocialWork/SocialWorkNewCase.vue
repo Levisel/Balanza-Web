@@ -397,6 +397,15 @@
                   :disabled="isFormLocked"
                 ></textarea>
               </div>
+              <div class="form-group">
+                <label class="block text-gray-700 font-medium mb-2">Tipo de enfermedad</label>
+                <textarea 
+                  v-model="caso.tipodeEnfermedad" 
+                  rows="2"
+                  class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  :disabled="isFormLocked"
+                ></textarea>
+              </div>
             </div>
           </div>
 
@@ -501,12 +510,37 @@
                 />
               </div>
               <div class="form-group">
-                <label class="block text-gray-700 font-medium mb-2">C.I.</label>
-                <input 
-                  type="text" 
-                  v-model="caso.contraparte.ci" 
+                <label class="block text-gray-700 font-medium mb-2">Documento de identidad</label>
+                <div class="flex items-center gap-4 mb-2">
+                  <label class="inline-flex items-center">
+                    <input
+                      type="radio"
+                      value="CI"
+                      v-model="caso.contraparte.tipoDocumento"
+                      :disabled="isFormLocked"
+                      class="form-radio"
+                    />
+                    <span class="ml-2">C.I.</span>
+                  </label>
+                  <label class="inline-flex items-center">
+                    <input
+                      type="radio"
+                      value="Pasaporte"
+                      v-model="caso.contraparte.tipoDocumento"
+                      :disabled="isFormLocked"
+                      class="form-radio"
+                    />
+                    <span class="ml-2">Pasaporte</span>
+                  </label>
+                </div>
+                <input
+                  type="text"
+                  v-model="caso.contraparte.ci"
+                  :placeholder="caso.contraparte.tipoDocumento === 'Pasaporte' ? 'Número de pasaporte' : 'Número de C.I.'"
                   class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   :disabled="isFormLocked"
+                  :maxlength="caso.contraparte.tipoDocumento === 'Pasaporte' ? 20 : 10"
+                  @input="onCIInput"
                 />
               </div>
               <div class="form-group">
@@ -564,6 +598,14 @@
             >
               Cancelar
             </button>
+            <button
+              type="button"
+              @click="generarWord"
+              class="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 focus:outline-none"
+              :disabled="isFormLocked"
+            >
+              Generar Documento Word
+            </button>
             <button 
             type="submit"
             class="px-6 py-2 bg-[#164284] text-white rounded-lg hover:bg-blue-700 focus:outline-none"
@@ -582,6 +624,7 @@
   
 <script>
 import { useToast } from "primevue/usetoast";
+import { API } from "@/ApiRoute";
 
 export default {
   name: 'SocialWorkCaseForm',
@@ -626,6 +669,7 @@ export default {
           direccionDomicilio: '',
           telefono: '',
           ci: '',
+          tipoDocumento: 'CI', // Default to C.I.
           relacion: ''
         },
         casoConocidoAnteriormente: '',
@@ -662,7 +706,7 @@ export default {
   methods: {
     async fetchHousingTypes() {
       try {
-        const response = await fetch('http://localhost:3000/type-of-housing'
+        const response = await fetch(`${API}/type-of-housing`
           , {credentials: 'include',}
         );
         if (!response.ok) throw new Error('Error fetching housing types');
@@ -686,7 +730,7 @@ export default {
     },
     async fetchCivilStatuses() {
       try {
-        const response = await fetch('http://localhost:3000/civil-statuses'
+        const response = await fetch(`${API}/civil-statuses`
           , {credentials:'include'}
         );
         if (!response.ok) throw new Error('Error fetching civil statuses');
@@ -778,6 +822,17 @@ export default {
 
       return isValid;
     },
+    onCIInput(e) {
+      if (this.caso.contraparte.tipoDocumento === 'CI') {
+        // Only allow numbers, max 10 digits
+        let value = e.target.value.replace(/\D/g, '').slice(0, 10);
+        this.caso.contraparte.ci = value;
+      } else {
+        // Allow alphanumeric, max 15 chars
+        let value = e.target.value.replace(/[^a-zA-Z0-9]/g, '').slice(0, 20);
+        this.caso.contraparte.ci = value;
+      }
+    },
     openNotasModal(index) {
     this.selectedMemberIndex = index; // Set the selected member index
     this.notasModalVisible = true;    // Changed false to true to correctly show the modal
@@ -819,7 +874,7 @@ export default {
       this.error = null;
 
       // Fetch case details from the API using the query parameters
-      const response = await fetch(`http://localhost:3000/social-work/${casoId}`
+      const response = await fetch(`${API}/social-work/${casoId}`
         , {credentials: 'include'}
       );
 
@@ -833,7 +888,7 @@ export default {
       // Fetch living group members
       let grupoConvivencia = [];
       try {
-        const livingGroupResponse = await fetch(`http://localhost:3000/living-groups/process/${casoId}`
+        const livingGroupResponse = await fetch(`${API}/living-groups/process/${casoId}`
           , {credentials: 'include'}
         );
         if (livingGroupResponse.ok) {
@@ -881,6 +936,7 @@ export default {
         denuncias: data.SW_Complaints || '',
         consumoAlcohol: data.SW_AlcoholConsumption || '',
         consumoDrogas: data.SW_DrugConsumption || '',
+        tipodeEnfermedad: data.SW_TypeOfDisease || '',
         ingresos: data.SW_Income || null,
         tipoVivienda: data.SW_HousingType || '',
         contraparte: {
@@ -891,6 +947,7 @@ export default {
           direccionDomicilio: data.SW_CounterpartAddress || '',
           telefono: data.SW_CounterpartPhone || '',
           ci: data.SW_CounterpartID || '',
+          tipoDocumento: data.SW_TypeOfID || 'CI', // Default to C.I.
           relacion: data.SW_CounterpartRelation || ''
         },
         casoConocidoAnteriormente: data.SW_PreviouslyKnownCase || '',
@@ -908,7 +965,62 @@ export default {
       this.isLoading = false;
     }
   },
+  async generarWord() {
+    try {
+      this.isLoading = true;
+      // You can use the current case's process number as ID
+      const processNumber = this.caso.numeroProceso;
+      if (!processNumber) {
+        this.toast.add({
+          severity: "error",
+          summary: "Error",
+          detail: "No se encontró el número de proceso.",
+          life: 3000,
+        });
+        return;
+      }
 
+      // Optionally, you can send date range or just the process number
+      const response = await fetch(
+        `${API}/social-work/report/word?processNumber=${encodeURIComponent(processNumber)}`,
+        {
+          method: "GET",
+          credentials: "include",
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("No se pudo generar el documento Word.");
+      }
+
+      const blob = await response.blob();
+      // Download the file
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `Reporte_TrabajoSocial_${processNumber}.docx`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+
+      this.toast.add({
+        severity: "success",
+        summary: "Documento generado",
+        detail: "El documento Word ha sido generado y descargado.",
+        life: 3000,
+      });
+    } catch (error) {
+      this.toast.add({
+        severity: "error",
+        summary: "Error",
+        detail: error.message || "No se pudo generar el documento Word.",
+        life: 3000,
+      });
+    } finally {
+      this.isLoading = false;
+    }
+  },
   async actualizarCaso() {
   if (this.isFormLocked) {
         this.toast.add({
@@ -938,6 +1050,7 @@ export default {
       SW_EntryDate: this.caso.fechaIngreso,
       SW_AlcoholConsumption: this.caso.consumoAlcohol,
       SW_DrugConsumption: this.caso.consumoDrogas,
+      SW_TypeOfDisease: this.caso.tipodeEnfermedad,
       SW_Income: this.caso.ingresos,
       SW_HousingType: this.caso.tipoVivienda,
       SW_CounterpartName: this.caso.contraparte.nombres,
@@ -947,6 +1060,7 @@ export default {
       SW_CounterpartAddress: this.caso.contraparte.direccionDomicilio,
       SW_CounterpartPhone: this.caso.contraparte.telefono,
       SW_CounterpartID: this.caso.contraparte.ci,
+      SW_TypeOfID: this.caso.contraparte.tipoDocumento,
       SW_CounterpartRelation: this.caso.contraparte.relacion,
       SW_PreviouslyKnownCase: this.caso.casoConocidoAnteriormente,
       SW_FactsReport: this.caso.relatoHechos,
@@ -962,7 +1076,7 @@ export default {
 
       // Update main social work case data first
       console.log("Updating social work case:", this.caso.numeroProceso);
-      const response = await fetch(`http://localhost:3000/social-work/${this.caso.numeroProceso}`, {
+      const response = await fetch(`${API}/social-work/${this.caso.numeroProceso}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -982,7 +1096,7 @@ export default {
       // Now handle the living group members
       console.log("Fetching existing living group members...");
       // First, fetch the existing living group members for this process
-      const livingGroupResponse = await fetch(`http://localhost:3000/living-groups/process/${this.caso.numeroProceso}`
+      const livingGroupResponse = await fetch(`${API}/living-groups/process/${this.caso.numeroProceso}`
         , {credential: 'include'}
       );
       let existingMembers = [];
@@ -1016,7 +1130,7 @@ export default {
         // If the member has an ID, it means it's an existing member that needs to be updated
         if (member.id) {
           console.log(`Updating existing member: ${member.nombre} (ID: ${member.id})`);
-          const updatePromise = fetch(`http://localhost:3000/living-groups/${member.id}`, {
+          const updatePromise = fetch(`${API}/living-groups/${member.id}`, {
             credentials: 'include',
             method: "PUT",
             headers: {
@@ -1031,7 +1145,7 @@ export default {
             if (response.status === 404) {
               console.warn(`Member ${member.id} not found, will be created instead`);
               // Create a new record instead
-              return fetch(`http://localhost:3000/living-groups`, {
+              return fetch(`${API}/living-groups`, {
                 credentials: 'include',
                 method: "POST",
                 headers: {
@@ -1063,7 +1177,7 @@ export default {
         } else {
           // This is a new member, so create it
           console.log(`Creating new member: ${member.nombre}`);
-          const createPromise = fetch(`http://localhost:3000/living-groups`, {
+          const createPromise = fetch(`${API}/living-groups`, {
             credentials: 'include',
             method: "POST",
             headers: {
@@ -1094,7 +1208,7 @@ export default {
       const deletePromises = [];
       for (const [memberId, member] of existingMembersMap.entries()) {
         console.log(`Deleting removed member: ${member.LG_Name} (ID: ${memberId})`);
-        const deletePromise = fetch(`http://localhost:3000/living-groups/${memberId}`, {
+        const deletePromise = fetch(`${API}/living-groups/${memberId}`, {
           credential: 'include',
           method: "DELETE",
           headers: {
@@ -1147,12 +1261,11 @@ export default {
 watch: {
     // Watch for changes in caso.contraparte.ci
     'caso.contraparte.ci'(newValue) {
-      if (newValue.length === 10) {
-        if (this.validateID(newValue)) {
-          alert("C.I. válido");
-        } else {
-          alert("C.I. no válido");
-          this.caso.contraparte.ci = ''; // Reset the field if invalid
+      if (this.caso.contraparte.tipoDocumento === 'CI' && 
+      newValue &&
+      newValue.length === 10) {
+        if (!this.validateID(newValue)) {
+          this.caso.contraparte.ci = ''; // Reset the C.I. if it's invalid
         }
       }
     },
