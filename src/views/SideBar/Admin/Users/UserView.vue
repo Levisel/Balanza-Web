@@ -13,10 +13,11 @@ import Tag from "primevue/tag";
 import { useToast } from "primevue/usetoast";
 import { type Internal_User } from "@/ApiRoute";
 import { API } from "@/ApiRoute";
-import { useSubjects } from "@/useSubjects";
 import { useAuthStore } from "@/stores/auth";
+import { useConfirm } from "primevue/useconfirm";
 
 import ProgressSpinner from "primevue/progressspinner";
+import ConfirmDialog from "primevue/confirmdialog";
 
 const authStore = useAuthStore();
 
@@ -222,6 +223,62 @@ const getSeverity = (status: string) => {
   }
 };
 
+const deleteUser = async () => {
+  if (selectedInternalUser.value) {
+    try {
+      await axios.delete(
+        `${API}/internal-user/${selectedInternalUser.value.Internal_ID}`,
+        {
+          headers: {
+            "internal-id": authStore.user?.id,
+          },
+        }
+      );
+      toast.add({
+        severity: "success",
+        summary: "Usuario Desactivado",
+        detail: "El usuario ha sido desactivado con éxito.",
+        life: 4000,
+      });
+      // Recargar usuarios después de la eliminación
+      await fetchUsers();
+    } catch (error) {
+      toast.add({
+        severity: "error",
+        summary: "Error",
+        detail: "No se ha podido desactivar al usuario.",
+        life: 3000,
+      });
+    }
+  }
+};
+
+const confirm = useConfirm();
+
+const deleteConfirm = (data: any) => {
+  selectedInternalUser.value = { ...data };
+  confirm.require({
+    message: "¿Estás seguro de que quieres desactivar a este usuario? Perderá el acceso al sistema",
+    header: "Advertencia",
+    icon: "pi pi-exclamation-triangle",
+    rejectLabel: "Cancelar",
+    rejectProps: { label: "Cancel", severity: "contrast", icon: "pi pi-times" },
+    acceptProps: { label: "Aceptar", severity: "danger", icon: "pi pi-check-circle" },
+    accept: async () => {
+      if (selectedInternalUser.value.Internal_Status === "Inactivo") {
+        toast.add({
+          severity: "warn",
+          summary: "Advertencia",
+          detail: "El usuario ya está inactivo.",
+          life: 3000,
+        });
+        return;
+      }
+      await deleteUser();
+    },
+  });
+};
+
 onMounted(() => {
   fetchUsers();
   initFilters();
@@ -230,6 +287,7 @@ onMounted(() => {
 
 <template>
   <Toast />
+  <ConfirmDialog />
   <div class="card">
     <div class="flex justify-between items-center">
       <h1 class="text-2xl font-bold mb-4">Gestión de Usuarios</h1>
@@ -244,6 +302,7 @@ onMounted(() => {
       dataKey="Internal_ID"
       filterDisplay="menu"
       removableSort
+      size="small"
       :globalFilterFields="[
         'Internal_ID',
         'Internal_Name',
@@ -416,6 +475,15 @@ onMounted(() => {
               v-tooltip.bottom="'Editar Usuario'"
               icon="pi pi-pencil"
               severity="info"
+              rounded
+              variant="outlined"
+              aria-label="User"
+            />
+            <Button
+              @click="deleteConfirm(data)"
+              v-tooltip.bottom="'Desactivar Usuario'"
+              icon="pi pi-delete-left"
+              severity="danger"
               rounded
               variant="outlined"
               aria-label="User"
