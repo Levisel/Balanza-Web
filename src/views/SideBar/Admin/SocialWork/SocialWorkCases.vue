@@ -199,6 +199,7 @@
 import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import axios from 'axios';
+import { API } from "@/ApiRoute";
 
 // Define interfaces
 interface SocialWorkCase {
@@ -236,7 +237,7 @@ interface SocialWork {
 }
 
 // API URL
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+const API_URL = import.meta.env.VITE_API_URL || `${API}`;
 
 // State variables
 const casos = ref<SocialWorkCase[]>([]);
