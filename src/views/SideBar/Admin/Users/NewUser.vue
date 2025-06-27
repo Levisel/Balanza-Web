@@ -156,7 +156,7 @@ const checkEmailExists = async (): Promise<boolean> => {
 watch(
   () => internalUser.value.Internal_ID,
   (nuevoValor) => {
-    if (selectedIdType.value === "cedula" && nuevoValor.length === 10) {
+    if ((selectedIdType.value === "cedula" && nuevoValor.length === 10)) {
       if (validateID(nuevoValor)) {
         checkUserExists().then((existe) => {
           if (existe) {
@@ -184,6 +184,21 @@ watch(
         });
         internalUser.value.Internal_ID = "";
       }
+    }
+    else if (
+      selectedIdType.value === "pasaporte" &&
+      nuevoValor.length > 0
+    ) {
+      checkUserExists().then((existe) => {
+        if (existe) {
+          toast.add({
+            severity: "warn",
+            summary: "Usuario ya existe",
+            detail: "Ya existe un usuario con el pasaporte ingresado.",
+            life: 3000,
+          });
+        } 
+      });
     }
   }
 );

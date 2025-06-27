@@ -235,7 +235,7 @@ const deleteUser = async () => {
         }
       );
       toast.add({
-        severity: "success",
+        severity: "info",
         summary: "Usuario Desactivado",
         detail: "El usuario ha sido desactivado con éxito.",
         life: 4000,
