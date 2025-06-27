@@ -156,7 +156,7 @@ const checkEmailExists = async (): Promise<boolean> => {
 watch(
   () => internalUser.value.Internal_ID,
   (nuevoValor) => {
-    if ((selectedIdType.value === "cedula" && nuevoValor.length === 10)) {
+    if (selectedIdType.value === "cedula" && nuevoValor.length === 10) {
       if (validateID(nuevoValor)) {
         checkUserExists().then((existe) => {
           if (existe) {
