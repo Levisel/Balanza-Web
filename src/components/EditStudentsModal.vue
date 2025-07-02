@@ -9,10 +9,11 @@ import axios from 'axios';
 import { API, type Internal_User } from '@/ApiRoute';
 import { useToast } from "primevue/usetoast";
 import { useSubjects } from '@/useSubjects';
+import { useAuthStore } from "@/stores/auth";
 const { subjects: areas } = useSubjects();
 const isSaving = ref(false);
 const toast = useToast();
-
+const authStore = useAuthStore();
 const props = defineProps<{
   visible: boolean;
   user: Internal_User | null;
@@ -121,7 +122,11 @@ const saveChanges = async () => {
       });
     } else {
       // PUT (con o sin cambio de correo)
-      await axios.put(`${API}/internal-user/${edited.Internal_ID}`, edited);
+      await axios.put(`${API}/internal-user/${edited.Internal_ID}`, edited, {
+        headers: {
+          "internal-id": authStore.user?.id,
+        },
+      });
 
       if (emailCambiado) {
         await axios.post(`${API}/internal-user/resend-credentials/${edited.Internal_ID}`, {

@@ -3056,7 +3056,7 @@ const getActivityStatusSeverity = (status: string) => {
 
 
 const initNotesEditor = ref<any>(null);
-const MAX_INIT_NOTES_LENGTH = 823;
+const MAX_INIT_NOTES_LENGTH = 612;
 
 const handleInitNotesChange = (event: EditorTextChangeEvent): void => {
   const quill = event.instance

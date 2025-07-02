@@ -114,11 +114,12 @@ import Button from 'primevue/button';
 import Message from 'primevue/message';
 import Dialog from 'primevue/dialog';
 import { useSubjects } from "@/useSubjects";
+import { useAuthStore } from "@/stores/auth";
 import axios from 'axios'; // asegúrate que esté importado
 
 const { subjects: opcionesAreas } = useSubjects(); // ← Esto reemplaza tu arreglo hardcoded
 
-
+const authStore = useAuthStore();
 const toast = useToast();
 
 // Estados
@@ -233,7 +234,15 @@ const asignarArea = async () => {
     for (const estudiante of estudiantesSeleccionados.value) {
       const payload = { Internal_Area: areaSeleccionada.value, Internal_Email: estudiante.Internal_Email };
 
-      await axios.put(`${API}/internal-user/${estudiante.Internal_ID}`, payload);
+      await axios.put(`${API}/internal-user/${estudiante.Internal_ID}`, 
+        payload,
+        {
+          headers: {
+            "internal-id": authStore.user?.id,
+          },
+        }
+
+      );
     }
 
     toast.add({ severity: 'success', summary: 'Éxito', detail: 'Área asignada correctamente', life: 3000 });
