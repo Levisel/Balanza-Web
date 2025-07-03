@@ -45,32 +45,31 @@ import MyCases from "@/views/SideBar/Cases/MyCases.vue";
 import CaseNotifications from "@/views/SideBar/Cases/CaseNotifications.vue";
 import CreateActivities from "@/views/SideBar/Cases/CreateActivities.vue";
 
-
 //Cases -> Reports
 import ExcelReport from "@/views/SideBar/Cases/Reports/ExcelReport.vue";
 
 //----------------------------------------------------------------------------------------------------------------//
 //ENTRANCE CONTROL
-//Cronogram 
-import Cronograma from '@/views/SideBar/EntranceControl/Cronograma/Cronograma.vue';
-import IngresoCronograma from '@/views/SideBar/EntranceControl/Cronograma/IngresoCronograma.vue';
+//Cronogram
+import Cronograma from "@/views/SideBar/EntranceControl/Cronograma/Cronograma.vue";
+import IngresoCronograma from "@/views/SideBar/EntranceControl/Cronograma/IngresoCronograma.vue";
 
 //Students
-import AsignacionPeriodo from '@/views/SideBar/EntranceControl/Estudiantes/AsignacionPeriodo.vue';
-import IngresoEstudiantesExcel from '@/views/SideBar/EntranceControl/Estudiantes/IngresoEstudiantesExcel.vue';
+import AsignacionPeriodo from "@/views/SideBar/EntranceControl/Estudiantes/AsignacionPeriodo.vue";
+import IngresoEstudiantesExcel from "@/views/SideBar/EntranceControl/Estudiantes/IngresoEstudiantesExcel.vue";
 import IngresoManualEstudiantes from "@/views/SideBar/EntranceControl/Estudiantes/IngresoManualEstudiantes.vue";
-import RemoverPeriodo from '@/views/SideBar/EntranceControl/Estudiantes/RemoverPeriodo.vue';
-import ListadoEstudiantes from '@/views/SideBar/EntranceControl/Estudiantes/ListadoEstudiantes.vue';
+import RemoverPeriodo from "@/views/SideBar/EntranceControl/Estudiantes/RemoverPeriodo.vue";
+import ListadoEstudiantes from "@/views/SideBar/EntranceControl/Estudiantes/ListadoEstudiantes.vue";
 
 //Schedule
-import IngresoArea from '@/views/SideBar/EntranceControl/Horario/IngresoArea.vue';
-import IngresoHorario from '@/views/SideBar/EntranceControl/Horario/IngresoHorario.vue';
-import IngresoHorarioVirtual from '@/views/SideBar/EntranceControl/Horario/IngresoHorarioVirtual.vue';
-import VistaHorarios from '@/views/SideBar/EntranceControl/Horario/VistaHorarios.vue';
+import IngresoArea from "@/views/SideBar/EntranceControl/Horario/IngresoArea.vue";
+import IngresoHorario from "@/views/SideBar/EntranceControl/Horario/IngresoHorario.vue";
+import IngresoHorarioVirtual from "@/views/SideBar/EntranceControl/Horario/IngresoHorarioVirtual.vue";
+import VistaHorarios from "@/views/SideBar/EntranceControl/Horario/VistaHorarios.vue";
 
 // FingerPrint
-import AsignacionHuella from '@/views/SideBar/EntranceControl/RegistroBiometrico/AsignacionHuella.vue';
-import RegistroHuella from '@/views/SideBar/EntranceControl/RegistroBiometrico/RegistroHuella.vue';
+import AsignacionHuella from "@/views/SideBar/EntranceControl/RegistroBiometrico/AsignacionHuella.vue";
+import RegistroHuella from "@/views/SideBar/EntranceControl/RegistroBiometrico/RegistroHuella.vue";
 import RegistroPorCedula from "@/views/SideBar/EntranceControl/RegistroBiometrico/RegistroPorCedula.vue";
 import SeguimientoGeneral from "@/views/SideBar/EntranceControl/ControlAsistencia/SeguimientoGeneral.vue";
 import SeguimientoSemanal from "@/views/SideBar/EntranceControl/Cronograma/SeguimientoSemanal.vue";
@@ -99,71 +98,71 @@ const routes: Array<RouteRecordRaw> = [
         path: "RevisionDeCasos",
         name: "CaseReview",
         component: CaseReview,
-        meta: { requiresAuth: true, requiredPermission: "CaseReview" }
+        meta: { requiresAuth: true, requiredPermission: "CaseReview" },
       },
       {
         path: "AsignacionDeCasos",
         name: "CaseAssign",
         component: CaseAssign,
-        meta: { requiresAuth: true, requiredPermission: "CaseAssign" }
+        meta: { requiresAuth: true, requiredPermission: "CaseAssign" },
       },
       {
         path: "VerCasosAsignados",
         name: "AssignedCases",
         component: AssignedCases,
-        meta: { requiresAuth: true, requiredPermission: "AssignedCases" }
+        meta: { requiresAuth: true, requiredPermission: "AssignedCases" },
       },
       {
         path: "VerCasos",
         name: "AllCases",
         component: AllCases,
-        meta: { requiresAuth: true, requiredPermission: "AllCases" }
+        meta: { requiresAuth: true, requiredPermission: "AllCases" },
       },
       // Admin -> Parameter Management
       {
         path: "Parametros",
         name: "Parameter",
         component: ParameterView,
-        meta: { requiresAuth: true, requiredPermission: "Parameter" }
+        meta: { requiresAuth: true, requiredPermission: "Parameter" },
       },
       //Admin -> Role Management
       {
         path: "Roles",
         name: "RoleView",
         component: RoleView,
-        meta: { requiresAuth: true, requiredPermission: "RoleView" }
+        meta: { requiresAuth: true, requiredPermission: "RoleView" },
       },
       // Admin -> Users views
       {
         path: "Usuarios/:id?",
         name: "UserView",
         component: UserView,
-        meta: { requiresAuth: true, requiredPermission: "UserView" }
+        meta: { requiresAuth: true, requiredPermission: "UserView" },
       },
       {
         path: "NuevoUsuario",
         name: "NewUser",
         component: NewUser,
-        meta: { requiresAuth: true, requiredPermission: "NewUser" }
+        meta: { requiresAuth: true, requiredPermission: "NewUser" },
       },
       // Admin -> Social Work views
       {
         path: "TrabajoSocialHorario",
         name: "SocialWorkSchedule",
         component: SocialWorkSchedule,
-        meta: { requiresAuth: true, requiredPermission: "SocialWorkSchedule" }
+        meta: { requiresAuth: true, requiredPermission: "SocialWorkSchedule" },
       },
       {
         path: "NuevoCasoTrabajoSocial",
         name: "SocialWorkNewCase",
         component: SocialWorkNewCase,
-        meta: { requiresAuth: true, requiredPermission: "SocialWorkNewCase" }
+        meta: { requiresAuth: true, requiredPermission: "SocialWorkNewCase" },
       },
       {
         path: "TrabajoSocialCasos",
         name: "SocialWorkCases",
         component: SocialWorkCases,
-        meta: { requiresAuth: true, requiredPermission: "SocialWorkCases" }
+        meta: { requiresAuth: true, requiredPermission: "SocialWorkCases" },
       },
       {
         path: "Configuracion",
@@ -175,194 +174,211 @@ const routes: Array<RouteRecordRaw> = [
         path: "NuevoCaso",
         name: "NewCase",
         component: NewCase,
-        meta: { requiresAuth: true, requiredPermission: "NewCase" }
+        meta: { requiresAuth: true, requiredPermission: "NewCase" },
       },
       {
         path: "MisCasos",
         name: "MyCases",
         component: MyCases,
-        meta: { requiresAuth: true, requiredPermission: "MyCases" }
+        meta: { requiresAuth: true, requiredPermission: "MyCases" },
       },
       {
         path: "CrearActividades",
         name: "CreateActivities",
         component: CreateActivities,
-        meta: { requiresAuth: true, requiredPermission: "CreateActivities" }
+        meta: { requiresAuth: true, requiredPermission: "CreateActivities" },
       },
       {
         path: "Notificaciones",
         name: "CaseNotifications",
         component: CaseNotifications,
-        meta: { requiresAuth: true, requiredPermission: "CaseNotifications" }
+        meta: { requiresAuth: true, requiredPermission: "CaseNotifications" },
       },
       // Cases -> Reports
       {
         path: "ReporteDeExcel",
         name: "ExcelReport",
         component: ExcelReport,
-        meta: { requiresAuth: true, requiredPermission: "ExcelReport" }
+        meta: { requiresAuth: true, requiredPermission: "ExcelReport" },
       },
       // ENTRANCE CONTROL
-      // Cronogram 
+      // Cronogram
       {
-        path: "Cronograma",
+        path: "/Cronograma",
         name: "Cronograma",
         component: Cronograma,
-        meta: { requiresAuth: true, requiredPermission: "Cronograma" }
+        meta: { requiresAuth: true, requiredPermission: "Cronograma" },
       },
       {
-        path: "IngresoCronograma",
+        // El “?” al final hace que `id` sea opcional:
+        path: "/IngresoCronograma/:id?",
         name: "IngresoCronograma",
         component: IngresoCronograma,
-        meta: { requiresAuth: true, requiredPermission: "IngresoCronograma" }
+        props: true,
+        meta: { requiresAuth: true, requiredPermission: "IngresoCronograma" },
       },
       {
         path: "PeriodoSemanal",
         name: "PeriodoSemanal",
         component: SeguimientoSemanal,
-        meta: { requiresAuth: true, requiredPermission: "PeriodoSemanal" }
+        meta: { requiresAuth: true, requiredPermission: "PeriodoSemanal" },
       },
       // Students
       {
         path: "AsignacionPeriodo",
         name: "AsignacionPeriodo",
         component: AsignacionPeriodo,
-        meta: { requiresAuth: true, requiredPermission: "AsignacionPeriodo" }
+        meta: { requiresAuth: true, requiredPermission: "AsignacionPeriodo" },
       },
       {
         path: "IngresoEstudiantesExcel",
         name: "IngresoEstudiantesExcel",
         component: IngresoEstudiantesExcel,
-        meta: { requiresAuth: true, requiredPermission: "IngresoEstudiantesExcel" }
+        meta: {
+          requiresAuth: true,
+          requiredPermission: "IngresoEstudiantesExcel",
+        },
       },
       {
         path: "IngresoManualEstudiantes",
         name: "IngresoManualEstudiantes",
         component: IngresoManualEstudiantes,
-        meta: { requiresAuth: true, requiredPermission: "IngresoManualEstudiantes" }
+        meta: {
+          requiresAuth: true,
+          requiredPermission: "IngresoManualEstudiantes",
+        },
       },
       {
         path: "ListadoEstudiantes",
         name: "ListadoEstudiantes",
         component: ListadoEstudiantes,
-        meta: { requiresAuth: true, requiredPermission: "ListadoEstudiantes" }
+        meta: { requiresAuth: true, requiredPermission: "ListadoEstudiantes" },
       },
       {
         path: "RemoverPeriodo",
         name: "RemoverPeriodo",
         component: RemoverPeriodo,
-        meta: { requiresAuth: true, requiredPermission: "RemoverPeriodo" }
+        meta: { requiresAuth: true, requiredPermission: "RemoverPeriodo" },
       },
       // Schedule
       {
         path: "IngresoArea",
         name: "IngresoArea",
         component: IngresoArea,
-        meta: { requiresAuth: true, requiredPermission: "IngresoArea" }
+        meta: { requiresAuth: true, requiredPermission: "IngresoArea" },
       },
       {
         path: "IngresoHorario",
         name: "IngresoHorario",
         component: IngresoHorario,
-        meta: { requiresAuth: true, requiredPermission: "IngresoHorario" }
+        meta: { requiresAuth: true, requiredPermission: "IngresoHorario" },
       },
       {
         path: "IngresoHorarioVirtual",
         name: "IngresoHorarioVirtual",
         component: IngresoHorarioVirtual,
-        meta: { requiresAuth: true, requiredPermission: "IngresoHorarioVirtual" }
+        meta: {
+          requiresAuth: true,
+          requiredPermission: "IngresoHorarioVirtual",
+        },
       },
       {
         path: "VistaHorarios",
         name: "VistaHorarios",
         component: VistaHorarios,
-        meta: { requiresAuth: true, requiredPermission: "VistaHorarios" }
+        meta: { requiresAuth: true, requiredPermission: "VistaHorarios" },
       },
       {
         path: "VistaHorariosPersonal",
         name: "VistaHorariosPersonal",
         component: VistaHorarioPersonal,
-        meta: { requiresAuth: true, requiredPermission: "VistaHorariosPersonal" }
+        meta: {
+          requiresAuth: true,
+          requiredPermission: "VistaHorariosPersonal",
+        },
       },
       // FingerPrint
       {
         path: "AsignacionHuella",
         name: "AsignacionHuella",
         component: AsignacionHuella,
-        meta: { requiresAuth: true, requiredPermission: "AsignacionHuella" }
+        meta: { requiresAuth: true, requiredPermission: "AsignacionHuella" },
       },
       {
         path: "RegistroHuella/:cedula?/:id?",
         name: "RegistroHuella",
         component: RegistroHuella,
-        meta: { requiresAuth: true, requiredPermission: "RegistroHuella" }
+        meta: { requiresAuth: true, requiredPermission: "RegistroHuella" },
       },
       {
         path: "RegistroPorCedula",
         name: "RegistroPorCedula",
         component: RegistroPorCedula,
-        meta: { requiresAuth: true, requiredPermission: "RegistroPorCedula" }
+        meta: { requiresAuth: true, requiredPermission: "RegistroPorCedula" },
       },
       {
         path: "RegistroManual",
         name: "RegistroManual",
         component: RegistroManual,
-        meta: { requiresAuth: true, requiredPermission: "RegistroManual" }
+        meta: { requiresAuth: true, requiredPermission: "RegistroManual" },
       },
       {
         path: "RegistrosAbiertos",
         name: "RegistrosAbiertos",
         component: RegistrosAbiertos,
-        meta: { requiresAuth: true, requiredPermission: "RegistrosAbiertos" }
+        meta: { requiresAuth: true, requiredPermission: "RegistrosAbiertos" },
       },
       {
         path: "RegistrosCerrados",
         name: "RegistrosCerrados",
         component: RegistrosCerrados,
-        meta: { requiresAuth: true, requiredPermission: "RegistrosCerrados" }
+        meta: { requiresAuth: true, requiredPermission: "RegistrosCerrados" },
       },
       {
         path: "ModificacionHoras",
         name: "ModificacionHoras",
         component: ModificacionHoras,
-        meta: { requiresAuth: true, requiredPermission: "ModificacionHoras" }
+        meta: { requiresAuth: true, requiredPermission: "ModificacionHoras" },
       },
       {
         path: "SeguimientoGeneral",
         name: "SeguimientoGeneral",
         component: SeguimientoGeneral,
-        meta: { requiresAuth: true, requiredPermission: "SeguimientoGeneral" }
+        meta: { requiresAuth: true, requiredPermission: "SeguimientoGeneral" },
       },
       {
-        path: 'SeguimientoSemanal',
-        name: 'SeguimientoSemanal',
+        path: "SeguimientoSemanal",
+        name: "SeguimientoSemanal",
         component: SeguimientoSemanal,
-        meta: { requiresAuth: true, requiredPermission: "SeguimientoSemanal" }
+        meta: { requiresAuth: true, requiredPermission: "SeguimientoSemanal" },
       },
       {
-        path: 'ResumenSemanal/:resumenId?/:internalId?',
-        name: 'ResumenSemanal',
+        path: "ResumenSemanal/:resumenId?/:internalId?",
+        name: "ResumenSemanal",
         component: ResumenSemanal,
-        meta: { requiresAuth: true, requiredPermission: "ResumenSemanal" }
+        meta: { requiresAuth: true, requiredPermission: "ResumenSemanal" },
       },
       {
-        path: 'ResumenSemanalEstudiante',
-        name: 'ResumenSemanalEstudiante',
+        path: "ResumenSemanalEstudiante",
+        name: "ResumenSemanalEstudiante",
         component: ResumenSemanal,
-        meta: { requiresAuth: true, requiredPermission: "ResumenSemanalEstudiante" }
+        meta: {
+          requiresAuth: true,
+          requiredPermission: "ResumenSemanalEstudiante",
+        },
       },
       {
-        path: 'RegistroVirtual',
-        name: 'RegistroVirtual',
+        path: "RegistroVirtual",
+        name: "RegistroVirtual",
         component: RegistroVirtual,
-        meta: { requiresAuth: true, requiredPermission: "RegistroVirtual" }
+        meta: { requiresAuth: true, requiredPermission: "RegistroVirtual" },
       },
       {
-        path: 'AlertasView',
-        name: 'AlertasView',
+        path: "AlertasView",
+        name: "AlertasView",
         component: AlertasView,
-        meta: { requiresAuth: true, requiredPermission: "AlertasView" }
-      }
+        meta: { requiresAuth: true, requiredPermission: "AlertasView" },
+      },
     ],
   },
   // Auth views
@@ -409,19 +425,23 @@ router.beforeEach(async (to, from, next) => {
 
   // Verificar permisos si la ruta requiere un permiso específico
   if (to.meta.requiredPermission) {
-    const hasPermission = authStore.canView(to.meta.requiredPermission as string);
-    
+    const hasPermission = authStore.canView(
+      to.meta.requiredPermission as string
+    );
+
     if (!hasPermission) {
       // El usuario no tiene permisos para acceder a esta ruta
-      console.warn(`Acceso denegado a ${to.path}. Permiso requerido: ${to.meta.requiredPermission}`);
-      
+      console.warn(
+        `Acceso denegado a ${to.path}. Permiso requerido: ${to.meta.requiredPermission}`
+      );
+
       // Redirigir a una página de acceso denegado o a home
-      return next({ 
-        name: "home", 
-        query: { 
-          error: "access_denied", 
-          message: "No tienes permisos para acceder a esta página" 
-        } 
+      return next({
+        name: "home",
+        query: {
+          error: "access_denied",
+          message: "No tienes permisos para acceder a esta página",
+        },
       });
     }
   }
