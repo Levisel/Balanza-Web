@@ -101,9 +101,11 @@ import Message from 'primevue/message';
 import Dialog from 'primevue/dialog';
 import { useToast } from 'primevue/usetoast';
 import { useSubjects } from '@/useSubjects';
+import { useAuthStore } from "@/stores/auth";
 import axios from 'axios'; // Asegúrate de importar axios
 
 const toast = useToast();
+const authStore = useAuthStore();
 
 const usuariosXPeriodoDVM = ref<UserXPeriodDVM[]>([]);
 const estudiantesSeleccionados = ref<UserXPeriodDVM[]>([]);
@@ -191,7 +193,13 @@ const removerEstudiantes = async () => {
 
   try {
     for (const estudiante of estudiantesSeleccionados.value) {
-      await axios.delete(`${API}/usuarioxPeriodo/${periodoSeleccionado.value?.Period_ID}/${estudiante.Internal_ID}`);
+      await axios.delete(`${API}/usuarioxPeriodo/${periodoSeleccionado.value?.Period_ID}/${estudiante.Internal_ID}`,
+        {
+          headers: {
+            'internal-id': authStore.user?.id, 
+          },
+        }
+      );
     }
 
     toast.add({

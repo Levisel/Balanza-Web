@@ -3,20 +3,19 @@ import { computed, ref, watch } from "vue";
 import { type Internal_User } from "@/ApiRoute";
 import { useToast } from "primevue/usetoast";
 import { API } from "@/ApiRoute";
-
+import { useAuthStore } from "@/stores/auth";
 import InputMask from "primevue/inputmask";
 import InputText from "primevue/inputtext";
-import Select from 'primevue/select';
+import Select from "primevue/select";
 import Button from "primevue/button";
 import axios from "axios";
 
-
 const toast = useToast();
+const authStore = useAuthStore();
+
 const selectedIdType = ref<string>("");
 const bandera = ref<boolean>(false);
 const userRegistered = ref<boolean>(false);
-
-
 const internalUser = ref<Internal_User>({
   Internal_ID: "",
   Internal_Name: "",
@@ -30,16 +29,14 @@ const internalUser = ref<Internal_User>({
   Internal_Picture: "",
 });
 
+const opcionesAreas = ref<{ name: string; value: string }[]>([]);
+axios.get(`${API}/subjects`).then((response) => {
+  opcionesAreas.value = response.data.map((area: any) => ({
+    label: area.Subject_Name,
+    value: area.Subject_Name,
+  }));
+});
 
-
-import { useSubjects } from '@/useSubjects';
-const { subjects: areas } = useSubjects();
-
-
-const status = ref([
-  { label: "Activo", value: "Activo" },
-  { label: "Inactivo", value: "Inactivo" },
-]);
 
 const idOptions = ref([
   { name: "C.I (Cédula)", value: "cedula" },
@@ -47,6 +44,7 @@ const idOptions = ref([
 ]);
 
 const resetLabels = () => {
+  selectedIdType.value = "";
   internalUser.value.Internal_ID = "";
   internalUser.value.Internal_Name = "";
   internalUser.value.Internal_LastName = "";
@@ -60,10 +58,9 @@ const resetLabels = () => {
 
 const loading = ref<boolean>(false); // Variable para controlar el spinner
 
-
 // Validar cédula
 
-  const validateID = (ID: string): boolean => {
+const validateID = (ID: string): boolean => {
   if (!/^\d{10}$/.test(ID)) return false; // Solo permite 10 dígitos numéricos
 
   const digits = ID.split("").map(Number);
@@ -85,12 +82,12 @@ const checkUserExists = async (): Promise<boolean> => {
   if (!internalUser.value.Internal_ID) {
     return false;
   }
-  
+
   try {
     const response = await axios.get<Internal_User>(
       `${API}/internal-user/${internalUser.value.Internal_ID}`
     );
-    
+
     if (response.data) {
       internalUser.value.Internal_ID = "";
       return true;
@@ -100,7 +97,8 @@ const checkUserExists = async (): Promise<boolean> => {
       toast.add({
         severity: "error",
         summary: "Error del servidor",
-        detail: "Ha ocurrido un error en el servidor. Por favor intenta más tarde.",
+        detail:
+          "Ha ocurrido un error en el servidor. Por favor intenta más tarde.",
         life: 3000,
       });
     }
@@ -113,12 +111,12 @@ const checkEmailExists = async (): Promise<boolean> => {
   if (!internalUser.value.Internal_Email) {
     return false;
   }
-  
+
   try {
     const response = await axios.get<Internal_User>(
       `${API}/internal-user/email/${internalUser.value.Internal_Email}`
     );
-    
+
     if (response.data) {
       internalUser.value.Internal_Email = "";
       return true;
@@ -128,7 +126,8 @@ const checkEmailExists = async (): Promise<boolean> => {
       toast.add({
         severity: "error",
         summary: "Error del servidor",
-        detail: "Ha ocurrido un error en el servidor. Por favor intenta más tarde.",
+        detail:
+          "Ha ocurrido un error en el servidor. Por favor intenta más tarde.",
         life: 3000,
       });
     }
@@ -143,23 +142,22 @@ watch(
     if (selectedIdType.value === "cedula" && nuevoValor.length === 10) {
       if (validateID(nuevoValor)) {
         checkUserExists().then((existe) => {
-        if (existe) {
+          if (existe) {
             toast.add({
-            severity: "warn",
-            summary: "Usuario ya existe",
-            detail: "Ya existe un usuario con la cédula ingresada.",
-            life: 3000,
-          });
-        } else {
-          toast.add({
-          severity: "success",
-          summary: "Cédula válida",
-          detail: "La cédula ingresada es correcta.",
-          life: 3000,
-           });
-        }
+              severity: "warn",
+              summary: "Usuario ya existe",
+              detail: "Ya existe un usuario con la cédula ingresada.",
+              life: 3000,
+            });
+          } else {
+            toast.add({
+              severity: "success",
+              summary: "Cédula válida",
+              detail: "La cédula ingresada es correcta.",
+              life: 3000,
+            });
+          }
         });
-        
       } else {
         toast.add({
           severity: "error",
@@ -169,6 +167,17 @@ watch(
         });
         internalUser.value.Internal_ID = "";
       }
+    } else if (selectedIdType.value === "pasaporte" && nuevoValor.length > 0) {
+      checkUserExists().then((existe) => {
+        if (existe) {
+          toast.add({
+            severity: "warn",
+            summary: "Usuario ya existe",
+            detail: "Ya existe un usuario con el pasaporte ingresado.",
+            life: 3000,
+          });
+        }
+      });
     }
   }
 );
@@ -179,20 +188,23 @@ watch(
     if (nuevoValor) {
       checkEmailExists().then((existe) => {
         if (existe) {
-            toast.add({
+          toast.add({
             severity: "warn",
             summary: "Correo ya existe",
             detail: "Ya existe un usuario con ese correo ingresado.",
             life: 3000,
           });
-        } 
-        });
+        }
+      });
     }
   }
 );
 
 const checkIdSize = (shouldShowToast: boolean = true): boolean => {
-  if (selectedIdType.value === "cedula" && internalUser.value.Internal_ID.length !== 10) {
+  if (
+    selectedIdType.value === "cedula" &&
+    internalUser.value.Internal_ID.length !== 10
+  ) {
     bandera.value = false;
     toast.add({
       severity: "warn",
@@ -201,8 +213,7 @@ const checkIdSize = (shouldShowToast: boolean = true): boolean => {
       life: 8000,
     });
     internalUser.value.Internal_ID = "";
-  }
-  else {
+  } else {
     bandera.value = true;
   }
   return bandera.value;
@@ -243,7 +254,20 @@ const onFormSubmit = async () => {
       Internal_Status: "Activo",
     };
 
-    const { data } = await axios.post(`${API}/usuariointernoBulk/${periodId}`, payload);
+    //imprimir json
+    console.log(
+      "Payload para creación de usuario:",
+      JSON.stringify(payload, null, 2)
+    );
+
+    const { data } = await axios.post(
+      `${API}/usuariointernoBulk/${periodId}`,
+      payload, {
+        headers: {
+          "internal-id": authStore.user?.id,
+        },
+      }
+    );
 
     toast.add({
       severity: "success",
@@ -255,7 +279,9 @@ const onFormSubmit = async () => {
     resetLabels(); // Limpiar formulario
   } catch (error: any) {
     console.error("Error en la creación del usuario:", error);
-    const mensajeError = error.response?.data?.message || "Ha ocurrido un error en el servidor. Por favor intenta más tarde.";
+    const mensajeError =
+      error.response?.data?.message ||
+      "Ha ocurrido un error en el servidor. Por favor intenta más tarde.";
     toast.add({
       severity: "error",
       summary: "Error",
@@ -266,15 +292,12 @@ const onFormSubmit = async () => {
     loading.value = false; // Ocultar loading
   }
 };
-
-
-
 </script>
 
 <template>
   <Toast />
   <div class="card">
-    <h3 class="text-2xl font-semibold mb-8">Crear nuevo usuario</h3>
+    <h3 class="text-2xl font-semibold mb-8">📝 Crear Nuevo Estudiante</h3>
     <div class="grid grid-cols-1 md:grid-cols-2 gap-80">
       <!-- Datos Personales -->
       <div>
@@ -292,7 +315,7 @@ const onFormSubmit = async () => {
                     :options="idOptions"
                     size="large"
                     optionLabel="name"
-                    optionValue="value" 
+                    optionValue="value"
                     class="w-full"
                     @change="internalUser.Internal_ID = ''"
                   />
@@ -316,14 +339,13 @@ const onFormSubmit = async () => {
                 </FloatLabel>
               </div>
             </div>
-           
           </div>
           <!-- Fila 2: Nombre y Apellido -->
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4 -mr-40">
             <FloatLabel variant="on" class="w-full md:w-80">
               <InputText
                 id="name"
-                 maxlength="50"
+                maxlength="50"
                 v-model="internalUser.Internal_Name"
                 size="large"
                 class="w-full"
@@ -335,7 +357,7 @@ const onFormSubmit = async () => {
             <FloatLabel variant="on" class="w-full md:w-80">
               <InputText
                 id="lastName"
-                 maxlength="50"
+                maxlength="50"
                 v-model="internalUser.Internal_LastName"
                 size="large"
                 class="w-full"
@@ -348,21 +370,21 @@ const onFormSubmit = async () => {
           <!-- Fila 3: Teléfono y Área -->
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4 -mr-40">
             <FloatLabel variant="on" class="w-full">
-  <InputMask
-    id="telefono"
-    v-model="internalUser.Internal_Phone"
-    size="large"
-    class="w-full md:w-80"
-    mask="(999)-999-9999"
-  />
-  <label for="telefono">Teléfono</label>
-</FloatLabel>
+              <InputMask
+                id="telefono"
+                v-model="internalUser.Internal_Phone"
+                size="large"
+                class="w-full md:w-80"
+                mask="(999)-999-9999"
+              />
+              <label for="telefono">Teléfono</label>
+            </FloatLabel>
 
             <FloatLabel variant="on" class="w-full md:w-80">
               <Select
                 id="userArea"
                 v-model="internalUser.Internal_Area"
-                :options="areas"
+                :options="opcionesAreas"
                 optionLabel="label"
                 optionValue="value"
                 class="w-full"
@@ -381,13 +403,13 @@ const onFormSubmit = async () => {
         <h4 class="text-lg font-semibold mb-6">Credenciales</h4>
         <div class="grid gap-7">
           <!-- Fila 1: Tipo de Usuario -->
-     
+
           <!-- Fila 2: Email -->
           <div>
             <FloatLabel variant="on" class="w-full md:w-80">
               <InputText
                 id="email"
-                 maxlength="50"
+                maxlength="50"
                 v-model="internalUser.Internal_Email"
                 size="large"
                 class="w-full"
@@ -402,7 +424,6 @@ const onFormSubmit = async () => {
     </div>
 
     <div class="mt-6 text-center mb-10">
-      
       <Button
         type="submit"
         label="Crear Usuario"

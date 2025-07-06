@@ -111,11 +111,13 @@ import ProgressSpinner from "primevue/progressspinner";
 import { useToast } from "primevue/usetoast";
 import { API, type Usuario } from "@/ApiRoute";
 import { useDarkMode } from "@/components/ThemeSwitcher";
+import { useAuthStore } from "@/stores/auth";
 import axios from "axios";
 
 const router = useRouter();
 const route = useRoute();
 const toast = useToast();
+const authStore = useAuthStore();
 const { isDarkTheme } = useDarkMode();
 
 // Obtener la cédula del estudiante desde la ruta (puede venir en "cedula" o "id")
@@ -271,6 +273,10 @@ const guardarHuella = async () => {
     await axios.put(`${API}/usuarios/actualizar-huella`, {
       usuarioCedula: cedula.value,
       template: huellaBase64.value,
+    }, {
+      headers: {
+        "internal-id": authStore.user?.id, 
+      },
     });
 
     toast.add({

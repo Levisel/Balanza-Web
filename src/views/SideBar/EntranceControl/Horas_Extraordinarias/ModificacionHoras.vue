@@ -15,6 +15,21 @@
 
     <Toast />
 
+    <!-- Modal de error -->
+    <Dialog
+      v-model:visible="showErrorModal"
+      header="⚠️ Error"
+      modal
+      :style="{ width: '30rem' }"
+      :breakpoints="{ '960px': '90vw' }"
+      :class="isDarkTheme ? 'bg-[#1f1f1f] text-white' : 'bg-white text-gray-900'"
+    >
+      <p class="text-center text-lg">{{ errorModalMessage }}</p>
+      <div class="flex justify-center mt-4 mt-5">
+        <Button label="Cerrar" severity="contrast" @click="showErrorModal = false" />
+      </div>
+    </Dialog>
+
     <!-- Modal de confirmación -->
     <Dialog
       v-model:visible="confirmDialogVisible"
@@ -181,6 +196,8 @@ function getTodayDateLocal() {
 // Variables para búsqueda
 const cedulaInput = ref("");
 const estudianteCargado = ref(false);
+const showErrorModal = ref(false);
+const errorModalMessage = ref("");
 
 // Variable para almacenar el resumen del estudiante con datos (usuarioResumen)
 // Se guarda el resultado de la búsqueda. Si no existe, se utiliza un objeto por defecto.
@@ -223,12 +240,28 @@ const cardClass = computed(() =>
 // Función para buscar y cargar el resumen con datos del estudiante
 const buscarEstudiante = async () => {
   if (!cedulaInput.value) {
-    toast.add({ severity: "warn", summary: "Falta cédula", detail: "Ingrese una cédula para buscar.", life: 3000 });
+    errorModalMessage.value = "Por favor, ingrese una cédula para buscar.";
+    showErrorModal.value = true;
     return;
   }
+
   try {
     // Primero buscar los datos del estudiante
     const { data: usuario } = await axios.get(`${API}/internal-user/${cedulaInput.value}`);
+    
+    if (!usuario || !usuario.Internal_ID) {
+      errorModalMessage.value = "No se encontró ningún estudiante con la cédula ingresada.";
+      showErrorModal.value = true;
+      return;
+    }
+
+    // Verificar que sea un estudiante
+    if (usuario.Internal_Type !== "Estudiante") {
+      errorModalMessage.value = "El usuario encontrado no es un estudiante. Solo los estudiantes pueden tener ajustes de horas.";
+      showErrorModal.value = true;
+      return;
+    }
+
     usuarioData.value = usuario;
 
     // Luego intentar obtener el resumen
@@ -242,13 +275,35 @@ const buscarEstudiante = async () => {
 
     estudianteCargado.value = true;
 
-  } catch (error: any) {
+    // Mostrar mensaje de éxito
     toast.add({
-      severity: "error",
-      summary: "Error",
-      detail: error.response?.data?.message || error.message || "Error al buscar el estudiante.",
-      life: 5000,
+      severity: "success",
+      summary: "Estudiante encontrado",
+      detail: `${usuario.Internal_Name} ${usuario.Internal_LastName}`,
+      life: 3000,
     });
+
+  } catch (error: any) {
+    console.error("Error al buscar el estudiante:", error);
+    
+    // Manejar errores específicos del servidor
+    if (error.response) {
+      if (error.response.status === 404) {
+        errorModalMessage.value = "No se encontró ningún estudiante con la cédula o pasaporte ingresado.";
+      } else if (error.response.status === 403) {
+        errorModalMessage.value = "No tienes permisos para acceder a esta información.";
+      } else if (error.response.status === 500) {
+        errorModalMessage.value = "Error interno del servidor. Intente nuevamente más tarde.";
+      } else {
+        errorModalMessage.value = error.response.data?.message || "Error del servidor al buscar el estudiante.";
+      }
+    } else if (error.request) {
+      errorModalMessage.value = "Error de conexión. Verifique su conexión a internet e intente nuevamente.";
+    } else {
+      errorModalMessage.value = error.message || "Error inesperado al cargar los datos del estudiante.";
+    }
+    
+    showErrorModal.value = true;
     estudianteCargado.value = false;
   }
 };
@@ -256,39 +311,54 @@ const buscarEstudiante = async () => {
 
 // Función para abrir el modal de confirmación
 const openConfirmDialog = () => {
-  if (ajusteHoras.value <= 0 || !ajusteTipo.value) {
-    toast.add({
-      severity: "warn",
-      summary: "Campos incompletos",
-      detail: "Complete los campos de ajuste.",
-      life: 3000,
-    });
+  // Validar que las horas sean válidas
+  if (!ajusteHoras.value || ajusteHoras.value <= 0) {
+    errorModalMessage.value = "Debe ingresar un número de horas válido (mayor a 0).";
+    showErrorModal.value = true;
     return;
   }
 
-   //  Validación: máximo permitido
-  if (ajusteHoras.value > 500) {
-    toast.add({
-      severity: "error",
-      summary: "Límite excedido",
-      detail: "No se pueden registrar más de 500 horas.",
-      life: 4000,
-    });
+  // Validar que el tipo esté seleccionado
+  if (!ajusteTipo.value) {
+    errorModalMessage.value = "Debe seleccionar un tipo de ajuste (Adicional o Reducida).";
+    showErrorModal.value = true;
     return;
   }
+
+  // Validación: máximo permitido
+  if (ajusteHoras.value > 500) {
+    errorModalMessage.value = "No se pueden registrar más de 500 horas en un solo ajuste.";
+    showErrorModal.value = true;
+    return;
+  }
+
 
   // Validación: si intenta reducir más horas de las que tiene
-  if (
-    ajusteTipo.value === "reducida" &&
-    ajusteHoras.value > resumenDisplay.value.Summary_Total_Hours
-  ) {
-    toast.add({
-      severity: "error",
-      summary: "Horas excedidas",
-      detail: `No puedes reducir más horas de las que tiene asignadas (${resumenDisplay.value.Summary_Total_Hours}).`,
-      life: 5000,
-    });
+  if (ajusteTipo.value === "reducida" && ajusteHoras.value > resumenDisplay.value.Summary_Total_Hours) {
+    errorModalMessage.value = `No puede reducir más horas de las que tiene asignadas.\n\nHoras totales actuales: ${resumenDisplay.value.Summary_Total_Hours}\nHoras que intenta reducir: ${ajusteHoras.value}`;
+    showErrorModal.value = true;
     return;
+  }
+
+
+  // Validación adicional: no permitir ajustes que resulten en horas negativas
+  if (ajusteTipo.value === "reducida") {
+    const horasRestantes = resumenDisplay.value.Summary_Total_Hours - ajusteHoras.value;
+    if (horasRestantes < 0) {
+      errorModalMessage.value = `Este ajuste dejaría al estudiante con horas negativas (${horasRestantes.toFixed(2)}). No es permitido.`;
+      showErrorModal.value = true;
+      return;
+    }
+  }
+
+  // Validación: límite razonable para horas adicionales
+  if (ajusteTipo.value === "adicional") {
+    const horasFinales = resumenDisplay.value.Summary_Total_Hours + ajusteHoras.value;
+    if (horasFinales > 1000) {
+      errorModalMessage.value = `El total de horas después del ajuste sería ${horasFinales.toFixed(2)}, lo cual excede el límite máximo de 1000 horas.`;
+      showErrorModal.value = true;
+      return;
+    }
   }
 
   confirmDialogVisible.value = true;
@@ -313,25 +383,50 @@ const guardarAjuste = async () => {
       Hours_Approved_By: authStore.user?.name || null
     };
 
-    await axios.post(`${API}/horasExtraordinarias/createConResumen`, ajusteData);
+    await axios.post(`${API}/horasExtraordinarias/createConResumen`, ajusteData,
+      {
+        headers: {
+          "internal-id": authStore.user?.id,
+        }
+      }
+    );
 
     toast.add({
       severity: "success",
-      summary: "Registrado",
-      detail: "El ajuste fue registrado correctamente.",
+      summary: "Ajuste Registrado",
+      detail: "El ajuste de horas fue registrado correctamente.",
       life: 3000,
     });
 
     setTimeout(() => {
       router.push("/SeguimientoGeneral");
     }, 3000);
+    
   } catch (error: any) {
-    toast.add({
-      severity: "error",
-      summary: "Error",
-      detail: error.response?.data?.message || error.message || "Error al guardar el ajuste.",
-      life: 5000,
-    });
+    console.error("Error al guardar el ajuste:", error);
+    
+    // Manejar errores específicos del servidor
+    if (error.response) {
+      if (error.response.status === 409) {
+        errorModalMessage.value = "Ya existe un ajuste similar para este estudiante en esta fecha. No se puede duplicar.";
+      } else if (error.response.status === 400) {
+        errorModalMessage.value = "Los datos del ajuste son inválidos. Verifique la información ingresada e intente nuevamente.";
+      } else if (error.response.status === 403) {
+        errorModalMessage.value = "No tienes permisos para registrar ajustes de horas. Contacte al administrador.";
+      } else if (error.response.status === 422) {
+        errorModalMessage.value = "Los datos proporcionados no cumplen con los requisitos del sistema. Verifique las horas y el tipo de ajuste.";
+      } else if (error.response.status === 500) {
+        errorModalMessage.value = "Error interno del servidor al guardar el ajuste. Intente nuevamente más tarde.";
+      } else {
+        errorModalMessage.value = error.response.data?.message || "Error del servidor al guardar el ajuste de horas.";
+      }
+    } else if (error.request) {
+      errorModalMessage.value = "Error de conexión al guardar el ajuste. Verifique su conexión a internet e intente nuevamente.";
+    } else {
+      errorModalMessage.value = error.message || "Error inesperado al guardar el ajuste de horas.";
+    }
+    
+    showErrorModal.value = true;
   }
 };
 

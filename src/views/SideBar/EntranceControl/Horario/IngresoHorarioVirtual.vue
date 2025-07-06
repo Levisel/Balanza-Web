@@ -242,11 +242,12 @@ import Column from 'primevue/column'
 import Dialog from 'primevue/dialog'
 import Toast from 'primevue/toast'
 import { useSubjects } from '@/useSubjects'
+import { useAuthStore } from "@/stores/auth";
 import axios from 'axios'
 
 
 const toast = useToast()
-
+const authStore = useAuthStore();
 // Filtros y selección de estudiante
 const periodos = ref<Period[]>([])
 const estudiantes = ref<UserXPeriod[]>([])
@@ -665,22 +666,44 @@ async function guardarHorario(esCambioAdministrativo: boolean) {
     if (!horarioGuardado.value) {
       // No había horario, se crea
       nuevoHorario['UserXPeriod_ID'] = usuarioXPeriodoId.value;
-      await axios.post(`${API}/horarioEstudiantes`, nuevoHorario);
+      await axios.post(`${API}/horarioEstudiantes`, nuevoHorario,
+        {
+          headers: {
+            "internal-id": authStore.user?.id,
+          }
+        }
+      );
     } else {
       if (esCambioAdministrativo) {
         // Cambio administrativo: se guarda con historial
         await axios.post(`${API}/horarioEstudiantes/cambio-administrativo`, {
           userXPeriodId: usuarioXPeriodoId.value,
-          newSchedules: [nuevoHorario]
+          newSchedules: [nuevoHorario],
+        },{
+          headers: {
+            "internal-id": authStore.user?.id,
+          }
         });
       } else {
         // Modificación normal: actualizar el existente
         if (horarioActual.value?.Schedule_Students_ID) {
-          await axios.put(`${API}/horarioEstudiantes/${horarioActual.value.Schedule_Students_ID}`, nuevoHorario);
+          await axios.put(`${API}/horarioEstudiantes/${horarioActual.value.Schedule_Students_ID}`, nuevoHorario,
+            {
+              headers: {
+                "internal-id": authStore.user?.id,
+              }
+            }
+          );
         } else {
           // No existía registro previo, crear uno nuevo
           nuevoHorario['UserXPeriod_ID'] = usuarioXPeriodoId.value;
-          await axios.post(`${API}/horarioEstudiantes`, nuevoHorario);
+          await axios.post(`${API}/horarioEstudiantes`, nuevoHorario,
+            {
+              headers: {
+                "internal-id": authStore.user?.id,
+              }
+            }
+          );
         }
       }
     }
@@ -697,7 +720,8 @@ async function guardarHorario(esCambioAdministrativo: boolean) {
     toast.add({
       severity: 'error',
       summary: 'Error',
-      detail: 'No se pudo guardar el horario virtual.'
+      detail: 'No se pudo guardar el horario virtual.',
+      life: 8000
     });
   } finally {
     isGuardando.value = false;
@@ -722,7 +746,13 @@ async function crearHorarioEspecial() {
   };
 
   try {
-    await axios.post(`${API}/parametroHorario`, payload);
+    await axios.post(`${API}/parametroHorario`, payload,
+      {
+        headers: {
+           "internal-id": authStore.user?.id,
+        }
+      }
+    );
 
     toast.add({ severity: 'success', summary: 'Horario Especial Creado', detail: 'Se registró correctamente.' });
     dialogoHorarioEspecialVisible.value = false;

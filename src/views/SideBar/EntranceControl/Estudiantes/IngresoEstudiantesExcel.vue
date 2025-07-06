@@ -12,7 +12,7 @@ import { useToast } from "primevue/usetoast";
 import Dialog from "primevue/dialog";
 import InputText from "primevue/inputtext";
 import axios from "axios";
-
+import { useAuthStore } from "@/stores/auth";
 import { API } from "@/ApiRoute";
 import { useDarkMode } from "@/components/ThemeSwitcher";
 // Importamos el composable que maneja los subjects (áreas)
@@ -92,55 +92,245 @@ function procesarArchivo(event: any) {
     errorMensaje.value = "Debe seleccionar un archivo.";
     return;
   }
+
+  // Validar extensión del archivo
+  const extensionesValidas = ['.xlsx', '.xls'];
+  const extension = archivo.name.toLowerCase().substring(archivo.name.lastIndexOf('.'));
+  if (!extensionesValidas.includes(extension)) {
+    errorMensaje.value = "El archivo debe ser de formato Excel (.xlsx o .xls).";
+    toast.add({
+      severity: "error",
+      summary: "Formato incorrecto",
+      detail: "Solo se permiten archivos Excel (.xlsx o .xls)",
+      life: 5000,
+    });
+    return;
+  }
+
+  // Validar tamaño del archivo (máximo 10MB)
+  const maxSize = 10 * 1024 * 1024;
+  if (archivo.size > maxSize) {
+    errorMensaje.value = "El archivo es demasiado grande. Máximo permitido: 10MB.";
+    toast.add({
+      severity: "error",
+      summary: "Archivo muy grande",
+      detail: "El archivo excede el tamaño máximo de 10MB",
+      life: 5000,
+    });
+    return;
+  }
+
   archivoNombre.value = archivo.name;
 
   const reader = new FileReader();
   reader.onload = (e) => {
-    const data = new Uint8Array(e.target!.result as ArrayBuffer);
-    const workbook = XLSX.read(data, { type: "array" });
-    // Buscamos la hoja "consolidado"
-    const sheetName = workbook.SheetNames.find(
-      (name) => name.toLowerCase() === "consolidado"
-    );
-    if (!sheetName) {
-      errorMensaje.value = "El archivo no contiene una hoja llamada 'consolidado'.";
-      return;
-    }
-    const sheet = workbook.Sheets[sheetName];
-    const jsonData = XLSX.utils.sheet_to_json(sheet);
-    datosTemp.value = jsonData; // Opcional: guardar data completa
+    try {
+      const data = new Uint8Array(e.target!.result as ArrayBuffer);
+      const workbook = XLSX.read(data, { type: "array" });
 
-    const dataFiltrada = jsonData.map((row: any) => {
-      let cedulaString = row["CEDULA"]?.toString().trim() || "N/A";
-      // Si la cédula tiene 9 dígitos, anteponemos un '0'
-      if (cedulaString.length === 9) {
-        cedulaString = "0" + cedulaString;
+      // Validar que el archivo tenga hojas
+      if (!workbook.SheetNames || workbook.SheetNames.length === 0) {
+        errorMensaje.value = "El archivo Excel está vacío o corrupto.";
+        toast.add({
+          severity: "error",
+          summary: "Archivo no válido",
+          detail: "El archivo Excel no contiene hojas de trabajo",
+          life: 5000,
+        });
+        return;
       }
 
-      // Se obtiene el área a partir del NRC usando el mapeo de useSubjects
-      // Nota: nrcAreaMap es un computed; por eso accedemos a su valor con .value
-      const area = nrcAreaMap.value[row["NRC"]] || "Sin Área";
+      // Buscar la hoja "consolidado"
+      const sheetName = workbook.SheetNames.find(
+        (name) => name.toLowerCase() === "consolidado"
+      );
+      
+      if (!sheetName) {
+        errorMensaje.value = `El archivo no contiene una hoja llamada 'consolidado'. Hojas encontradas: ${workbook.SheetNames.join(', ')}`;
+        toast.add({
+          severity: "error",
+          summary: "Hoja requerida no encontrada",
+          detail: "Se requiere una hoja llamada 'consolidado'",
+          life: 5000,
+        });
+        return;
+      }
 
-      // Definimos los campos obligatorios (sin considerar teléfono)
-      const tieneDatosObligatorios =
-        cedulaString !== "N/A" &&
-        row["APELLIDOS"] &&
-        row["NOMBRES"] &&
-        row["Correo_institucional"] &&
-        row["NRC"];
+      const sheet = workbook.Sheets[sheetName];
+      
+      // Validar que la hoja no esté vacía
+      if (!sheet || Object.keys(sheet).length === 0) {
+        errorMensaje.value = "La hoja 'consolidado' está vacía.";
+        toast.add({
+          severity: "warn",
+          summary: "Hoja vacía",
+          detail: "La hoja 'consolidado' no contiene datos",
+          life: 5000,
+        });
+        return;
+      }
+
+      const jsonData = XLSX.utils.sheet_to_json(sheet);
+      
+      // Validar que haya datos
+      if (!jsonData || jsonData.length === 0) {
+        errorMensaje.value = "No se encontraron datos en la hoja 'consolidado'.";
+        toast.add({
+          severity: "warn",
+          summary: "Sin datos",
+          detail: "La hoja 'consolidado' no contiene registros",
+          life: 5000,
+        });
+        return;
+      }
+
+      // Validar estructura de columnas requeridas
+      const columnasRequeridas = ['CEDULA', 'APELLIDOS', 'NOMBRES', 'Correo_institucional', 'NRC'];
+      const primeraFila = jsonData[0] as any;
+      const columnasEncontradas = Object.keys(primeraFila);
+      const columnasFaltantes = columnasRequeridas.filter(col => !columnasEncontradas.includes(col));
+      
+      if (columnasFaltantes.length > 0) {
+        const columnasDisponibles = columnasEncontradas.join(', ');
+        errorMensaje.value = `Estructura incorrecta. Faltan columnas: ${columnasFaltantes.join(', ')}`;
+        toast.add({
+          severity: "warn",
+          summary: "Estructura de Excel incorrecta",
+          detail: `Columnas requeridas: ${columnasRequeridas.join(', ')}\nColumnas encontradas: ${columnasDisponibles}`,
+          life: 10000,
+        });
+        return;
+      }
+
+      // Validar que las columnas no estén vacías en su mayoría
+      let filasVacidasCount = 0;
+      const totalFilas = jsonData.length;
+      
+      columnasRequeridas.forEach(columna => {
+        const filasVacias = jsonData.filter((row: any) => !row[columna] || row[columna].toString().trim() === '').length;
+        if (filasVacias > totalFilas * 0.8) { // Si más del 80% están vacías
+          filasVacidasCount++;
+        }
+      });
+
+      if (filasVacidasCount > 0) {
+        toast.add({
+          severity: "warn",
+          summary: "Datos insuficientes",
+          detail: "Se detectaron columnas con muchos valores vacíos. Verifica la estructura del archivo.",
+          life: 8000,
+        });
+      }
+
+      datosTemp.value = jsonData;
+
+      // Validar formato de datos y detectar errores específicos
+      let filasConErrores = 0;
+      const erroresDetallados: string[] = [];
+      const cedulasDuplicadas = new Set();
+      const cedulasVistas = new Set();
+
+      toast.add({
+        severity: "info",
+        summary: "Procesando archivo",
+        detail: `Validando ${totalFilas} registros...`,
+        life: 3000,
+      });
+
+      const dataFiltrada = jsonData.map((row: any, index: number) => {
+        const filaNum = index + 2; // +2 porque Excel empieza en 1 y tenemos header
+        let erroresFila = [];
+
+        // Validar y procesar cédula
+        let cedulaString = row["CEDULA"]?.toString().trim() || "";
+        if (!cedulaString || cedulaString === "N/A") {
+          erroresFila.push(`Fila ${filaNum}: Cédula vacía`);
+          cedulaString = "N/A";
+        } else {
+          // Validar que solo contenga números
+          if (!/^\d+$/.test(cedulaString)) {
+            erroresFila.push(`Fila ${filaNum}: Cédula '${cedulaString}' debe contener solo números`);
+          } else {
+            // Si la cédula tiene 9 dígitos, anteponemos un '0'
+            if (cedulaString.length === 9) {
+              cedulaString = "0" + cedulaString;
+            }
+            // Validar longitud de cédula
+            if (cedulaString.length !== 10) {
+              erroresFila.push(`Fila ${filaNum}: Cédula '${cedulaString}' debe tener 10 dígitos`);
+            }
+            // Detectar duplicados
+            if (cedulasVistas.has(cedulaString)) {
+              cedulasDuplicadas.add(cedulaString);
+              erroresFila.push(`Fila ${filaNum}: Cédula '${cedulaString}' está duplicada en el archivo`);
+            } else {
+              cedulasVistas.add(cedulaString);
+            }
+          }
+        }
+
+        // Validar apellidos
+        const apellidos = row["APELLIDOS"]?.toString().trim() || "";
+        if (!apellidos) {
+          erroresFila.push(`Fila ${filaNum}: Campo 'APELLIDOS' vacío`);
+        } else if (apellidos.length < 2) {
+          erroresFila.push(`Fila ${filaNum}: 'APELLIDOS' muy corto`);
+        }
+
+        // Validar nombres
+        const nombres = row["NOMBRES"]?.toString().trim() || "";
+        if (!nombres) {
+          erroresFila.push(`Fila ${filaNum}: Campo 'NOMBRES' vacío`);
+        } else if (nombres.length < 2) {
+          erroresFila.push(`Fila ${filaNum}: 'NOMBRES' muy corto`);
+        }
+
+        // Validar correo
+        const correo = row["Correo_institucional"]?.toString().trim() || "";
+        if (!correo) {
+          erroresFila.push(`Fila ${filaNum}: Campo 'Correo_institucional' vacío`);
+        } else {
+          // Validar formato de correo
+          const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+          if (!emailRegex.test(correo)) {
+            erroresFila.push(`Fila ${filaNum}: Formato de correo '${correo}' inválido`);
+          }
+        }
+
+        // Validar NRC
+        const nrc = row["NRC"];
+        if (!nrc) {
+          erroresFila.push(`Fila ${filaNum}: Campo 'NRC' vacío`);
+        } else if (!nrcAreaMap.value[nrc]) {
+          erroresFila.push(`Fila ${filaNum}: NRC '${nrc}' no encontrado en el sistema`);
+        }
+
+        if (erroresFila.length > 0) {
+          filasConErrores++;
+          erroresDetallados.push(...erroresFila);
+        }
+
+        // Se obtiene el área a partir del NRC usando el mapeo de useSubjects
+        const area = nrcAreaMap.value[row["NRC"]] || "Sin Área";
+
+        // Definimos los campos obligatorios
+        const tieneDatosObligatorios =
+          cedulaString !== "N/A" &&
+          apellidos &&
+          nombres &&
+          correo &&
+          row["NRC"] &&
+          erroresFila.length === 0;
 
         // Extraer primer nombre y primer apellido
-        const apellidosRaw = row["APELLIDOS"]?.toString().trim() || "";
-        const nombresRaw = row["NOMBRES"]?.toString().trim() || "";
-
-        const primerApellido = apellidosRaw.split(" ")[0] || "N/A";
-        const primerNombre = nombresRaw.split(" ")[0] || "N/A";
+        const primerApellido = apellidos.split(" ")[0] || "N/A";
+        const primerNombre = nombres.split(" ")[0] || "N/A";
 
         const usuario: Internal_User = {
           Internal_ID: cedulaString,
           Internal_LastName: primerApellido,
           Internal_Name: primerNombre,
-          Internal_Email: row["Correo_institucional"]?.toString().trim() || "N/A",
+          Internal_Email: correo,
           Internal_Password: "",
           Internal_Type: "Estudiante",
           Internal_Area: area,
@@ -149,47 +339,105 @@ function procesarArchivo(event: any) {
           completo: !!tieneDatosObligatorios,
         };
 
-      return usuario;
-    });
+        return usuario;
+      });
 
-    // Si es la primera carga, se eliminan duplicados y se asigna la data completa.
-    if (estudiantes.value.length === 0) {
-      const idSet = new Set();
-      estudiantes.value = dataFiltrada.filter((est) => {
-        if (!idSet.has(est.Internal_ID)) {
-          idSet.add(est.Internal_ID);
-          return true;
-        }
-        return false;
+      // Mostrar resumen de validación
+      if (erroresDetallados.length > 0) {
+        const maxErrores = 15;
+        const erroresAMostrar = erroresDetallados.slice(0, maxErrores);
+        const mensajeErrores = erroresAMostrar.join('\n');
+        const textoAdicional = erroresDetallados.length > maxErrores 
+          ? `\n... y ${erroresDetallados.length - maxErrores} errores más.` 
+          : '';
+        
+        toast.add({
+          severity: "warn",
+          summary: `${filasConErrores} filas con errores de ${totalFilas}`,
+          detail: `Errores encontrados:\n${mensajeErrores}${textoAdicional}`,
+          life: 12000,
+        });
+      }
+
+      if (cedulasDuplicadas.size > 0) {
+        toast.add({
+          severity: "error",
+          summary: "Cédulas duplicadas encontradas",
+          detail: `Se encontraron ${cedulasDuplicadas.size} cédulas duplicadas en el archivo`,
+          life: 8000,
+        });
+      }
+
+      // Si es la primera carga, se eliminan duplicados y se asigna la data completa.
+      if (estudiantes.value.length === 0) {
+        const idSet = new Set();
+        const estudiantesFiltrados = dataFiltrada.filter((est) => {
+          if (!idSet.has(est.Internal_ID)) {
+            idSet.add(est.Internal_ID);
+            return true;
+          } else {
+            return false;
+          }
+        });
+        estudiantes.value = estudiantesFiltrados;
+      } else {
+        // Si ya hay registros, se actualizan aquellos que estén incompletos.
+        const newDataMap = new Map<string, Internal_User>();
+        dataFiltrada.forEach((est) => {
+          newDataMap.set(est.Internal_ID, est);
+        });
+        estudiantes.value = estudiantes.value.map((est) => {
+          if (!est.completo) {
+            const newEst = newDataMap.get(est.Internal_ID);
+            return newEst && newEst.completo ? newEst : est;
+          }
+          return est;
+        });
+      }
+
+      // Ordenamos para que los registros incompletos aparezcan primero
+      estudiantes.value.sort((a, b) => {
+        if (a.completo === b.completo) return 0;
+        return a.completo ? 1 : -1;
       });
-    } else {
-      // Si ya hay registros, se actualizan aquellos que estén incompletos.
-      const newDataMap = new Map<string, Internal_User>();
-      dataFiltrada.forEach((est) => {
-        newDataMap.set(est.Internal_ID, est);
-      });
-      estudiantes.value = estudiantes.value.map((est) => {
-        if (!est.completo) {
-          const newEst = newDataMap.get(est.Internal_ID);
-          return newEst && newEst.completo ? newEst : est;
-        }
-        return est;
+
+      // Mostrar resumen final
+      const numCompletos = estudiantes.value.filter(est => est.completo).length;
+      const numIncompletos = estudiantes.value.length - numCompletos;
+
+      if (numIncompletos === 0 && erroresDetallados.length === 0) {
+        toast.add({
+          severity: "success",
+          summary: "Archivo procesado correctamente",
+          detail: `Se cargaron ${numCompletos} estudiantes sin errores`,
+          life: 5000,
+        });
+      } else if (numIncompletos > 0) {
+        errorMensaje.value = `Existen ${numIncompletos} estudiantes con datos incompletos. Corrige el Excel o edítalos manualmente.`;
+      }
+
+    } catch (error: any) {
+      console.error("Error procesando archivo:", error);
+      errorMensaje.value = "Error al procesar el archivo Excel. Verifica que el archivo no esté corrupto.";
+      toast.add({
+        severity: "error",
+        summary: "Error de procesamiento",
+        detail: "No se pudo procesar el archivo Excel. Verifica la estructura y formato.",
+        life: 5000,
       });
     }
-
-    // Ordenamos para que los registros incompletos aparezcan primero
-    estudiantes.value.sort((a, b) => {
-      if (a.completo === b.completo) return 0;
-      return a.completo ? 1 : -1;
-    });
-
-    // Actualizamos el mensaje de error según la cantidad de registros incompletos.
-    const numIncompletos = estudiantes.value.filter((est) => !est.completo).length;
-    errorMensaje.value =
-      numIncompletos > 0
-        ? `Existen ${numIncompletos} estudiantes con datos incompletos. Corrige el Excel o edítalos manualmente.`
-        : "";
   };
+
+  reader.onerror = () => {
+    errorMensaje.value = "Error al leer el archivo.";
+    toast.add({
+      severity: "error",
+      summary: "Error de lectura",
+      detail: "No se pudo leer el archivo seleccionado",
+      life: 5000,
+    });
+  };
+
   reader.readAsArrayBuffer(archivo);
 }
 

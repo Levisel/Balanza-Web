@@ -20,18 +20,16 @@
     <!-- Modal de error -->
     <Dialog
       v-model:visible="showErrorModal"
-      header="Error"
+      header="⚠️ Error"
       modal
       :closable="true"
       style="width: 30rem"
       :class="isDarkTheme ? 'bg-[#1f1f1f] text-white' : 'bg-white text-gray-900'"
     >
-      <p class="text-center text-base">{{ errorModalMessage }}</p>
-      <template #footer>
-        <div class="flex justify-center p-3">
-          <Button label="Cerrar" class="text-sm px-4 py-2" @click="showErrorModal = false" />
+      <p class="text-center text-lg">{{ errorModalMessage }}</p>
+        <div class="flex justify-center mt-4 mt-5">
+          <Button label="Cerrar" severity="contrast" @click="showErrorModal = false" />
         </div>
-      </template>
     </Dialog>
 
     <!-- Formulario para cédula -->
@@ -149,9 +147,14 @@ import Toast from "primevue/toast";
 import { useToast } from "primevue/usetoast";
 import { API } from "@/ApiRoute";
 import { useDarkMode } from "@/components/ThemeSwitcher";
+import { useAuthStore } from "@/stores/auth";
 import axios from "axios";
+
 // Router
 const router = useRouter();
+
+//Usuario del Sistema
+const authStore = useAuthStore();
 
 // Temas
 const { isDarkTheme } = useDarkMode();
@@ -308,12 +311,8 @@ onMounted(() => {
 /* FUNCIONES DE BÚSQUEDA Y CARGA DE ESTUDIANTE */
 const buscarEstudiante = async () => {
   if (!cedulaInput.value) {
-    toast.add({
-      severity: "warn",
-      summary: "Falta cédula",
-      detail: "Ingrese una cédula para buscar.",
-      life: 3000,
-    });
+    errorModalMessage.value = "Por favor, ingrese una cédula o pasaporte para buscar.";
+    showErrorModal.value = true;
     return;
   }
 
@@ -323,6 +322,20 @@ const buscarEstudiante = async () => {
     const { data } = await axios.get(`${API}/internal-user/${cedulaInput.value}`, {
       withCredentials: true,
     });
+
+    if (!data || !data.Internal_ID) {
+      errorModalMessage.value = "No se encontró ningún estudiante con la cédula ingresada.";
+      showErrorModal.value = true;
+      return;
+    }
+
+    // Verificar que sea un estudiante
+    if (data.Internal_Type !== "Estudiante") {
+      errorModalMessage.value = "El usuario encontrado no es un estudiante. Solo los estudiantes pueden usar este sistema.";
+      showErrorModal.value = true;
+      return;
+    }
+
     cedula.value = data.Internal_ID;
     nombres.value = data.Internal_Name;
     apellidos.value = data.Internal_LastName;
@@ -330,16 +343,37 @@ const buscarEstudiante = async () => {
     area.value = data.Internal_Area || "";
 
     // Obtener huella guardada
-    const { data: huellaData } = await axios.get(`${API}/usuarios/obtener-huella/${data.Internal_ID}`, {
-      withCredentials: true,
-    });
-    huellaGuardada.value = huellaData.huella || "";
-    console.log("Huella guardada:", huellaGuardada.value.length); //216 igual que al guardar en templateBase64
+    try {
+      const { data: huellaData } = await axios.get(`${API}/usuarios/obtener-huella/${data.Internal_ID}`, {
+        withCredentials: true,
+      });
+      huellaGuardada.value = huellaData.huella || "";
+    } catch (huellaError: any) {
+      console.log("Error al obtener huella:", huellaError);
+      // Si hay error al obtener la huella, asumimos que no tiene huella registrada
+      huellaGuardada.value = "";
+    }
+
+    // Verificar si el usuario tiene una huella guardada
+    if (!huellaGuardada.value) {
+      huellaBase64.value = "";
+      huellaCapturada.value = false;
+      errorModalMessage.value = "Este estudiante no tiene huella registrada. Debe registrar su huella primero en el sistema para poder usar el registro automático.";
+      showErrorModal.value = true;
+      return;
+    } 
 
     // Obtener períodos del estudiante
     const { data: periodosData } = await axios.get(`${API}/usuarioXPeriodo/usuario/${cedula.value}`, {
       withCredentials: true,
     });
+
+    if (!periodosData || periodosData.length === 0) {
+      errorModalMessage.value = "Este estudiante no está asignado a ningún período académico. Contacte al administrador.";
+      showErrorModal.value = true;
+      return;
+    }
+
     const hoy = getAhoraLocal();
     periodoActual.value = periodosData.find((p: any) => {
       const inicio = new Date(p.period.Period_Start);
@@ -348,7 +382,9 @@ const buscarEstudiante = async () => {
     });
 
     if (!periodoActual.value) {
-      throw new Error("No se encontró un período activo para el estudiante");
+      errorModalMessage.value = "No se encontró un período académico activo para este estudiante. El registro de asistencia no está disponible.";
+      showErrorModal.value = true;
+      return;
     }
 
     usuarioXPeriodoId.value = periodoActual.value.UserXPeriod_ID;
@@ -357,6 +393,13 @@ const buscarEstudiante = async () => {
     await cargarRegistroAsistenciaAbierto();
     await cargarHorarioCompleto();
 
+    // Verificar que tenga horario asignado
+    if (!horarioCompleto.value || horarioCompleto.value.length === 0) {
+      errorModalMessage.value = "Este estudiante no tiene horario asignado. Contacte al administrador para configurar su horario.";
+      showErrorModal.value = true;
+      return;
+    }
+
     estudianteCargado.value = true;
 
     // Validar horario antes de capturar
@@ -364,6 +407,7 @@ const buscarEstudiante = async () => {
       if (horarioDelDia.value && horarioDelDia.value.length > 0) {
         const ahora = getAhoraLocal();
         let turnoProximo: any = null;
+        let mensajeHorario = "";
 
         for (const h of horarioDelDia.value) {
           const entradaDesde = h && h.entrada ? new Date(h.entrada.getTime() - 10 * 60000) : null;
@@ -371,53 +415,38 @@ const buscarEstudiante = async () => {
 
           if (h && tipoRegistro.value === "entrada" && ahora < h.entrada) {
             turnoProximo = h.entrada;
+            const diffMin = Math.ceil((turnoProximo.getTime() - ahora.getTime()) / 60000);
+            mensajeHorario = `Aún no puedes registrar entrada. Tu horario inicia a las ${turnoProximo.toLocaleTimeString([], {
+              hour: '2-digit',
+              minute: '2-digit'
+            })}. Faltan ${diffMin} minutos.`;
             break;
           }
 
           if (tipoRegistro.value === "salida" && salidaHasta && ahora < salidaHasta) {
             turnoProximo = h ? h.salida : null;
+            const diffMin = Math.ceil((turnoProximo.getTime() - ahora.getTime()) / 60000);
+            mensajeHorario = `Aún no puedes registrar salida. Tu horario termina a las ${turnoProximo.toLocaleTimeString([], {
+              hour: '2-digit',
+              minute: '2-digit'
+            })}. Faltan ${diffMin} minutos.`;
             break;
           }
         }
 
         if (turnoProximo) {
-          const diffMin = Math.ceil((turnoProximo.getTime() - ahora.getTime()) / 60000);
-          toast.add({
-            severity: "info",
-            summary: `Aún no puedes registrar ${tipoRegistro.value}`,
-            detail: `Tu horario ${tipoRegistro.value === "entrada" ? 'inicia' : 'termina'} a las ${turnoProximo.toLocaleTimeString([], {
-              hour: '2-digit',
-              minute: '2-digit'
-            })}. Faltan ${diffMin} minutos.`,
-            life: 6000,
-          });
+          errorModalMessage.value = mensajeHorario;
+          showErrorModal.value = true;
         } else {
-          toast.add({
-            severity: "warn",
-            summary: "Fuera de rango",
-            detail: `Ya no estás en un horario válido para registrar ${tipoRegistro.value}.`,
-            life: 4000,
-          });
+          errorModalMessage.value = `Ya no estás en un horario válido para registrar ${tipoRegistro.value}. Verifica tus horarios asignados.`;
+          showErrorModal.value = true;
         }
       } else {
-        toast.add({
-          severity: "warn",
-          summary: "Sin horario para hoy",
-          detail: "No tienes un horario asignado para hoy.",
-          life: 4000,
-        });
+        const diasSemana = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
+        const diaActual = diasSemana[getAhoraLocal().getDay()];
+        errorModalMessage.value = `No tienes horario asignado para ${diaActual}. El registro de asistencia no está disponible.`;
+        showErrorModal.value = true;
       }
-      return;
-    }
-
-    // Validar huella antes de captura
-    if (!huellaGuardada.value) {
-      toast.add({
-        severity: "warn",
-        summary: "Huella no encontrada",
-        detail: "Este estudiante no tiene huella registrada. No se puede realizar el registro automático.",
-        life: 4000,
-      });
       return;
     }
 
@@ -426,7 +455,24 @@ const buscarEstudiante = async () => {
 
   } catch (error: any) {
     console.error("Error al cargar el estudiante:", error);
-    errorModalMessage.value = error.message || "Error al cargar los datos del estudiante.";
+    
+    // Manejar errores específicos del servidor
+    if (error.response) {
+      if (error.response.status === 404) {
+        errorModalMessage.value = "No se encontró ningún estudiante con la cédula o pasaporte ingresado.";
+      } else if (error.response.status === 403) {
+        errorModalMessage.value = "No tienes permisos para acceder a esta información.";
+      } else if (error.response.status === 500) {
+        errorModalMessage.value = "Error interno del servidor. Intente nuevamente más tarde.";
+      } else {
+        errorModalMessage.value = error.response.data?.message || "Error del servidor al buscar el estudiante.";
+      }
+    } else if (error.request) {
+      errorModalMessage.value = "Error de conexión. Verifique su conexión a internet e intente nuevamente.";
+    } else {
+      errorModalMessage.value = error.message || "Error inesperado al cargar los datos del estudiante.";
+    }
+    
     showErrorModal.value = true;
   } finally {
     cargando.value = false;
@@ -449,10 +495,18 @@ const cargarRegistroAsistenciaAbierto = async () => {
       registroAbierto.value = null;
       tipoRegistro.value = "entrada";
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error al cargar registro abierto:", error);
+    
+    // En caso de error, asumimos que es entrada
     registroAbierto.value = null;
     tipoRegistro.value = "entrada";
+    
+    // Solo mostramos error si es crítico
+    if (error.response && error.response.status >= 500) {
+      errorModalMessage.value = "Error del servidor al verificar registros de asistencia. Contacte al administrador.";
+      showErrorModal.value = true;
+    }
   }
 };
 
@@ -468,8 +522,23 @@ const cargarHorarioCompleto = async () => {
     horarioCompleto.value = response.data.filter((h: any) => h.Schedule_IsDeleted === 0);
 
     console.log("Horario completo cargado:", horarioCompleto.value);
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error al cargar el horario completo:", error);
+    
+    // Si no se puede cargar el horario, es un error crítico
+    if (error.response) {
+      if (error.response.status === 404) {
+        errorModalMessage.value = "No se encontró horario asignado para este estudiante. Contacte al administrador.";
+      } else if (error.response.status >= 500) {
+        errorModalMessage.value = "Error del servidor al cargar el horario. Intente nuevamente más tarde.";
+      } else {
+        errorModalMessage.value = "Error al cargar el horario del estudiante.";
+      }
+    } else {
+      errorModalMessage.value = "Error de conexión al cargar el horario. Verifique su conexión a internet.";
+    }
+    
+    showErrorModal.value = true;
   }
 };
 
@@ -517,12 +586,8 @@ const guardarAsistencia = async () => {
   console.log("¿Es atraso?:", esAtraso.value);
 
   if (!scheduledTimeUTC.value) {
-    toast.add({
-      severity: "warn",
-      summary: "Horario no asignado",
-      detail: "No tienes un horario asignado para hoy. No se puede registrar la asistencia.",
-      life: 4000,
-    });
+    errorModalMessage.value = "No tienes un horario asignado para hoy. No se puede registrar la asistencia.";
+    showErrorModal.value = true;
     return;
   }
 
@@ -549,20 +614,20 @@ const guardarAsistencia = async () => {
       //  Actualizar registro de salida (axios.put)
       const registroId = registroAbierto.value.Attendance_ID;
       if (!registroId) {
-        toast.add({
-          severity: "error",
-          summary: "Error",
-          detail: "No se encontró el registro de entrada para actualizar la salida.",
-          life: 5000,
-        });
+        errorModalMessage.value = "No se encontró el registro de entrada para actualizar la salida. Contacte al administrador.";
+        showErrorModal.value = true;
         return;
       }
 
       await axios.put(
         `${API}/registros/${registroId}/salida`,
         payload,
-        { withCredentials: true }
-      );
+        {
+        headers: {
+          "internal-id": authStore.user?.id,
+        },
+        withCredentials: true
+      });
 
       toast.add({
         severity: "success",
@@ -572,11 +637,12 @@ const guardarAsistencia = async () => {
       });
     } else {
       // 🔵 Crear nuevo registro de entrada (axios.post)
-      await axios.post(
-        `${API}/registros`,
-        payload,
-        { withCredentials: true }
-      );
+      await axios.post(`${API}/registros`, payload, {
+        headers: {
+          "internal-id": authStore.user?.id,
+        },
+        withCredentials: true
+      });
 
       toast.add({
         severity: "success",
@@ -592,12 +658,27 @@ const guardarAsistencia = async () => {
 
   } catch (error: any) {
     console.error("Error al guardar la asistencia:", error);
-    toast.add({
-      severity: "error",
-      summary: "Error",
-      detail: error.response?.data?.message || error.message || "No se pudo guardar la asistencia.",
-      life: 5000,
-    });
+    
+    // Manejar errores específicos del servidor
+    if (error.response) {
+      if (error.response.status === 409) {
+        errorModalMessage.value = "Ya existe un registro de asistencia para este horario. No se puede duplicar.";
+      } else if (error.response.status === 400) {
+        errorModalMessage.value = "Datos de asistencia inválidos. Verifique la información e intente nuevamente.";
+      } else if (error.response.status === 403) {
+        errorModalMessage.value = "No tienes permisos para registrar asistencia.";
+      } else if (error.response.status === 500) {
+        errorModalMessage.value = "Error interno del servidor al guardar la asistencia. Intente nuevamente más tarde.";
+      } else {
+        errorModalMessage.value = error.response.data?.message || "Error del servidor al guardar la asistencia.";
+      }
+    } else if (error.request) {
+      errorModalMessage.value = "Error de conexión al guardar la asistencia. Verifique su conexión a internet.";
+    } else {
+      errorModalMessage.value = error.message || "Error inesperado al guardar la asistencia.";
+    }
+    
+    showErrorModal.value = true;
   }
 };
 
@@ -632,87 +713,126 @@ const iniciarCaptura = async () => {
 
     clearTimeout(timeoutId);
 
-    if (!response.ok) throw new Error(`Respuesta HTTP inválida: ${response.status}`);
+    if (!response.ok) {
+      throw new Error(`Error de conexión con el lector de huella: ${response.status}`);
+    }
+    
     const data = await response.json();
 
-    if (data.ErrorCode === 0 && data.TemplateBase64) {
-      huellaBase64.value = data.TemplateBase64;
-      huellaCapturada.value = true;
-
-      // ⬇️ SGIMatchScore sigue con fetch (comparación local)
-      const params = new URLSearchParams();
-      params.append("Template1", huellaGuardada.value);
-      params.append("Template2", huellaBase64.value);
-      params.append("Licstr", "");
-      params.append("TemplateFormat", "ISO");
-
-      console.log("Template1 (BD):", huellaGuardada.value.length);
-console.log("Template2 (capturada):", huellaBase64.value.length);
-
-
-
-      const resMatch = await fetch("/SGIMatchScore", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-          Accept: "*/*",
-          "Access-Control-Allow-Origin": "*",
-        },
-        body: params,
-      });
-
-
-      if (!resMatch.ok) throw new Error("Error al comparar las huellas.");
-      const matchData = await resMatch.json();
-
-      if (matchData.ErrorCode !== 0 || matchData.MatchingScore < 70) {
-        toast.add({
-          severity: "error",
-          summary: "Huella no válida",
-          detail: `No coincide la huella (score: ${matchData.MatchingScore}).`,
-          life: 4000,
-        });
-        dialogoActivo.value = false;
-        huellaBase64.value = "";
-        huellaCapturada.value = false;
-        return;
+    if (data.ErrorCode !== 0) {
+      let errorMessage = "Error desconocido en el lector de huella.";
+      switch (data.ErrorCode) {
+        case 1:
+          errorMessage = "No se detectó ningún dedo en el lector. Intente nuevamente.";
+          break;
+        case 2:
+          errorMessage = "Calidad de huella insuficiente. Limpie el sensor e intente nuevamente.";
+          break;
+        case 3:
+          errorMessage = "Tiempo de espera agotado. Intente nuevamente.";
+          break;
+        case 4:
+          errorMessage = "Error de hardware del lector de huella.";
+          break;
+        default:
+          errorMessage = `Error en el lector de huella (Código: ${data.ErrorCode}).`;
       }
-
-      toast.add({
-        severity: "success",
-        summary: "Huella Validada",
-        detail: `Coincidencia aceptada. Score: ${matchData.MatchingScore}`,
-        life: 3000,
-      });
-
-      // ⬇️ Aquí sí usamos axios para actualizar tu backend
-      try {
-        await axios.put(
-          `${API}/usuarios/actualizar-huella`,
-          {
-            usuarioCedula: cedula.value,
-            template: huellaBase64.value,
-          },
-          { withCredentials: true }
-        );
-        console.log("Huella actualizada correctamente.");
-      } catch (err) {
-        console.error("Error actualizando la huella en backend:", err);
-      }
-
-      dialogoActivo.value = false;
-      await guardarAsistencia();
-    } else {
-      throw new Error(`Error en la captura. Código: ${data.ErrorCode}`);
+      throw new Error(errorMessage);
     }
+
+    if (!data.TemplateBase64) {
+      throw new Error("No se pudo capturar la huella correctamente. Intente nuevamente.");
+    }
+
+    huellaBase64.value = data.TemplateBase64;
+    huellaCapturada.value = true;
+
+    // ⬇️ SGIMatchScore sigue con fetch (comparación local)
+    const params = new URLSearchParams();
+    params.append("Template1", huellaGuardada.value);
+    params.append("Template2", huellaBase64.value);
+    params.append("Licstr", "");
+    params.append("TemplateFormat", "ISO");
+
+    console.log("Template1 (BD):", huellaGuardada.value.length);
+    console.log("Template2 (capturada):", huellaBase64.value.length);
+
+    const resMatch = await fetch("/SGIMatchScore", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        Accept: "*/*",
+        "Access-Control-Allow-Origin": "*",
+      },
+      body: params,
+    });
+
+    if (!resMatch.ok) {
+      throw new Error("Error al comunicarse con el sistema de comparación de huellas.");
+    }
+    
+    const matchData = await resMatch.json();
+
+    if (matchData.ErrorCode !== 0) {
+      throw new Error(`Error en la comparación de huellas (Código: ${matchData.ErrorCode}).`);
+    }
+
+    if (matchData.MatchingScore < 70) {
+      errorModalMessage.value = `La huella no coincide con la registrada en el sistema.\n\nPuntuación de coincidencia: ${matchData.MatchingScore}% (mínimo requerido: 70%)\n\nVerifique que esté usando el dedo correcto e intente nuevamente.`;
+      showErrorModal.value = true;
+      dialogoActivo.value = false;
+      huellaBase64.value = "";
+      huellaCapturada.value = false;
+      return;
+    }
+
+    toast.add({
+      severity: "success",
+      summary: "Huella Validada",
+      detail: `Coincidencia aceptada. Score: ${matchData.MatchingScore}%`,
+      life: 3000,
+    });
+
+    // ⬇️ Aquí sí usamos axios para actualizar tu backend
+    try {
+      await axios.put(
+      `${API}/usuarios/actualizar-huella`,
+      {
+        usuarioCedula: cedula.value,
+        template: huellaBase64.value,
+      },
+      {
+        headers: {
+          "internal-id": authStore.user?.id,
+        },
+        withCredentials: true
+      }
+    );
+      console.log("Huella actualizada correctamente.");
+    } catch (err: any) {
+      console.error("Error actualizando la huella en backend:", err);
+      // No mostramos error al usuario por este fallo, ya que la validación fue exitosa
+    }
+
+    dialogoActivo.value = false;
+    await guardarAsistencia();
+    
   } catch (error: any) {
     console.error("Error al capturar la huella:", error);
-    toast.add({
-      severity: "error",
-      summary: "Error",
-      detail: "No se pudo capturar la huella. Verifica la conexión con el lector.",
-      life: 5000,
-    });
+    
+    let errorMessage = "Error inesperado al capturar la huella.";
+    
+    if (error.name === 'AbortError') {
+      errorMessage = "La captura de huella fue cancelada por tiempo de espera (15 segundos). Intente nuevamente.";
+    } else if (error.message.includes("fetch")) {
+      errorMessage = "No se puede conectar con el lector de huella. Verifique que:\n\n• El lector esté conectado correctamente\n• Los drivers estén instalados\n• El servicio del lector esté ejecutándose";
+    } else if (error.message) {
+      errorMessage = error.message;
+    }
+    
+    errorModalMessage.value = errorMessage;
+    showErrorModal.value = true;
+    dialogoActivo.value = false;
   } finally {
     capturando.value = false;
   }

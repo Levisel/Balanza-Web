@@ -288,23 +288,34 @@ const validarYGuardar = async () => {
         const nuevasSemanas = calcularSemanas(periodoId, nextDay, periodEnd.value);
 
         await axios.post(`${API}/seguimientos/bulk`, nuevasSemanas, {
-          withCredentials: true
-        });
+        withCredentials: true,
+        headers: {
+          "internal-id": authStore.user?.id,
+        },
+      });
       }
 
       // 🔵 Verificar extensión al inicio
       if (originalFechaInicio.value && periodStart.value < originalFechaInicio.value) {
         const nuevasSemanasInicio = calcularSemanas(periodoId, periodStart.value, originalFechaInicio.value);
         await axios.post(`${API}/seguimientos/bulk`, nuevasSemanasInicio, {
-          withCredentials: true
-        });
+        withCredentials: true,
+        headers: {
+          "internal-id": authStore.user?.id,
+        },
+      });
       }
 
       // 🔵 Reordenar todas las semanas
       await axios.put(`${API}/seguimientos/reorder/${periodoId}`, {
         newStartDate: periodStart.value.toISOString(),
         newEndDate: periodEnd.value.toISOString()
-      }, { withCredentials: true });
+      }, {
+        withCredentials: true,
+        headers: {
+          "internal-id": authStore.user?.id,
+        },
+      });
 
     } else {
       // 🛠 Creación de período
@@ -324,7 +335,10 @@ const validarYGuardar = async () => {
       );
 
       await axios.post(`${API}/seguimientos/bulk`, semanas, {
-        withCredentials: true
+        withCredentials: true,
+        headers: {
+          "internal-id": authStore.user?.id,
+        },
       });
     }
 

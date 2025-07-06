@@ -138,8 +138,10 @@ import InputText from "primevue/inputtext";
 import Button from "primevue/button";
 import Dialog from "primevue/dialog";
 import { useToast } from "primevue/usetoast";
+import { useAuthStore } from "@/stores/auth";
 
 const toast = useToast();
+const authStore = useAuthStore();
 
 // Estados
 const estudiantes = ref<Usuario[]>([]);
@@ -290,7 +292,13 @@ async function asignarEstudiantes() {
   }));
 
   try {
-    await axios.post(`${API}/usuarioxPeriodo`, payload);
+    await axios.post(`${API}/usuarioxPeriodo`, payload, 
+      {
+        headers: {
+          "internal-id": authStore.user?.id,
+        },
+      }
+    );
     toast.add({
       severity: "success",
       summary: "Éxito",

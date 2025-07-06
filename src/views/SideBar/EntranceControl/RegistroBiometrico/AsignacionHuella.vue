@@ -165,6 +165,7 @@
 import { ref, onMounted, computed } from "vue";
 import { useRouter } from "vue-router";
 import { useToast } from "primevue/usetoast";
+import { useAuthStore } from "@/stores/auth";
 import axios from "axios";
 
 // Componentes PrimeVue
@@ -181,7 +182,7 @@ import {useSubjects} from '@/useSubjects' // ajusta la ruta si está en otra car
 
 // Importa las interfaces (ajusta según tu proyecto)
 import { API, type UserXPeriodDVM, type Period } from "@/ApiRoute";
-
+const authStore = useAuthStore();
 const router = useRouter();
 const toast = useToast();
 
@@ -325,8 +326,11 @@ const borrarHuella = async () => {
     await axios.put(`${API}/internal-user/${cedula}`, {
       Internal_Huella: null,
       Internal_Email: estudianteSeleccionado.value.Internal_Email,
+    }, {
+      headers: {
+        "internal-id": authStore.user?.id,
+      },
     });
-
     const index = usuariosXPeriodoDVM.value.findIndex(
       (u) => u.Internal_ID === estudianteSeleccionado.value?.Internal_ID
     );

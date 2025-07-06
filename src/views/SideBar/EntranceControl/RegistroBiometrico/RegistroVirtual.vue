@@ -425,8 +425,12 @@ async function guardarAsistenciaVirtual() {
       };
 
       await axios.post(`${API}/registros`, payloadEntrada, {
-        withCredentials: true,
+        headers: {
+          "internal-id": authStore.user?.id,
+        },
+        withCredentials: true
       });
+
 
       toast.add({
         severity: "success",
@@ -470,8 +474,12 @@ async function guardarAsistenciaVirtual() {
       const registroId = registroAbierto.value.Attendance_ID;
 
       await axios.put(`${API}/registros/${registroId}/salida`, payloadSalida, {
-        withCredentials: true,
+        headers: {
+          "internal-id": authStore.user?.id,
+        },
+        withCredentials: true
       });
+
 
       toast.add({
         severity: "success",

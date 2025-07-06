@@ -147,10 +147,12 @@ import DataTable from "primevue/datatable";
 import Column from "primevue/column";
 import { useToast } from "primevue/usetoast";
 import { API } from "@/ApiRoute";
+import { useAuthStore } from "@/stores/auth";
 import axios from "axios";
 
 const router = useRouter();
 const toast = useToast();
+const authStore = useAuthStore();
 
 interface Record {
   userXPeriod?: {
@@ -283,7 +285,12 @@ const saveSalida = async () => {
     await axios.put(
       `${API}/registros/${registroId}/salida`,
       { Attendance_Exit: editSalida.value },
-      { withCredentials: true }
+      {
+        headers: {
+          "internal-id": authStore.user?.id,
+        },
+        withCredentials: true
+      }
     );
     toast.add({ severity: "success", summary: "Actualizado", detail: "Registro actualizado correctamente", life: 3000 });
     closeEditModal();
@@ -313,7 +320,10 @@ const confirmDelete = async () => {
   try {
     const registroId = registroToDelete.value.Attendance_ID;
     await axios.delete(`${API}/registros/${registroId}`, {
-      withCredentials: true,
+      headers: {
+        "internal-id": authStore.user?.id,
+      },
+      withCredentials: true
     });
     toast.add({ severity: "success", summary: "Eliminado", detail: "Registro eliminado", life: 3000 });
     deleteDialogVisible.value = false;

@@ -277,9 +277,11 @@ import Button from 'primevue/button';
 import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
 import Dialog from 'primevue/dialog';
-import { useSubjects } from '@/useSubjects';
 import axios from 'axios';
+import { useSubjects } from '@/useSubjects';
+import { useAuthStore } from "@/stores/auth";
 
+const authStore = useAuthStore();
 const { subjects: opcionesAreas } = useSubjects();
 
 const maxHorasSemanales = ref(12); // Valor por defecto
@@ -720,35 +722,64 @@ async function guardarHorario(esCambioAdministrativo: boolean) {
   try {
     if (!horarioGuardado.value) {
       for (const reg of nuevosRegistros) {
-        await axios.post(`${API}/horarioEstudiantes`, reg, { withCredentials: true });
+        await axios.post(`${API}/horarioEstudiantes`, reg, {
+          headers: {
+          "internal-id": authStore.user?.id,
+          },
+          withCredentials: true,
+        });
+
       }
       horarioGuardado.value = true;
       tieneHorarioActual.value = true;
     } else {
       if (esCambioAdministrativo) {
-        await axios.post(`${API}/horarioEstudiantes/cambio-administrativo`, {
-          userXPeriodId: usuarioXPeriodoId.value,
-          newSchedules: nuevosRegistros
-        }, { withCredentials: true });
+      await axios.post(`${API}/horarioEstudiantes/cambio-administrativo`, {
+        userXPeriodId: usuarioXPeriodoId.value,
+        newSchedules: nuevosRegistros
+      }, {
+        headers: {
+        "internal-id": authStore.user?.id,
+        },
+        withCredentials: true,
+      });
+
       } else {
         if (Array.isArray(horarioActual.value)) {
           for (let i = 0; i < nuevosRegistros.length; i++) {
             const existing = horarioActual.value[i];
             if (existing?.Schedule_Students_ID) {
-              await axios.put(`${API}/horarioEstudiantes/${existing.Schedule_Students_ID}`, nuevosRegistros[i], {
+            await axios.put(`${API}/horarioEstudiantes/${existing.Schedule_Students_ID}`, nuevosRegistros[i], {
+              headers: {
+                "internal-id": authStore.user?.id,
+              },
+              withCredentials: true
+            });
+            } else {
+              await axios.post(`${API}/horarioEstudiantes`, nuevosRegistros[i], {
+                headers: {
+                "internal-id": authStore.user?.id,
+                },
                 withCredentials: true
               });
-            } else {
-              await axios.post(`${API}/horarioEstudiantes`, nuevosRegistros[i], { withCredentials: true });
+
             }
           }
         } else {
           if (horarioActual.value?.Schedule_Students_ID) {
             await axios.put(`${API}/horarioEstudiantes/${horarioActual.value.Schedule_Students_ID}`, nuevosRegistros[0], {
+              headers: {
+                "internal-id": authStore.user?.id,
+              },
               withCredentials: true
             });
           } else {
-            await axios.post(`${API}/horarioEstudiantes`, nuevosRegistros[0], { withCredentials: true });
+            await axios.post(`${API}/horarioEstudiantes`, nuevosRegistros[0], {
+              headers: {
+                "internal-id": authStore.user?.id,
+              },
+              withCredentials: true
+            });
           }
         }
       }
@@ -955,10 +986,16 @@ async function crearHorarioEspecial() {
   };
 
   try {
-    await axios.post(`${API}/parametroHorario`, payload, { withCredentials: true });
+    await axios.post(`${API}/parametroHorario`, payload, {
+      headers: {
+        "internal-id": authStore.user?.id,
+      },
+      withCredentials: true,
+    });
 
     toast.add({
       severity: 'success',
+      life: 4000,
       summary: 'Horario Especial Creado',
       detail: 'Se registró correctamente.'
     });
