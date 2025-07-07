@@ -11,11 +11,14 @@ import ToggleSwitch from "primevue/toggleswitch";
 import Card from "primevue/card";
 import Badge from "primevue/badge";
 import ScrollPanel from "primevue/scrollpanel";
+import { useAuthStore } from "@/stores/auth";
 
 import { useDarkMode } from "@/components/ThemeSwitcher";
 import { useToast } from "primevue/usetoast";
 import { API } from "@/ApiRoute";
 import { useConfirm } from "primevue/useconfirm";
+
+
 
 // Importa APP_VIEWS y el tipo ViewPermission de tu config
 import { APP_VIEWS, type AppView, type ViewPermission } from "@/config/views";
@@ -23,6 +26,7 @@ import { APP_VIEWS, type AppView, type ViewPermission } from "@/config/views";
 const { isDarkTheme } = useDarkMode();
 const toast = useToast();
 const confirm = useConfirm();
+
 
 // Estado para la gestión de roles
 const tableData = ref<any[]>([]);
@@ -34,6 +38,7 @@ const selectedProfileForPermissions = ref<any | null>(null);
 const profileViewPermissions = ref<ViewPermission[]>([]);
 const isLoadingPermissions = ref(false);
 const isLoadingProfiles = ref(false);
+const authStore = useAuthStore();
 
 // Columnas para la tabla de Perfiles
 const profileColumns = [
@@ -261,10 +266,15 @@ const saveProfilePermissions = async () => {
       View_Name: p.viewKey,
       Has_Permission: p.isEnabled,
     }));
-
+    
     await axios.put(
       `${API}/profile/auth/${selectedProfileForPermissions.value.Profile_ID}`,
-      permissionsToSave
+      permissionsToSave,
+      {
+          headers: {
+            "internal-id": authStore.user?.id,
+          },
+        }
     );
     toast.add({
       severity: "success",

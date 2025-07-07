@@ -1317,6 +1317,9 @@ function validateUserRequiredFields() {
   if (!userCity.value) formErrors.value.push("Ciudad");
 
   //Contacto y contacto de referencia
+  if (!userPhone.value) formErrors.value.push("Teléfono");
+  if (userPhone.value.length < 10)
+    formErrors.value.push("Teléfono debe tener al menos 10 dígitos");
   if (!userEmail.value) formErrors.value.push("Correo electrónico");
   if (!userAddress.value) formErrors.value.push("Dirección");
   if (!userSector.value) formErrors.value.push("Sector");
@@ -3053,7 +3056,7 @@ const getActivityStatusSeverity = (status: string) => {
 
 
 const initNotesEditor = ref<any>(null);
-const MAX_INIT_NOTES_LENGTH = 823;
+const MAX_INIT_NOTES_LENGTH = 612;
 
 const handleInitNotesChange = (event: EditorTextChangeEvent): void => {
   const quill = event.instance
@@ -3347,7 +3350,7 @@ const handleInitNotesChange = (event: EditorTextChangeEvent): void => {
               mask="(999)-999-9999"
               :disabled="areInputsDisabled"
             />
-            <label for="userPhone">Teléfono</label>
+            <label for="userPhone"><span class="text-red-500">* </span>Teléfono</label>
           </FloatLabel>
           <FloatLabel variant="on" class="w-full">
             <InputText

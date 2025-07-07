@@ -64,9 +64,14 @@ const fetchAlertas = async () => {
 
 const marcarComoRevisado = async (alertaId: number) => {
   try {
-    await axios.put(`${API}/alerta/${alertaId}`, {
-      Alert_Approval_Status: "Revisado",
-    }, { withCredentials: true });
+  await axios.put(`${API}/alerta/${alertaId}`, {
+    Alert_Approval_Status: "Revisado",
+  }, {
+    headers: {
+      "internal-id": authStore.user?.id,
+    },
+    withCredentials: true
+  });
     await fetchAlertas();
   } catch (error) {
     toast.add({

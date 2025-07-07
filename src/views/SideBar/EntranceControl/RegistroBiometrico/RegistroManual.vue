@@ -18,15 +18,15 @@
     <!-- Modal de error -->
     <Dialog
       v-model:visible="showErrorModal"
-      header="Error"
+      header="⚠️ Error"
       modal
       :style="{ width: '30rem' }"
       :breakpoints="{ '960px': '90vw' }"
       :class="isDarkTheme ? 'bg-[#1f1f1f] text-white' : 'bg-white text-gray-900'"
     >
-      <p class="text-center">{{ errorModalMessage }}</p>
-      <div class="flex justify-center mt-4">
-        <Button label="Cerrar" @click="showErrorModal = false" />
+      <p class="text-center text-lg">{{ errorModalMessage }}</p>
+      <div class="flex justify-center mt-4 mt-5">
+        <Button label="Cerrar" severity="contrast" @click="showErrorModal = false" />
       </div>
     </Dialog>
 
@@ -150,11 +150,13 @@
   import { useToast } from "primevue/usetoast";
   import { API, type Usuario } from "@/ApiRoute";
   import { useDarkMode } from "@/components/ThemeSwitcher";
+  import { useAuthStore } from "@/stores/auth";
   import axios from "axios";
 
 
   const router = useRouter();
   const toast = useToast();
+  const authStore = useAuthStore();
   const { isDarkTheme } = useDarkMode();
   
   // Función para obtener la fecha de hoy en formato "YYYY-MM-DDT00:00"
@@ -216,17 +218,30 @@
   // Función para buscar y cargar datos del estudiante y sus períodos
   const buscarEstudiante = async () => {
   if (!cedulaInput.value) {
-    toast.add({
-      severity: "warn",
-      summary: "Falta cédula",
-      detail: "Ingrese una cédula para buscar.",
-      life: 3000,
-    });
+    errorModalMessage.value = "Por favor, ingrese una cédula o pasaporte para buscar.";
+    showErrorModal.value = true;
     return;
   }
+
+
+
   try {
     // 📥 Obtener datos del estudiante
     const { data } = await axios.get(`${API}/internal-user/${cedulaInput.value}`);
+    
+    if (!data || !data.Internal_ID) {
+      errorModalMessage.value = "No se encontró ningún estudiante con la cédula o pasaporte ingresado.";
+      showErrorModal.value = true;
+      return;
+    }
+
+    // Verificar que sea un estudiante
+    if (data.Internal_Type !== "Estudiante") {
+      errorModalMessage.value = "El usuario encontrado no es un estudiante. Solo los estudiantes pueden registrar asistencia manual.";
+      showErrorModal.value = true;
+      return;
+    }
+
     cedula.value = data.Internal_ID;
     nombres.value = `${data.Internal_Name} ${data.Internal_LastName}`;
     apellidos.value = data.Internal_LastName;
@@ -235,6 +250,13 @@
 
     // 📥 Obtener períodos del estudiante
     const { data: periodosData } = await axios.get(`${API}/usuarioXPeriodo/usuario/${cedula.value}`);
+    
+    if (!periodosData || periodosData.length === 0) {
+      errorModalMessage.value = "Este estudiante no está asignado a ningún período académico. Contacte al administrador.";
+      showErrorModal.value = true;
+      return;
+    }
+
     const hoy = new Date();
     periodoActual.value = periodosData.find((p: any) => {
       const inicio = new Date(p.period.Period_Start);
@@ -243,14 +265,42 @@
     });
 
     if (!periodoActual.value) {
-      throw new Error("No se encontró un período activo para el estudiante");
+      errorModalMessage.value = "No se encontró un período académico activo para este estudiante. El registro manual de asistencia no está disponible.";
+      showErrorModal.value = true;
+      return;
     }
 
     usuarioXPeriodoId.value = periodoActual.value.UserXPeriod_ID;
     estudianteCargado.value = true;
+
+    // Mostrar mensaje de éxito
+    toast.add({
+      severity: "success",
+      summary: "Estudiante encontrado",
+      detail: `${nombres.value} - ${periodoActual.value.period.Period_Name}`,
+      life: 3000,
+    });
+
   } catch (error: any) {
     console.error("Error al cargar el estudiante:", error);
-    errorModalMessage.value = error.response?.data?.message || error.message || "Error al cargar los datos del estudiante.";
+    
+    // Manejar errores específicos del servidor
+    if (error.response) {
+      if (error.response.status === 404) {
+        errorModalMessage.value = "No se encontró ningún estudiante con la cédula o pasaporte ingresado.";
+      } else if (error.response.status === 403) {
+        errorModalMessage.value = "No tienes permisos para acceder a esta información.";
+      } else if (error.response.status === 500) {
+        errorModalMessage.value = "Error interno del servidor. Intente nuevamente más tarde.";
+      } else {
+        errorModalMessage.value = error.response.data?.message || "Error del servidor al buscar el estudiante.";
+      }
+    } else if (error.request) {
+      errorModalMessage.value = "Error de conexión. Verifique su conexión a internet e intente nuevamente.";
+    } else {
+      errorModalMessage.value = error.message || "Error inesperado al cargar los datos del estudiante.";
+    }
+    
     showErrorModal.value = true;
   }
 };
@@ -290,62 +340,111 @@ const validarMismoDia = (entrada: string, salida: string): boolean => {
 };
   
 const openConfirmDialog = () => {
-
-  if (periodoInicio.value && new Date(manualEntrada.value) < periodoInicio.value) {
-  toast.add({
-    severity: "error",
-    summary: "Fecha fuera de rango",
-    detail: "La hora de entrada está antes del inicio del período.",
-    life: 3000,
-  });
-  return;
-}
-
-const periodoFinAdjusted = periodoFin.value ? new Date(periodoFin.value) : new Date();
-periodoFinAdjusted.setHours(23, 59, 59, 999);
-
-if (new Date(manualSalida.value) > periodoFinAdjusted) {
-  toast.add({
-    severity: "error",
-    summary: "Fecha fuera de rango",
-    detail: "La hora de salida está después del fin del período.",
-    life: 3000,
-  });
-  return;
-}
-
-
+  // Validar que los campos no estén vacíos
   if (!manualEntrada.value || !manualSalida.value) {
-    toast.add({
-      severity: "warn",
-      summary: "Campos Incompletos",
-      detail: "Ingrese tanto la hora de entrada como la de salida.",
-      life: 3000,
-    });
+    errorModalMessage.value = "Debe ingresar tanto la hora de entrada como la hora de salida.";
+    showErrorModal.value = true;
     return;
   }
 
+  // Validar que el tipo de asistencia esté seleccionado
+  if (!attendanceTypeSelected.value) {
+    errorModalMessage.value = "Debe seleccionar un tipo de asistencia (Presencial o Virtual).";
+    showErrorModal.value = true;
+    return;
+  }
+
+  // Validar rango de fechas del período
+  if (periodoInicio.value && new Date(manualEntrada.value) < periodoInicio.value) {
+    const fechaInicio = periodoInicio.value.toLocaleDateString('es-ES', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+    errorModalMessage.value = `La fecha de entrada no puede ser anterior al inicio del período académico (${fechaInicio}).`;
+    showErrorModal.value = true;
+    return;
+  }
+
+  const periodoFinAdjusted = periodoFin.value ? new Date(periodoFin.value) : new Date();
+  periodoFinAdjusted.setHours(23, 59, 59, 999);
+
+  if (new Date(manualSalida.value) > periodoFinAdjusted) {
+    const fechaFin = periodoFin.value?.toLocaleDateString('es-ES', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+    errorModalMessage.value = `La fecha de salida no puede ser posterior al fin del período académico (${fechaFin}).`;
+    showErrorModal.value = true;
+    return;
+  }
+
+  // Validar que las fechas sean del mismo día
   if (!validarMismoDia(manualEntrada.value, manualSalida.value)) {
-    toast.add({
-      severity: "error",
-      summary: "Fechas inválidas",
-      detail: "La hora de entrada y salida deben ser del mismo día.",
-      life: 3000,
-    });
+    errorModalMessage.value = "La hora de entrada y la hora de salida deben ser del mismo día.";
+    showErrorModal.value = true;
     return;
   }
 
-  if (new Date(manualEntrada.value) >= new Date(manualSalida.value)) {
-    toast.add({
-      severity: "error",
-      summary: "Horas inválidas",
-      detail: "La hora de entrada debe ser anterior a la hora de salida.",
-      life: 3000,
-    });
+  // Validar que la entrada sea anterior a la salida
+  const fechaEntrada = new Date(manualEntrada.value);
+  const fechaSalida = new Date(manualSalida.value);
+  
+  if (fechaEntrada >= fechaSalida) {
+    errorModalMessage.value = "La hora de entrada debe ser anterior a la hora de salida.";
+    showErrorModal.value = true;
     return;
   }
 
-  // ✅ Si todo es válido, mostramos el modal
+  // Validar duración mínima y máxima
+  const duracionMinutos = (fechaSalida.getTime() - fechaEntrada.getTime()) / (1000 * 60);
+  
+  if (duracionMinutos < 15) {
+    errorModalMessage.value = "La duración mínima entre entrada y salida debe ser de 15 minutos.";
+    showErrorModal.value = true;
+    return;
+  }
+
+  if (duracionMinutos > 18 * 60) { // 18 horas
+    errorModalMessage.value = "La duración máxima entre entrada y salida no puede exceder las 18 horas.";
+    showErrorModal.value = true;
+    return;
+  }
+
+  // Validar que no sea una fecha futura
+  const ahora = new Date();
+  if (fechaSalida > ahora) {
+    errorModalMessage.value = "No se puede registrar asistencia para fechas futuras.";
+    showErrorModal.value = true;
+    return;
+  }
+
+  // Validar días hábiles (lunes a viernes)
+  const diaSemana = fechaEntrada.getDay();
+  if (diaSemana === 0 || diaSemana === 6) {
+    errorModalMessage.value = "No se puede registrar asistencia para fines de semana (sábado o domingo).";
+    showErrorModal.value = true;
+    return;
+  }
+
+  // Validar horarios razonables (no antes de 6:00 AM ni después de 10:00 PM)
+  const horaEntrada = fechaEntrada.getHours();
+  const horaSalida = fechaSalida.getHours();
+  
+  if (horaEntrada < 6 || horaEntrada > 22) {
+    errorModalMessage.value = "La hora de entrada debe estar entre las 6:00 AM y las 10:00 PM.";
+    showErrorModal.value = true;
+    return;
+  }
+
+  if (horaSalida < 6 || horaSalida > 22) {
+    errorModalMessage.value = "La hora de salida debe estar entre las 6:00 AM y las 10:00 PM.";
+    showErrorModal.value = true;
+    return;
+  }
+
+  // ✅ Si todas las validaciones pasan, mostrar confirmación
   confirmDialogVisible.value = true;
 };
 
@@ -371,26 +470,49 @@ if (new Date(manualSalida.value) > periodoFinAdjusted) {
     };
 
     // POST con axios
-    await axios.post(`${API}/registros/createConResumen`, registroData);
+    await axios.post(`${API}/registros/createConResumen`, registroData, {
+      headers: {
+        "internal-id": authStore.user?.id,
+      },
+      withCredentials: true
+    });
 
     toast.add({
       severity: "success",
-      summary: "Registrado",
-      detail: "La asistencia fue registrada correctamente.",
+      summary: "Asistencia Registrada",
+      detail: "La asistencia manual fue registrada correctamente.",
       life: 3000,
     });
 
     setTimeout(() => {
       router.push("/AsignacionHuella");
     }, 3000);
+    
   } catch (error: any) {
     console.error("Error al guardar la asistencia manual:", error);
-    toast.add({
-      severity: "error",
-      summary: "Error",
-      detail: error.response?.data?.message || error.message || "No se pudo guardar la asistencia.",
-      life: 5000,
-    });
+    
+    // Manejar errores específicos del servidor
+    if (error.response) {
+      if (error.response.status === 409) {
+        errorModalMessage.value = "Ya existe un registro de asistencia para esta fecha y estudiante. No se puede duplicar el registro.";
+      } else if (error.response.status === 400) {
+        errorModalMessage.value = "Los datos de asistencia son inválidos. Verifique la información ingresada e intente nuevamente.";
+      } else if (error.response.status === 403) {
+        errorModalMessage.value = "No tienes permisos para registrar asistencia manual. Contacte al administrador.";
+      } else if (error.response.status === 422) {
+        errorModalMessage.value = "Los datos proporcionados no cumplen con los requisitos del sistema. Verifique las fechas y horarios.";
+      } else if (error.response.status === 500) {
+        errorModalMessage.value = "Error interno del servidor al guardar la asistencia. Intente nuevamente más tarde.";
+      } else {
+        errorModalMessage.value = error.response.data?.message || "Error del servidor al guardar la asistencia manual.";
+      }
+    } else if (error.request) {
+      errorModalMessage.value = "Error de conexión al guardar la asistencia. Verifique su conexión a internet e intente nuevamente.";
+    } else {
+      errorModalMessage.value = error.message || "Error inesperado al guardar la asistencia manual.";
+    }
+    
+    showErrorModal.value = true;
   }
 };
 

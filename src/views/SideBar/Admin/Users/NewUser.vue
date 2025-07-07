@@ -14,6 +14,7 @@ import type { boolean } from "zod";
 import { useSubjects } from "@/useSubjects";
 import ProgressSpinner from "primevue/progressspinner";
 import { useNotificationStore } from "@/stores/notifications";
+//"internal-id": authStore.user?.id,
 
 const toast = useToast();
 const notificationStore = useNotificationStore();
@@ -184,6 +185,21 @@ watch(
         });
         internalUser.value.Internal_ID = "";
       }
+    }
+    else if (
+      selectedIdType.value === "pasaporte" &&
+      nuevoValor.length > 0
+    ) {
+      checkUserExists().then((existe) => {
+        if (existe) {
+          toast.add({
+            severity: "warn",
+            summary: "Usuario ya existe",
+            detail: "Ya existe un usuario con el pasaporte ingresado.",
+            life: 3000,
+          });
+        } 
+      });
     }
   }
 );

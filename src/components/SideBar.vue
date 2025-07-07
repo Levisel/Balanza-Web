@@ -586,21 +586,24 @@ const toggleSubmenu = (submenu: keyof typeof openSubmenus.value) => {
       </main>
       <!-- Pie de página con Avatar -->
       <footer class="mt-auto p-4">
-        <hr class="mb-3 border-t border-gray-300" />
+        <hr class="mb-2 border-t border-gray-300" />
         <div class="flex items-center justify-between mb-2">
           <!-- Grupo de avatar y nombre -->
           <div class="flex items-center gap-4">
             <button v-ripple
               class="relative overflow-hidden w-full md:w-60 border-0 bg-transparent flex items-start p-2 pl-4 hover:bg-surface-100 dark:hover:bg-surface-100 rounded-none cursor-pointer transition-colors duration-200"
               @click="toggle" aria-haspopup="true" aria-controls="overlay_menu">
-              <Avatar :image="userAvatar" class="mr-3" shape="circle" size="large" />
-              <span class="inline-flex flex-col items-start mt-1">
-                <span class="font-semibold">
-                  {{ authStore.user?.name }}
-                </span>
-                <span class="text-sm">
-                  {{ authStore.user?.type }}
-                </span>
+              <Avatar :image="userAvatar" class="mr-3 -ml-3" shape="circle" size="xlarge" />
+                <span class="inline-flex flex-col items-start mt-1">
+                  <span class="font-semibold">
+                    {{ authStore.user?.name }}
+                  </span>
+                  <span class="text-sm -mt-0.5">
+                    {{ authStore.user?.type }} 
+                  </span>
+                  <span class="text-sm -mt-0.6">
+                    {{ authStore.user?.area || 'Sin Área' }}
+                  </span>
               </span>
             </button>
 
@@ -620,14 +623,17 @@ const toggleSubmenu = (submenu: keyof typeof openSubmenus.value) => {
           </div>
 
           <!-- Botón de modo oscuro/claro -->
-          <button type="button"
+           <div class = "mr-3 -mb-1">
+           <button type="button"
             class="flex items-center justify-center w-10 h-10 rounded-full transition-colors duration-300 text-yellow-500 hover:bg-gray-700"
             @click="toggleDarkMode">
             <i :class="[
               'pi',
               { 'pi-moon': isDarkTheme, 'pi-sun': !isDarkTheme },
             ]"></i>
-          </button>
+          </button>         
+          </div>
+
         </div>
       </footer>
     </div>

@@ -117,7 +117,8 @@ import Dropdown from "primevue/dropdown";
 import { useDarkMode } from "@/components/ThemeSwitcher";
 import { API, type Period } from "@/ApiRoute";
 import { useToast } from "primevue/usetoast";
-
+import { useAuthStore } from "@/stores/auth";
+const authStore = useAuthStore();
 const router = useRouter();
 const route = useRoute();
 const toast = useToast();
@@ -266,7 +267,10 @@ const validarYGuardar = async () => {
     if (periodoId) {
       //  Edición de período
       response = await axios.put(`${API}/periodos/${periodoId}`, periodoData, {
-        withCredentials: true
+        withCredentials: true,
+        headers: {
+          "internal-id": authStore.user?.id,
+        },
       });
       nuevoPeriodo = response.data;
 
@@ -284,29 +288,44 @@ const validarYGuardar = async () => {
         const nuevasSemanas = calcularSemanas(periodoId, nextDay, periodEnd.value);
 
         await axios.post(`${API}/seguimientos/bulk`, nuevasSemanas, {
-          withCredentials: true
-        });
+        withCredentials: true,
+        headers: {
+          "internal-id": authStore.user?.id,
+        },
+      });
       }
 
       // 🔵 Verificar extensión al inicio
       if (originalFechaInicio.value && periodStart.value < originalFechaInicio.value) {
         const nuevasSemanasInicio = calcularSemanas(periodoId, periodStart.value, originalFechaInicio.value);
         await axios.post(`${API}/seguimientos/bulk`, nuevasSemanasInicio, {
-          withCredentials: true
-        });
+        withCredentials: true,
+        headers: {
+          "internal-id": authStore.user?.id,
+        },
+      });
       }
 
       // 🔵 Reordenar todas las semanas
       await axios.put(`${API}/seguimientos/reorder/${periodoId}`, {
         newStartDate: periodStart.value.toISOString(),
         newEndDate: periodEnd.value.toISOString()
-      }, { withCredentials: true });
+      }, {
+        withCredentials: true,
+        headers: {
+          "internal-id": authStore.user?.id,
+        },
+      });
 
     } else {
       // 🛠 Creación de período
-      response = await axios.post(`${API}/periodos`, periodoData, {
-        withCredentials: true
-      });
+      const response = await axios.post(`${API}/periodos`, periodoData, {
+        withCredentials: true,
+        headers: {
+          "internal-id": authStore.user?.id,
+        },
+      }
+    );
       nuevoPeriodo = response.data;
 
       const semanas = calcularSemanas(
@@ -316,7 +335,10 @@ const validarYGuardar = async () => {
       );
 
       await axios.post(`${API}/seguimientos/bulk`, semanas, {
-        withCredentials: true
+        withCredentials: true,
+        headers: {
+          "internal-id": authStore.user?.id,
+        },
       });
     }
 
