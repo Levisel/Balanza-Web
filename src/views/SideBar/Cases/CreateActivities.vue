@@ -33,6 +33,7 @@ interface ActividadCompletar {
   UltimaActividad: string;
   FechaUltimaActividad: Date | null;
   Observaciones: string;
+  [key: string]: unknown; // Permite el acceso por string
 }
 
 interface Actividad {
@@ -272,23 +273,20 @@ const guardarNuevaActividad = async () => {
     return;
   }
 
-  // 2. Validar que todos los campos dinámicos cargados estén llenos
+  // 2. Validar que TODOS los campos dinámicos estén llenos (todos obligatorios)
   let formEsValido = true;
-  if (dynamicFields.value.length > 0) {
-    for (const field of dynamicFields.value) {
-      const value = dynamicFieldValues.value[field.Field_Of_Activity_Name];
-      const valorEsencialmenteVacio = value === null || value === undefined || String(value).trim() === "";
-
-      if (field.Field_Of_Activity_Required && valorEsencialmenteVacio) {
-        formEsValido = false;
-        toast.add({
-          severity: "warn",
-          summary: "Campo Requerido",
-          detail: `El campo "${formatFieldName(field.Field_Of_Activity_Name)}" es obligatorio y está vacío.`,
-          life: 3000,
-        });
-        break;
-      }
+  for (const field of dynamicFields.value) {
+    const value = dynamicFieldValues.value[field.Field_Of_Activity_Name];
+    const valorEsencialmenteVacio = value === null || value === undefined || String(value).trim() === "";
+    if (valorEsencialmenteVacio) {
+      formEsValido = false;
+      toast.add({
+        severity: "warn",
+        summary: "Campo Requerido",
+        detail: `El campo "${formatFieldName(field.Field_Of_Activity_Name)}" es obligatorio y está vacío.`,
+        life: 3000,
+      });
+      break;
     }
   }
 
@@ -376,20 +374,23 @@ const guardarNuevaActividad = async () => {
     });
 
     if (response.status === 201) {
-      toast.add({
-        severity: "success",
-        summary: "Éxito",
-        detail: "Actividad creada correctamente.",
-        life: 3000,
-      });
+  toast.add({
+    severity: "success",
+    summary: "Éxito",
+    detail: "Actividad creada correctamente.",
+    life: 3000,
+  });
 
-      visibleNuevaActividadDialog.value = false;
-      dynamicFieldValues.value = {};
-      selectedActivityType.value = null;
-      isActivityInternal.value = false; // Limpiar el checkbox al cerrar
-    } else {
-      throw new Error(`Error al guardar la actividad: Estado ${response.status} - ${response.statusText}`);
-    }
+  visibleNuevaActividadDialog.value = false;
+  dynamicFieldValues.value = {};
+  selectedActivityType.value = null;
+  isActivityInternal.value = false; // Limpiar el checkbox al cerrar
+
+  // Recargar actividades en caliente
+  await verActividades({ codigo: selectedCaseCode.value, usuario: "N/A" }); // <-- Agregado
+} else {
+  throw new Error(`Error al guardar la actividad: Estado ${response.status} - ${response.statusText}`);
+}
   } catch (error: any) {
     console.error("Error al guardar la actividad:", error.response?.data || error.message);
     toast.add({
@@ -592,6 +593,8 @@ const obtenerCasos = async () => {
         tema: caso.Init_Subject,
         estado: caso.Init_Status,
         tipocliente: caso.Init_ClientType,
+        Init_EndCaseReason: caso.Init_EndCaseReason || 'N/A',
+        Init_EndCaseDescription: caso.Init_EndCaseDescription || 'N/A',
       };
     };
 
@@ -936,10 +939,39 @@ const handleFileUpload = async (event: { files: File | File[] }) => {
 };
 
 const guardarActividadCompletada = async () => {
+  // Validación de campos obligatorios con alerta personalizada
+  const campos = [
+    { key: 'Evidencia', label: 'Evidencia (PDF)' },
+    { key: 'TipoJudicatura', label: 'Tipo de Judicatura' },
+    { key: 'ReferenciaInterna', label: 'Referencia Interna' },
+    { key: 'NroJuzgado', label: 'Nro. Juzgado/Unidad Judicial' },
+    { key: 'UltimaActividad', label: 'Última Actividad o Diligencia Realizada por el CJG' },
+    { key: 'FechaUltimaActividad', label: 'Fecha de la Última Diligencia o Actividad' },
+    { key: 'Observaciones', label: 'Observaciones' },
+  ];
+
+  for (const campo of campos) {
+    const valor = actividadCompletar.value[campo.key];
+    if (
+      valor === null ||
+      valor === undefined ||
+      (typeof valor === 'string' && valor.trim() === '') ||
+      (campo.key === 'Evidencia' && !valor)
+    ) {
+      toast.add({
+        severity: "warn",
+        summary: "Campo Requerido",
+        detail: `El campo "${campo.label}" es obligatorio y está vacío.`,
+        life: 3000,
+      });
+      return;
+    }
+  }
+
   try {
     const formData = new FormData();
     if (actividadCompletar.value.Evidencia) {
-        formData.append("file", actividadCompletar.value.Evidencia); // Cambia "Evidencia" a "file"
+      formData.append("file", actividadCompletar.value.Evidencia);
     }
     formData.append("Activity_JurisdictionType", actividadCompletar.value.TipoJudicatura);
     formData.append("Activity_InternalReference", actividadCompletar.value.ReferenciaInterna);
@@ -952,9 +984,9 @@ const guardarActividadCompletada = async () => {
         : ""
     );
     formData.append("Activity_Observation", actividadCompletar.value.Observaciones);
-    formData.append("Activity_Status", "Completado"); // Cambia el estado a "Completado"
+    formData.append("Activity_Status", "Completado");
 
-    const internalID = authStore.user?.id; // Obtén el ID del usuario autenticado
+    const internalID = authStore.user?.id;
     if (!internalID) {
       throw new Error("No se pudo obtener el ID del usuario.");
     }
@@ -962,7 +994,7 @@ const guardarActividadCompletada = async () => {
     const response = await axios.put(`${API}/activity/${actividadCompletar.value.id}`, formData, {
       headers: {
         "Content-Type": "multipart/form-data",
-        "internal-id": internalID, // Agrega el encabezado internal-id
+        "internal-id": internalID,
       },
     });
 
@@ -974,8 +1006,6 @@ const guardarActividadCompletada = async () => {
         life: 3000,
       });
       visibleCompletarActividadDialog.value = false;
-
-      // Actualiza la lista de actividades
       await verActividades({ codigo: selectedCaseCode.value, usuario: "Unknown User" });
     } else {
       throw new Error("Error al completar la actividad.");
@@ -1032,7 +1062,13 @@ const traduccionesCamposActividad: Record<string, string> = {
   Activity_lastCJGActivity: "Última Actividad CJG",
   Activity_lastCJGActivityDate: "Fecha Última Actividad CJG",
   Activity_Observation: "Observaciones",
-  // Agrega más traducciones según los campos que devuelva tu API /activity/{id}
+  // Campos para Activity_Record
+  Activity_Record_Type: "Tipo de Registro",
+  Activity_Record_Recorded_Time: "Hora de Registro",
+  Activity_Record_Latitude: "Latitud",
+  Activity_Record_Longitude: "Longitud",
+  Activity_Record_On_Time: "¿En Tiempo?",
+  Activity_Record_Observation: "Observación de Registro",
 };
 
 const traducirYFormatearNombreCampo = (nombreCampo: string): string => {
@@ -1051,8 +1087,34 @@ const verDetallesActividad = async (activityId: number | undefined) => {
   visibleDetallesActividadDialog.value = true;
 
   try {
+    // 1. Obtén los detalles de la actividad
     const response = await axios.get(`${API}/activity/${activityId}`);
-    actividadSeleccionadaDetalles.value = response.data;
+    const actividad = response.data;
+
+    // 2. Si la actividad NO es interna, consulta los datos extra
+    if (actividad.Activity_IsInternal === false || actividad.Activity_IsInternal === 0) {
+      try {
+        const recordResp = await axios.get(`${API}/activity-record/activity/${activityId}`);
+        const records = recordResp.data;
+        if (Array.isArray(records) && records.length > 0) {
+          const record = records[0]; // Toma el primer registro
+          actividad.Activity_Record_Type = record.Activity_Record_Type;
+          actividad.Activity_Record_Recorded_Time = record.Activity_Record_Recorded_Time;
+          actividad.Activity_Record_Latitude = record.Activity_Record_Latitude;
+          actividad.Activity_Record_Longitude = record.Activity_Record_Longitude;
+          actividad.Activity_Record_On_Time = record.Activity_Record_On_Time;
+          actividad.Activity_Record_Observation = record.Activity_Record_Observation;
+          // Agrega el campo concatenado solo si ambos existen
+          if (record.Activity_Record_Latitude && record.Activity_Record_Longitude) {
+            actividad.Activity_Record_LatLong = `${record.Activity_Record_Latitude}, ${record.Activity_Record_Longitude}`;
+          }
+        }
+      } catch (err) {
+        console.warn('No se pudo cargar el registro de actividad:', err);
+      }
+    }
+
+    actividadSeleccionadaDetalles.value = actividad;
   } catch (error) {
     console.error(`Error al obtener los detalles de la actividad ${activityId}:`, error);
     toast.add({ severity: 'error', summary: 'Error', detail: 'No se pudieron obtener los detalles de la actividad.', life: 3000 });
@@ -1061,7 +1123,6 @@ const verDetallesActividad = async (activityId: number | undefined) => {
     isLoadingActivityDetails.value = false;
   }
 };
-// --- FIN: Lógica para Ver Detalles de Actividad ---
 
 onMounted(() => {
   fetchActivityTypes();
@@ -1149,6 +1210,8 @@ onMounted(() => {
           <Column field="tema" header="Tema" />
           <Column field="estado" header="Estado" />
           <Column field="tipocliente" header="Tipo de Cliente" />
+          <Column field="Init_EndCaseReason" header="Motivo de Finalización" />
+          <Column field="Init_EndCaseDescription" header="Detalle de Finalización" />
           <Column field="actividades" header="Actividades">
             <template #body="slotProps">
               <Button label="Ver Actividades" icon="pi pi-eye" class="p-button-info" @click="verActividades(slotProps.data)" />
@@ -1266,10 +1329,10 @@ onMounted(() => {
 
     <!-- Campos dinámicos -->
     <div v-for="field in dynamicFields" :key="field.Field_Of_Activity_Id" class="field">
-      <label :for="field.Field_Of_Activity_Name" class="block text-sm font-semibold mb-1">
-        {{ field.Field_Of_Activity_Name }}
-        <span v-if="field.Field_Of_Activity_Required" class="text-red-500">*</span>
-      </label>
+  <label :for="field.Field_Of_Activity_Name" class="block text-sm font-semibold mb-1">
+    {{ field.Field_Of_Activity_Name }}
+    <span class="text-red-500">*</span> <!-- Siempre muestra el asterisco rojo -->
+  </label>
 
       <InputText
         v-if="field.Field_Of_Activity_Type === 'Texto'"
@@ -1415,85 +1478,106 @@ onMounted(() => {
   </div>
 </Dialog>
 
-    <!-- Dialog para Completar Actividad -->
-    <Dialog v-model:visible="visibleCompletarActividadDialog" modal header="Completar Actividad" class="p-6 rounded-lg shadow-lg bg-white max-w-3xl w-full">
-    <div class="space-y-4">
-      <p>Para completar la actividad, llena los siguientes campos:</p>
+<!-- Dialog para Completar Actividad -->
+<Dialog v-model:visible="visibleCompletarActividadDialog" modal header="Completar Actividad" class="p-6 rounded-lg shadow-lg bg-white max-w-3xl w-full">
+  <div class="space-y-4">
+    <p>Para completar la actividad, llena los siguientes campos:</p>
 
-      <!-- Campo para subir evidencia -->
-      <div class="field">
-        <label for="evidencia" class="block text-sm font-semibold mb-1">Evidencia (PDF)</label>
-        <FileUpload
-          id="evidencia"
-          name="evidencia"
-          accept="application/pdf"
-          mode="basic"
-          customUpload
-          :auto="true"
-          chooseLabel="Seleccionar Archivo"
-          @upload="handleFileUpload"
-          @select="onFileSelect"
-          class="w-full"
-        />
-        <p v-if="selectedFileName" class="text-sm text-gray-600 mt-2">
-          Archivo seleccionado: <strong>{{ selectedFileName }}</strong>
-        </p>
-      </div>
-
-      <!-- Tipo de Judicatura -->
-      <div class="field">
-        <label for="judicatura" class="block text-sm font-semibold mb-1">Tipo de Judicatura</label>
-        <InputText id="judicatura" v-model="actividadCompletar.TipoJudicatura" class="w-full" />
-      </div>
-
-      <!-- Referencia Interna -->
-      <div class="field">
-        <label for="referenciaInterna" class="block text-sm font-semibold mb-1">Referencia Interna</label>
-        <InputText id="referenciaInterna" v-model="actividadCompletar.ReferenciaInterna" class="w-full" />
-      </div>
-
-      <!-- Número de Juzgado/Unidad Judicial -->
-      <div class="field">
-        <label for="nroJuzgado" class="block text-sm font-semibold mb-1">Nro. Juzgado/Unidad Judicial</label>
-        <InputText id="nroJuzgado" v-model="actividadCompletar.NroJuzgado" class="w-full" />
-      </div>
-
-      <!-- Última Actividad o Diligencia Realizada -->
-      <div class="field">
-        <label for="ultimaActividad" class="block text-sm font-semibold mb-1">Última Actividad o Diligencia Realizada por el CJG</label>
-        <InputText id="ultimaActividad" v-model="actividadCompletar.UltimaActividad" class="w-full" />
-      </div>
-
-      <!-- Fecha de la Última Diligencia o Actividad -->
-      <div class="field">
-        <label for="fechaUltimaActividad" class="block text-sm font-semibold mb-1">Fecha de la Última Diligencia o Actividad</label>
-        <Calendar id="fechaUltimaActividad" v-model="actividadCompletar.FechaUltimaActividad" class="w-full" dateFormat="dd/mm/yy" />
-      </div>
-
-      <!-- Observaciones -->
-      <div class="field">
-        <label for="observaciones" class="block text-sm font-semibold mb-1">Observaciones</label>
-        <textarea
-          id="observaciones"
-          v-model="actividadCompletar.Observaciones"
-          class="w-full border border-gray-300 rounded-lg p-2"
-          rows="5"
-          placeholder="Escribe tus observaciones aquí..."
-        ></textarea>
-      </div>
+    <!-- Campo para subir evidencia -->
+    <div class="field">
+      <label for="evidencia" class="block text-sm font-semibold mb-1">
+        Evidencia (PDF)
+        <span class="text-red-500" style="color:#ef4444 !important">*</span>
+      </label>
+      <FileUpload
+        id="evidencia"
+        name="evidencia"
+        accept="application/pdf"
+        mode="basic"
+        customUpload
+        :auto="true"
+        chooseLabel="Seleccionar Archivo"
+        @upload="handleFileUpload"
+        @select="onFileSelect"
+        class="w-full"
+      />
+      <p v-if="selectedFileName" class="text-sm text-gray-600 mt-2">
+        Archivo seleccionado: <strong>{{ selectedFileName }}</strong>
+      </p>
     </div>
 
-    <template #footer>
-      <Button label="Cancelar" icon="pi pi-times" class="p-button-text" @click="visibleCompletarActividadDialog = false" />
-      <Button
-        label="Guardar"
-        icon="pi pi-check"
-        class="p-button-success"
-        :disabled="!isCompletarActividadFormValid"
-        @click="guardarActividadCompletada"
-      />
-    </template>
-  </Dialog>
+    <!-- Tipo de Judicatura -->
+    <div class="field">
+      <label for="judicatura" class="block text-sm font-semibold mb-1">
+        Tipo de Judicatura
+        <span class="text-red-500" style="color:#ef4444 !important">*</span>
+      </label>
+      <InputText id="judicatura" v-model="actividadCompletar.TipoJudicatura" class="w-full" />
+    </div>
+
+    <!-- Referencia Interna -->
+    <div class="field">
+      <label for="referenciaInterna" class="block text-sm font-semibold mb-1">
+        Referencia Interna
+        <span class="text-red-500" style="color:#ef4444 !important">*</span>
+      </label>
+      <InputText id="referenciaInterna" v-model="actividadCompletar.ReferenciaInterna" class="w-full" />
+    </div>
+
+    <!-- Número de Juzgado/Unidad Judicial -->
+    <div class="field">
+      <label for="nroJuzgado" class="block text-sm font-semibold mb-1">
+        Nro. Juzgado/Unidad Judicial
+        <span class="text-red-500" style="color:#ef4444 !important">*</span>
+      </label>
+      <InputText id="nroJuzgado" v-model="actividadCompletar.NroJuzgado" class="w-full" />
+    </div>
+
+    <!-- Última Actividad o Diligencia Realizada -->
+    <div class="field">
+      <label for="ultimaActividad" class="block text-sm font-semibold mb-1">
+        Última Actividad o Diligencia Realizada por el CJG
+        <span class="text-red-500" style="color:#ef4444 !important">*</span>
+      </label>
+      <InputText id="ultimaActividad" v-model="actividadCompletar.UltimaActividad" class="w-full" />
+    </div>
+
+    <!-- Fecha de la Última Diligencia o Actividad -->
+    <div class="field">
+      <label for="fechaUltimaActividad" class="block text-sm font-semibold mb-1">
+        Fecha de la Última Diligencia o Actividad
+        <span class="text-red-500" style="color:#ef4444 !important">*</span>
+      </label>
+      <Calendar id="fechaUltimaActividad" v-model="actividadCompletar.FechaUltimaActividad" class="w-full" dateFormat="dd/mm/yy" />
+    </div>
+
+    <!-- Observaciones -->
+    <div class="field">
+      <label for="observaciones" class="block text-sm font-semibold mb-1">
+        Observaciones
+        <span class="text-red-500" style="color:#ef4444 !important">*</span>
+      </label>
+      <textarea
+        id="observaciones"
+        v-model="actividadCompletar.Observaciones"
+        class="w-full border border-gray-300 rounded-lg p-2"
+        rows="5"
+        placeholder="Escribe tus observaciones aquí..."
+      ></textarea>
+    </div>
+  </div>
+
+  <template #footer>
+    <Button label="Cancelar" icon="pi pi-times" class="p-button-text" @click="visibleCompletarActividadDialog = false" />
+    <Button
+      label="Guardar"
+      icon="pi pi-check"
+      class="p-button-success"
+      :disabled="!isCompletarActividadFormValid"
+      @click="guardarActividadCompletada"
+    />
+  </template>
+</Dialog>
 
 <Dialog
   v-model:visible="visibleDocumentoDialog"
@@ -1572,18 +1656,45 @@ onMounted(() => {
     <p class="mt-2">Cargando detalles...</p>
   </div>
   <div v-else-if="actividadSeleccionadaDetalles" class="flow-root">
+    <!-- Detalles generales de la actividad -->
     <dl class="-my-4 divide-y divide-gray-200 text-base">
       <template v-for="(value, key) in actividadSeleccionadaDetalles" :key="key">
-        <div v-if="!camposExcluidosDetallesActividad.includes(String(key))"
-             class="grid grid-cols-1 gap-x-4 gap-y-2 py-4 sm:grid-cols-4 items-baseline">
-          <dt class="font-semibold text-gray-700 capitalize sm:col-span-1">{{ traducirYFormatearNombreCampo(String(key)) }}:</dt>
-          <dd class="text-gray-800 sm:col-span-3 break-words">{{ value === null || value === undefined || String(value).trim() === '' ? 'N/A' : value }}</dd>
+        <!-- Oculta los campos de latitud y longitud individuales -->
+        <div
+          v-if="!camposExcluidosDetallesActividad.includes(String(key)) &&
+                key !== 'Activity_Record_Latitude' &&
+                key !== 'Activity_Record_Longitude'"
+          class="grid grid-cols-1 gap-x-4 gap-y-2 py-4 sm:grid-cols-4 items-baseline"
+        >
+          <!-- Concatenar y mostrar enlace solo para Latitud/Longitud -->
+          <template v-if="key === 'Activity_Record_LatLong'">
+            <dt class="font-semibold text-gray-700 capitalize sm:col-span-1">Ubicación (Lat/Lng):</dt>
+            <dd class="text-blue-700 sm:col-span-3 break-words">
+              <a
+                :href="`https://www.google.com/maps?q=${actividadSeleccionadaDetalles.Activity_Record_Latitude},${actividadSeleccionadaDetalles.Activity_Record_Longitude}`"
+                target="_blank"
+                rel="noopener"
+                v-if="actividadSeleccionadaDetalles.Activity_Record_Latitude && actividadSeleccionadaDetalles.Activity_Record_Longitude"
+                class="underline hover:text-blue-900"
+              >
+                {{ actividadSeleccionadaDetalles.Activity_Record_Latitude }}, {{ actividadSeleccionadaDetalles.Activity_Record_Longitude }}
+                <i class="pi pi-external-link ml-1"></i>
+              </a>
+              <span v-else>N/A</span>
+            </dd>
+          </template>
+          <template v-else>
+            <dt class="font-semibold text-gray-700 capitalize sm:col-span-1">{{ traducirYFormatearNombreCampo(String(key)) }}:</dt>
+            <dd class="text-gray-800 sm:col-span-3 break-words">{{ value === null || value === undefined || String(value).trim() === '' ? 'N/A' : value }}</dd>
+          </template>
         </div>
       </template>
     </dl>
   </div>
   <div v-else class="text-center text-gray-500 py-4">No hay detalles disponibles para mostrar o ocurrió un error al cargarlos.</div>
-  <template #footer><Button label="Cerrar" icon="pi pi-times" class="p-button-text" @click="visibleDetallesActividadDialog = false" /></template>
+  <template #footer>
+    <Button label="Cerrar" icon="pi pi-times" class="p-button-text" @click="visibleDetallesActividadDialog = false" />
+  </template>
 </Dialog>
   </div>
 </template>

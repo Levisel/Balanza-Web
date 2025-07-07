@@ -302,74 +302,69 @@ const filteredAssignedCases = computed(() =>
     };
 
     const autoAssignAllCases = async (): Promise<void> => {
-      if (!selectedArea.value) {
-        notificationMessage.value = 'No se ha seleccionado un área para la asignación automática.';
-        showNotification.value = true;
-        notificationType.value = 'error';
-        notificationTitle.value = 'Error';
-        return;
-      }
-      if (!authStore.user?.id) {
-        notificationMessage.value = 'No se pudo obtener el ID del usuario para la asignación.';
-        showNotification.value = true;
-        notificationType.value = 'error';
-        notificationTitle.value = 'Error de Autenticación';
-        return;
-      }
+  if (!selectedArea.value) {
+    notificationMessage.value = 'No se ha seleccionado un área para la asignación automática.';
+    showNotification.value = true;
+    notificationType.value = 'error';
+    notificationTitle.value = 'Error';
+    return;
+  }
+  if (!authStore.user?.id) {
+    notificationMessage.value = 'No se pudo obtener el ID del usuario para la asignación.';
+    showNotification.value = true;
+    notificationType.value = 'error';
+    notificationTitle.value = 'Error de Autenticación';
+    return;
+  }
 
-      autoAssignLoading.value = true;
-      try {
-        const response = await axios.post(
-          `${API}/assignment/assign-pending-by-area`,
-          { area: selectedArea.value },
-          { headers: { 'internal-id': authStore.user.id } }
-        );
+  autoAssignLoading.value = true;
+  try {
+    const response = await axios.post(
+      `${API}/assignment/assign-pending-by-area`,
+      { area: selectedArea.value },
+      { headers: { 'internal-id': authStore.user.id } }
+    );
 
-        // // Find the student's name from the `students` array
-        // const assignedStudent = students.value.find(student => student.Internal_ID === caso.assignedTo);
-        // const assignedStudentName = assignedStudent
-        //   ? `${assignedStudent.Internal_Name} ${assignedStudent.Internal_LastName}`
-        //   : 'Estudiante no encontrado';
-
-        // Add a notification for the automatic assignment
-        response.data.assignedCases.forEach((assignedCase:AssignedCase) => {
-          notificationStore.addNotification({
-            id: Date.now(),
-            mensaje: `El caso ${assignedCase.Init_Code} ha sido asignado automáticamente.`,
-            fecha: new Date().toISOString(),
-            leida: false,
-            userId: assignedCase.assignedTo, // Associate with the assigned student's ID
-          });
+    // Verifica que assignedCases exista y sea un array antes de usar forEach
+    if (response.data && Array.isArray(response.data.assignedCases)) {
+      response.data.assignedCases.forEach((assignedCase: AssignedCase) => {
+        notificationStore.addNotification({
+          id: Date.now(),
+          mensaje: `El caso ${assignedCase.Init_Code} ha sido asignado automáticamente.`,
+          fecha: new Date().toISOString(),
+          leida: false,
+          userId: assignedCase.assignedTo, // Associate with the assigned student's ID
         });
+      });
+    } else {
+      console.warn('La respuesta de asignación automática no contiene assignedCases:', response.data);
+    }
 
-        showNotification.value = true;
-        notificationType.value = 'success';
-        notificationTitle.value = 'Asignación Automática Iniciada';
-        notificationMessage.value = response.data.message || `Se inició la asignación automática para el área ${selectedArea.value}. Los casos se actualizarán en breve.`;
+    showNotification.value = true;
+    notificationType.value = 'success';
+    notificationTitle.value = 'Asignación Automática Iniciada';
+    notificationMessage.value = response.data.message || `Se inició la asignación automática para el área ${selectedArea.value}. Los casos se actualizarán en breve.`;
 
-        // Usar un temporizador puede ser propenso a errores si el backend tarda más.
-        // Considera usar WebSockets o Server-Sent Events para una actualización en tiempo real,
-        // o simplemente informar al usuario y dejar que recargue manualmente o esperar un fetch periódico.
-        setTimeout(() => {
-             fetchCases();
-        }, 2000); // Aumentar un poco el tiempo de espera o eliminarlo y confiar en la notificación
+    setTimeout(() => {
+      fetchCases();
+    }, 2000);
 
-      } catch (error: any) {
-        console.error('Error en la asignación automática:', error);
-        let errorMessage = 'Ocurrió un error al intentar asignar los casos automáticamente.';
-        if (error.response && error.response.data && error.response.data.message) {
-          errorMessage = error.response.data.message;
-        } else if (error.message) {
-          errorMessage = error.message;
-        }
-        showNotification.value = true;
-        notificationType.value = 'error';
-        notificationTitle.value = 'Error en Asignación Automática';
-        notificationMessage.value = errorMessage;
-      } finally {
-        autoAssignLoading.value = false;
-      }
-    };
+  } catch (error: any) {
+    console.error('Error en la asignación automática:', error);
+    let errorMessage = 'Ocurrió un error al intentar asignar los casos automáticamente.';
+    if (error.response && error.response.data && error.response.data.message) {
+      errorMessage = error.response.data.message;
+    } else if (error.message) {
+      errorMessage = error.message;
+    }
+    showNotification.value = true;
+    notificationType.value = 'error';
+    notificationTitle.value = 'Error en Asignación Automática';
+    notificationMessage.value = errorMessage;
+  } finally {
+    autoAssignLoading.value = false;
+  }
+};
 
     const openReassignModal = (caso: Case): void => {
       selectedCaseToReassign.value = { ...caso }; // Copiar el objeto para evitar mutaciones directas
@@ -722,16 +717,16 @@ const filteredAssignedCases = computed(() =>
 
     <!-- Notification Toast (sin cambios) -->
     <div
-      v-if="showNotification"
-      class="fixed bottom-4 right-4 z-50 max-w-sm bg-white shadow-lg rounded-lg p-4 border-l-4"
-      :class="{
-        'border-green-500': notificationType === 'success',
-        'border-red-500': notificationType === 'error',
-        'border-blue-500': notificationType === 'info',
-        'border-yellow-500': notificationType === 'warning'
-      }"
-      role="alert"
-    >
+  v-if="showNotification"
+  class="fixed top-6 right-6 z-50 max-w-sm bg-white shadow-lg rounded-lg p-4 border-l-4"
+  :class="{
+    'border-green-500': notificationType === 'success',
+    'border-red-500': notificationType === 'error',
+    'border-blue-500': notificationType === 'info',
+    'border-yellow-500': notificationType === 'warning'
+  }"
+  role="alert"
+>
       <div class="flex items-start gap-3">
         <div class="flex-shrink-0 text-xl">
           <i v-if="notificationType === 'success'" class="pi pi-check-circle text-green-500"></i>

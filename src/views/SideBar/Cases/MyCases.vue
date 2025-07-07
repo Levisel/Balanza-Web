@@ -587,7 +587,9 @@ const obtenerCasos = async () => {
     tema: caso.Init_Subject,
     estado: caso.Init_Status,
     tipocliente: caso.Init_ClientType,
-    attentionSheet: caso.Init_AttentionSheet || null, // <-- Añade esto
+    attentionSheet: caso.Init_AttentionSheet || null, 
+    Init_EndCaseReason: caso.Init_EndCaseReason || 'N/A',           
+  Init_EndCaseDescription: caso.Init_EndCaseDescription || 'N/A',
   };
 };
 
@@ -1173,6 +1175,8 @@ onMounted(() => {
           <Column field="tema" header="Tema" />
           <Column field="estado" header="Estado" />
           <Column field="tipocliente" header="Tipo de Cliente" />
+          <Column field="Init_EndCaseReason" header="Motivo de Finalización" /> 
+    <Column field="Init_EndCaseDescription" header="Detalle de Finalización" /> 
           <Column field="actividades" header="Actividades">
             <template #body="slotProps">
               <Button label="Ver Actividades" icon="pi pi-eye" class="p-button-info" @click="verActividades(slotProps.data)" />

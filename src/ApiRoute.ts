@@ -65,6 +65,8 @@ export interface User {
 }
 // 📌 Initial_Consultation (Manages all the information of the initial consultation)
 export interface Initial_Consultation {
+    Init_EndCaseDescription: string;
+    Init_EndCaseReason: string;
     Init_Code: string;
     Internal_ID: string;
     Init_Status: string; //Controlar internamente el caso
