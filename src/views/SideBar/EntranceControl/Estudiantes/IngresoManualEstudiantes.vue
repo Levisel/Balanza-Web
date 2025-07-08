@@ -60,6 +60,23 @@ const loading = ref<boolean>(false); // Variable para controlar el spinner
 
 // Validar cédula
 
+const validateEmail = (email: string): boolean => {
+  const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailPattern.test(email);
+};
+
+const handleEmailValidation = () => {
+  if (internalUser.value.Internal_Email && !validateEmail(internalUser.value.Internal_Email)) {
+    toast.add({
+      severity: "error",
+      summary: "Email no válido",
+      detail: "Por favor ingrese un email válido.",
+      life: 3000,
+    });
+    internalUser.value.Internal_Email = "";
+  }
+};
+
 const validateID = (ID: string): boolean => {
   if (!/^\d{10}$/.test(ID)) return false; // Solo permite 10 dígitos numéricos
 
@@ -185,7 +202,7 @@ watch(
 watch(
   () => internalUser.value.Internal_Email,
   (nuevoValor) => {
-    if (nuevoValor) {
+    if (nuevoValor && validateEmail(nuevoValor)) {
       checkEmailExists().then((existe) => {
         if (existe) {
           toast.add({
@@ -413,6 +430,7 @@ const onFormSubmit = async () => {
                 v-model="internalUser.Internal_Email"
                 size="large"
                 class="w-full"
+                @blur="handleEmailValidation"
               />
               <label for="email"
                 ><span class="text-red-500">*</span> Email</label

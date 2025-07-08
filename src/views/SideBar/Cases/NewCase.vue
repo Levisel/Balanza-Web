@@ -2851,6 +2851,23 @@ const checkExternalUserExists = async (): Promise<boolean> => {
   return false;
 };
 
+const validateEmail = (email: string): boolean => {
+  const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailPattern.test(email);
+};
+
+const handleEmailValidation = () => {
+  if (userEmail.value && !validateEmail(userEmail.value)) {
+    toast.add({
+      severity: "error",
+      summary: "Email inválido",
+      detail: "Por favor ingrese un email válido.",
+      life: 3000,
+    });
+    userEmail.value = "";
+  }
+};
+
 watch(
   () => userID.value,
   (nuevoValor) => {
@@ -2886,6 +2903,18 @@ watch(
         });
         userID.value = "";
       }
+    }
+    else if (userIDType.value?.value === "pasaporte" && nuevoValor.length > 0 && !doesUserExist.value) {
+      checkExternalUserExists().then((existe) => {
+        if (existe) {
+          toast.add({
+            severity: "warn",
+            summary: "Usuario ya existe",
+            detail: "Ya existe un usuario con el pasaporte ingresado.",
+            life: 3000,
+          });
+        }
+      });
     }
   }
 );
@@ -3359,6 +3388,7 @@ const handleInitNotesChange = (event: EditorTextChangeEvent): void => {
               size="large"
               class="w-full md:w-100"
               :disabled="areInputsDisabled"
+              @blur="handleEmailValidation"
             />
             <label for="userEmail"><span class="text-red-500">* </span>Correo Electrónico</label>
           </FloatLabel>
