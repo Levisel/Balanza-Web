@@ -4,20 +4,20 @@ import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import vueDevTools from 'vite-plugin-vue-devtools'
 import tailwindcss from '@tailwindcss/vite'
-import {PrimeVueResolver} from '@primevue/auto-import-resolver';
-import Components from 'unplugin-vue-components/vite';
+import { PrimeVueResolver } from '@primevue/auto-import-resolver'
+import Components from 'unplugin-vue-components/vite'
 
-// https://vite.dev/config/
 export default defineConfig({
+  base: './',   // ←🔥 ESTO ES LO QUE TE FALTABA
   plugins: [
     vue(),
     vueDevTools(),
     tailwindcss(),
     Components({
       resolvers: [
-          PrimeVueResolver()
+        PrimeVueResolver()
       ]
-  })
+    })
   ],
   resolve: {
     alias: {
@@ -27,16 +27,15 @@ export default defineConfig({
   server: {
     proxy: {
       '/SGIFPCapture': {
-        target: 'https://localhost:8443',
+        target: 'https://127.0.0.1:8443',
         changeOrigin: true,
         secure: false
       },
       '/SGIMatchScore': {
-        target: 'https://localhost:8443',
+        target: 'https://127.0.0.1:8443',
         changeOrigin: true,
         secure: false
       }
     }
   }
 })
-

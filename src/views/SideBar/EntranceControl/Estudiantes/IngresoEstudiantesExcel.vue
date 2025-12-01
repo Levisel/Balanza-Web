@@ -187,6 +187,7 @@ function procesarArchivo(event: any) {
       // Validar estructura de columnas requeridas
       const columnasRequeridas = ['CEDULA', 'APELLIDOS', 'NOMBRES', 'Correo_institucional', 'NRC'];
       const primeraFila = jsonData[0] as any;
+      console.log("Primera fila del Excel:", primeraFila);
       const columnasEncontradas = Object.keys(primeraFila);
       const columnasFaltantes = columnasRequeridas.filter(col => !columnasEncontradas.includes(col));
       

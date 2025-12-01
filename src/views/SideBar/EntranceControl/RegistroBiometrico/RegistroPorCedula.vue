@@ -195,8 +195,8 @@ const capturando = ref(false);
 
 
 // SIMULACIÓN DE FECHA Y HORA ACTUAL
-const modoSimulacion = false; // Cambiar a false para usar la hora real
-const fechaSimulada = new Date("2025-04-30T13:51:00"); // Lunes 8:49 AM
+const modoSimulacion = true; // Cambiar a false para usar la hora real
+const fechaSimulada = new Date("2025-11-24T08:57:00"); // Lunes 8:49 AM
 
 function getAhoraLocal(): Date {
   return modoSimulacion ? new Date(fechaSimulada) : new Date();
@@ -593,7 +593,7 @@ const guardarAsistencia = async () => {
 
   try {
     const nowUTC = modoSimulacion ? new Date(fechaSimulada) : new Date();
-    const fechaSimuladaSalida = new Date("2025-04-23T17:59:00");
+    const fechaSimuladaSalida = new Date("2025-11-24T13:00:00");
 
     let payload: any = {
       UserXPeriod_ID: usuarioXPeriodoId.value,

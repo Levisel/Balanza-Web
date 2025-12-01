@@ -141,10 +141,6 @@ const fetchResumenGeneral = async () => {
 
 
 
-
-
-
-
 const fetchResumenSemanales = async () => {
   loading.value = true;
   try {
