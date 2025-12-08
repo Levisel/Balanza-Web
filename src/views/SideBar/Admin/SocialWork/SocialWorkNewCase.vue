@@ -1175,102 +1175,125 @@ export default {
       this.$router.push('/TrabajoSocialCasos');
     },
     async cargarCaso(casoId, userId, internalId) {
-    try {
-      this.isLoading = true;
-      this.error = null;
+  try {
+    this.isLoading = true;
+    this.error = null;
 
-      // Fetch case details from the API using the query parameters
-      const response = await fetch(`${API}/social-work/${casoId}`
-        , {credentials: 'include'}
-      );
+    // Fetch case details from the API using the query parameters
+    console.log('Fetching case details for:', casoId);
+    const response = await fetch(`${API}/social-work/${casoId}`, {
+      credentials: 'include'
+    });
 
-      if (!response.ok) {
-        throw new Error('Error al cargar el caso');
-      }
+    console.log('Case details response status:', response.status);
 
-      const data = await response.json();
-      console.log("Datos recibidos del backend:", data); 
-
-      // Fetch living group members
-      let grupoConvivencia = [];
-      try {
-        const livingGroupResponse = await fetch(`${API}/living-groups/process/${casoId}`
-          , {credentials: 'include'}
-        );
-        if (livingGroupResponse.ok) {
-          const livingGroupData = await livingGroupResponse.json();
-          grupoConvivencia = livingGroupData.map(member => ({
-            id: member.LG_LivingGroup_ID, 
-            nombre: member.LG_Name,
-            edad: member.LG_Age,
-            parentesco: member.LG_Relationship,
-            ocupacion: member.LG_Occupation,
-            notas: member.LG_Notes
-          }));
-        } else {
-          console.warn("No members found for the living group.");
-        }
-      } catch (error) {
-        console.error("Error fetching living group members:", error);
-      }
-
-      // Initialize default values for the form
-      this.caso = {
-        numeroProceso: data.SW_ProcessNumber || '',
-        areaRemision: data.Initial_Consultation.Init_Subject || '',
-        fechaIngreso: data.SW_EntryDate ? new Date(data.SW_EntryDate).toISOString().substr(0, 10) : new Date().toISOString().substr(0, 10),
-        pedidoUsuario: data.SW_UserRequests || '',
-        pedidoRemision: data.SW_ReferralAreaRequests || '',
-        usuario: {
-          nombres: `${data.Initial_Consultation.User.User_FirstName || ''} ${data.Initial_Consultation.User.User_LastName || ''}`.trim(),
-          edad: data.Initial_Consultation.User.User_Age || '',
-          estadoCivil: data.Initial_Consultation.User.User_MaritalStatus || '',
-          ocupacion: data.Initial_Consultation.User.User_Profession || '',
-          direccionTrabajo: data.SW_WorkAdress || '',
-          telefono: data.Initial_Consultation.User.User_Phone || '',
-          direccionDomicilio: data.SW_HomeAdress || '',
-          telefonoReferencia: data.SW_ReferencePhone || '',
-          documento: data.Initial_Consultation.User.User_ID || ''
-        },
-        grupoConvivencia: grupoConvivencia.length > 0 ? grupoConvivencia : [], // Use fetched living group data or empty array
-        discapacidad: {
-          tipo: data.SW_DisabilityType || '',
-          porcentaje: data.SW_DisabilityPercentage || null,
-          carnet: data.SW_DisabilityCard || false
-        },
-        episodiosViolencia: data.SW_ViolenceEpisodes || '',
-        denuncias: data.SW_Complaints || '',
-        consumoAlcohol: data.SW_AlcoholConsumption || '',
-        consumoDrogas: data.SW_DrugConsumption || '',
-        tipodeEnfermedad: data.SW_TypeOfDisease || '',
-        ingresos: data.SW_Income || null,
-        tipoVivienda: data.SW_HousingType || '',
-        contraparte: {
-          nombres: data.SW_CounterpartName || '',
-          edad: data.SW_CounterpartAge || null,
-          estadoCivil: data.SW_CounterpartMaritalStatus || '',
-          ocupacion: data.SW_CounterpartOccupation || '',
-          direccionDomicilio: data.SW_CounterpartAddress || '',
-          telefono: data.SW_CounterpartPhone || '',
-          ci: data.SW_CounterpartID || '',
-          tipoDocumento: data.SW_TypeOfID || 'CI', // Default to C.I.
-          relacion: data.SW_CounterpartRelation || ''
-        },
-        casoConocidoAnteriormente: data.SW_PreviouslyKnownCase || '',
-        relatoHechos: data.SW_Notes || '',
-        observaciones: data.SW_Observations || '',
-        Internal_ID: internalId,
-        SW_Status: data.SW_Status || ''
-      };
-
-      console.log("Formulario inicializado:", this.caso); // Add logging for debugging
-    } catch (error) {
-      console.error('Error al cargar el caso:', error);
-      this.error = 'No se pudo cargar la información del caso. Por favor intente de nuevo.';
-    } finally {
-      this.isLoading = false;
+    if (!response.ok) {
+      throw new Error('Error al cargar el caso');
     }
-  },
+
+    const data = await response.json();
+    console.log("Datos recibidos del backend:", data); 
+
+    // Fetch living group members
+    let grupoConvivencia = [];
+    try {
+      console.log('Fetching living group for process:', casoId);
+      
+      const livingGroupResponse = await fetch(
+        `${API}/living-groups/process/${casoId}`,
+        { 
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+      
+      console.log('Living group response status:', livingGroupResponse.status);
+      console.log('Living group response headers:', [...livingGroupResponse.headers.entries()]);
+
+      if (livingGroupResponse.status === 401) {
+        console.error('Unauthorized - Cookie might not be set or expired');
+        console.log('Document cookies:', document.cookie);
+        // Try to continue without living group data
+        console.warn("Skipping living group data due to authentication error");
+      } else if (livingGroupResponse.ok) {
+        const livingGroupData = await livingGroupResponse.json();
+        console.log('Living group data received:', livingGroupData);
+        
+        grupoConvivencia = livingGroupData.map(member => ({
+          id: member.LG_LivingGroup_ID, 
+          nombre: member.LG_Name,
+          edad: member.LG_Age,
+          parentesco: member.LG_Relationship,
+          ocupacion: member.LG_Occupation,
+          notas: member.LG_Notes
+        }));
+      } else {
+        console.warn(`Living group request failed with status: ${livingGroupResponse.status}`);
+      }
+    } catch (error) {
+      console.error("Error fetching living group members:", error);
+      // Continue loading the case even if living group fails
+    }
+
+    // Initialize default values for the form
+    this.caso = {
+      numeroProceso: data.SW_ProcessNumber || '',
+      areaRemision: data.Initial_Consultation?.Init_Subject || '',
+      fechaIngreso: data.SW_EntryDate ? new Date(data.SW_EntryDate).toISOString().substr(0, 10) : new Date().toISOString().substr(0, 10),
+      pedidoUsuario: data.SW_UserRequests || '',
+      pedidoRemision: data.SW_ReferralAreaRequests || '',
+      usuario: {
+        nombres: `${data.Initial_Consultation?.User?.User_FirstName || ''} ${data.Initial_Consultation?.User?.User_LastName || ''}`.trim(),
+        edad: data.Initial_Consultation?.User?.User_Age || '',
+        estadoCivil: data.Initial_Consultation?.User?.User_MaritalStatus || '',
+        ocupacion: data.Initial_Consultation?.User?.User_Profession || '',
+        direccionTrabajo: data.SW_WorkAdress || '',
+        telefono: data.Initial_Consultation?.User?.User_Phone || '',
+        direccionDomicilio: data.SW_HomeAdress || '',
+        telefonoReferencia: data.SW_ReferencePhone || '',
+        documento: data.Initial_Consultation?.User?.User_ID || ''
+      },
+      grupoConvivencia: grupoConvivencia.length > 0 ? grupoConvivencia : [],
+      discapacidad: {
+        tipo: data.SW_DisabilityType || '',
+        porcentaje: data.SW_DisabilityPercentage || null,
+        carnet: data.SW_HasDisabilityCard || false
+      },
+      episodiosViolencia: data.SW_ViolenceEpisodes || '',
+      denuncias: data.SW_Complaints || '',
+      consumoAlcohol: data.SW_AlcoholConsumption || '',
+      consumoDrogas: data.SW_DrugConsumption || '',
+      tipodeEnfermedad: data.SW_TypeOfDisease || '',
+      ingresos: data.SW_Income || null,
+      tipoVivienda: data.SW_HousingType || '',
+      contraparte: {
+        nombres: data.SW_CounterpartName || '',
+        edad: data.SW_CounterpartAge || null,
+        estadoCivil: data.SW_CounterpartMaritalStatus || '',
+        ocupacion: data.SW_CounterpartOccupation || '',
+        direccionDomicilio: data.SW_CounterpartAddress || '',
+        telefono: data.SW_CounterpartPhone || '',
+        ci: data.SW_CounterpartID || '',
+        tipoDocumento: data.SW_TypeOfID || 'CI',
+        relacion: data.SW_CounterpartRelation || ''
+      },
+      casoConocidoAnteriormente: data.SW_PreviouslyKnownCase || '',
+      relatoHechos: data.SW_Notes || '',
+      observaciones: data.SW_Observations || '',
+      Internal_ID: internalId,
+      SW_Status: data.SW_Status || ''
+    };
+
+    console.log("Formulario inicializado:", this.caso);
+  } catch (error) {
+    console.error('Error al cargar el caso:', error);
+    this.error = 'No se pudo cargar la información del caso. Por favor intente de nuevo.';
+  } finally {
+    this.isLoading = false;
+  }
+},
   async generarWord() {
     try {
       this.isLoading = true;
@@ -1403,7 +1426,7 @@ export default {
       console.log("Fetching existing living group members...");
       // First, fetch the existing living group members for this process
       const livingGroupResponse = await fetch(`${API}/living-groups/process/${this.caso.numeroProceso}`
-        , {credential: 'include'}
+        , {credentials: 'include'}
       );
       let existingMembers = [];
       
@@ -1515,7 +1538,7 @@ export default {
       for (const [memberId, member] of existingMembersMap.entries()) {
         console.log(`Deleting removed member: ${member.LG_Name} (ID: ${memberId})`);
         const deletePromise = fetch(`${API}/living-groups/${memberId}`, {
-          credential: 'include',
+          credentials: 'include',
           method: "DELETE",
           headers: {
             "Content-Type": "application/json",
