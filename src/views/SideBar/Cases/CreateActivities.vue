@@ -1390,7 +1390,10 @@ const verDetallesActividad = async (activityId: number | undefined) => {
         if (Array.isArray(records) && records.length > 0) {
           // Guardar TODOS los registros (1 o 2)
           activityRecords.value = records;
-          console.log('Registros de entrada/salida cargados:', activityRecords.value);
+          console.log(
+            "Registros de entrada/salida cargados:",
+            activityRecords.value
+          );
         }
       } catch (err) {
         console.warn("No se pudo cargar el registro de actividad:", err);
@@ -2429,18 +2432,18 @@ onMounted(() => {
         <i class="pi pi-spin pi-spinner" style="font-size: 2rem"></i>
         <p class="mt-2">Cargando detalles...</p>
       </div>
-      
+
       <div v-else-if="actividadSeleccionadaDetalles" class="space-y-6">
         <!-- Badge: Actividad Interna o Externa -->
         <div class="flex justify-center mb-4">
-          <span 
+          <span
             v-if="actividadSeleccionadaDetalles.Activity_IsInternal"
             class="inline-flex items-center px-4 py-2 rounded-full text-sm font-semibold bg-blue-100 text-blue-800 border border-blue-300"
           >
             <i class="pi pi-building mr-2"></i>
             Actividad Interna
           </span>
-          <span 
+          <span
             v-else
             class="inline-flex items-center px-4 py-2 rounded-full text-sm font-semibold bg-amber-100 text-amber-800 border border-amber-300"
           >
@@ -2451,47 +2454,85 @@ onMounted(() => {
 
         <!-- Detalles generales de la actividad (DINÁMICO) -->
         <div class="bg-gray-50 rounded-lg p-4 border border-gray-200">
-          <h3 class="font-bold text-gray-800 mb-3 text-lg">Información General</h3>
+          <h3 class="font-bold text-gray-800 mb-3 text-lg">
+            Información General
+          </h3>
           <dl class="divide-y divide-gray-200">
-            <template v-for="(value, key) in actividadSeleccionadaDetalles" :key="key">
+            <template
+              v-for="(value, key) in actividadSeleccionadaDetalles"
+              :key="key"
+            >
               <div
-                v-if="!camposExcluidosDetallesActividad.includes(String(key)) &&
-                      (!actividadSeleccionadaDetalles.Activity_IsInternal || !camposExcluidosSiEsInterna.includes(String(key))) &&
-                      key !== 'Activity_IsInternal' &&
-                      value !== null && value !== undefined && String(value).trim() !== '' && String(value).trim() !== 'N/A'"
+                v-if="
+                  !camposExcluidosDetallesActividad.includes(String(key)) &&
+                  (!actividadSeleccionadaDetalles.Activity_IsInternal ||
+                    !camposExcluidosSiEsInterna.includes(String(key))) &&
+                  key !== 'Activity_IsInternal' &&
+                  value !== null &&
+                  value !== undefined &&
+                  String(value).trim() !== '' &&
+                  String(value).trim() !== 'N/A'
+                "
                 class="grid grid-cols-1 gap-x-4 gap-y-2 py-3 sm:grid-cols-3 items-baseline"
               >
-                <dt class="font-semibold text-gray-700 sm:col-span-1">{{ traducirYFormatearNombreCampo(String(key)) }}:</dt>
-                <dd class="text-gray-800 sm:col-span-2 break-words">{{ value }}</dd>
+                <dt class="font-semibold text-gray-700 sm:col-span-1">
+                  {{ traducirYFormatearNombreCampo(String(key)) }}:
+                </dt>
+                <dd class="text-gray-800 sm:col-span-2 break-words">
+                  {{ value }}
+                </dd>
               </div>
             </template>
           </dl>
         </div>
 
         <!-- Sección de Registros de Entrada/Salida (solo si NO es interna) -->
-        <div v-if="!actividadSeleccionadaDetalles.Activity_IsInternal && activityRecords.length > 0" class="bg-white rounded-lg border-2 border-indigo-200">
-          <div class="bg-indigo-50 px-4 py-3 border-b border-indigo-200 rounded-t-lg">
+        <div
+          v-if="
+            !actividadSeleccionadaDetalles.Activity_IsInternal &&
+            activityRecords.length > 0
+          "
+          class="bg-white rounded-lg border-2 border-indigo-200"
+        >
+          <div
+            class="bg-indigo-50 px-4 py-3 border-b border-indigo-200 rounded-t-lg"
+          >
             <h3 class="font-bold text-indigo-900 text-lg flex items-center">
               <i class="pi pi-clock mr-2"></i>
               Registros de Entrada y Salida
             </h3>
           </div>
-          
+
           <div class="p-4 space-y-4">
             <!-- Iterar sobre TODOS los registros (1 o 2) -->
-            <div 
-              v-for="(record, index) in activityRecords" 
+            <div
+              v-for="(record, index) in activityRecords"
               :key="index"
               class="p-4 rounded-lg border-2"
-              :class="record.Activity_Record_Type === 'entrada' ? 'bg-green-50 border-green-300' : 'bg-red-50 border-red-300'"
+              :class="
+                record.Activity_Record_Type === 'entrada'
+                  ? 'bg-green-50 border-green-300'
+                  : 'bg-red-50 border-red-300'
+              "
             >
               <!-- Encabezado del registro -->
               <div class="flex items-center gap-2 mb-3">
-                <i 
+                <i
                   class="text-2xl"
-                  :class="record.Activity_Record_Type === 'entrada' ? 'pi pi-sign-in text-green-600' : 'pi pi-sign-out text-red-600'"
+                  :class="
+                    record.Activity_Record_Type === 'entrada'
+                      ? 'pi pi-sign-in text-green-600'
+                      : 'pi pi-sign-out text-red-600'
+                  "
                 ></i>
-                <h4 class="font-bold text-lg uppercase" :class="record.Activity_Record_Type === 'entrada' ? 'text-green-800' : 'text-red-800'">
+                <h4
+                  class="font-bold text-lg uppercase"
+                  :class="
+                    record.Activity_Record_Type === 'entrada'
+                      ? 'text-green-800'
+                      : 'text-red-800'
+                  "
+                >
                   {{ record.Activity_Record_Type }}
                 </h4>
               </div>
@@ -2502,37 +2543,72 @@ onMounted(() => {
                 <div class="flex items-start gap-2">
                   <i class="pi pi-calendar text-gray-600 mt-0.5"></i>
                   <div>
-                    <span class="font-semibold text-gray-700">Hora de Registro:</span>
-                    <p class="text-gray-800">{{ new Date(record.Activity_Record_Recorded_Time).toLocaleString('es-ES', { 
-                      dateStyle: 'short', 
-                      timeStyle: 'medium' 
-                    }) }}</p>
+                    <span class="font-semibold text-gray-700"
+                      >Hora de Registro:</span
+                    >
+                    <p class="text-gray-800">
+                      {{
+                        new Date(
+                          record.Activity_Record_Recorded_Time
+                        ).toLocaleString("es-ES", {
+                          dateStyle: "short",
+                          timeStyle: "medium",
+                        })
+                      }}
+                    </p>
                   </div>
                 </div>
 
                 <!-- En Tiempo -->
                 <div class="flex items-center gap-2">
-                  <i 
+                  <i
                     class="text-xl"
-                    :class="record.Activity_Record_On_Time ? 'pi pi-check-circle text-green-600' : 'pi pi-times-circle text-red-600'"
+                    :class="
+                      record.Activity_Record_On_Time
+                        ? 'pi pi-check-circle text-green-600'
+                        : 'pi pi-times-circle text-red-600'
+                    "
                   ></i>
                   <span class="font-semibold text-gray-700">En Tiempo:</span>
-                  <span :class="record.Activity_Record_On_Time ? 'text-green-700 font-medium' : 'text-red-700 font-medium'">
-                    {{ record.Activity_Record_On_Time ? 'Sí' : 'No' }}
+                  <span
+                    :class="
+                      record.Activity_Record_On_Time
+                        ? 'text-green-700 font-medium'
+                        : 'text-red-700 font-medium'
+                    "
+                  >
+                    {{ record.Activity_Record_On_Time ? "Sí" : "No" }}
                   </span>
                 </div>
 
                 <!-- Observación -->
-                <div v-if="record.Activity_Record_Observation && record.Activity_Record_Observation.trim() !== '' && record.Activity_Record_Observation !== 'N/A'" class="flex items-start gap-2">
+                <div
+                  v-if="
+                    record.Activity_Record_Observation &&
+                    record.Activity_Record_Observation.trim() !== '' &&
+                    record.Activity_Record_Observation !== 'N/A'
+                  "
+                  class="flex items-start gap-2"
+                >
                   <i class="pi pi-comment text-gray-600 mt-0.5"></i>
                   <div>
-                    <span class="font-semibold text-gray-700">Observación:</span>
-                    <p class="text-gray-800">{{ record.Activity_Record_Observation }}</p>
+                    <span class="font-semibold text-gray-700"
+                      >Observación:</span
+                    >
+                    <p class="text-gray-800">
+                      {{ record.Activity_Record_Observation }}
+                    </p>
                   </div>
                 </div>
 
                 <!-- Ubicación -->
-                <div v-if="record.Activity_Record_Latitude && record.Activity_Record_Longitude" class="flex items-start gap-2">
+                <div
+                  v-if="
+                    record.Activity_Record_Latitude &&
+                    record.Activity_Record_Longitude
+                  "
+                  class="flex items-start gap-2"
+                >
                   <i class="pi pi-map-marker text-gray-600 mt-0.5"></i>
                   <div>
                     <span class="font-semibold text-gray-700">Ubicación:</span>
@@ -2543,7 +2619,8 @@ onMounted(() => {
                       class="text-blue-600 hover:text-blue-800 underline flex items-center gap-1 mt-1"
                     >
                       <i class="pi pi-external-link"></i>
-                      Ver en Google Maps ({{ record.Activity_Record_Latitude }}, {{ record.Activity_Record_Longitude }})
+                      Ver en Google Maps ({{ record.Activity_Record_Latitude }},
+                      {{ record.Activity_Record_Longitude }})
                     </a>
                   </div>
                 </div>
@@ -2552,7 +2629,7 @@ onMounted(() => {
           </div>
         </div>
       </div>
-      
+
       <div v-else class="text-center text-gray-500 py-4">
         No hay detalles disponibles para mostrar o ocurrió un error al
         cargarlos.
